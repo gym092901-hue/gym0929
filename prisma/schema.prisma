@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ProductProject {
+  id             String   @id @default(cuid())
+  sourceUrl      String
+  status         String   @default("draft")
+  productName    String?
+  category       String?
+  brand          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sources        ProductSource[]
+  assets         SourceAsset[]
+  evidence       EvidenceItem[]
+  truthSnapshots ProductTruthSnapshot[]
+  claims         Claim[]
+  potential      SalesPotentialScore?
+  pains          CustomerPain[]
+  angles         SalesAngle[]
+  hooks          HookCandidate[]
+  storyboards    Storyboard[]
+  shotRequests   ShotRequest[]
+  compliance     ComplianceReport[]
+  renders        VideoRender[]
+  packages       ConversionPackage[]
+  performance    PerformanceRecord[]
+  improvements   ImprovementPlan[]
+  promptRuns     PromptRun[]
+}
+
+model ProductSource {
+  id            String   @id @default(cuid())
+  productId     String
+  url           String
+  status        String   @default("pending")
+  htmlSnapshot  String?
+  textSnapshot  String?
+  metadata      String?
+  error         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  product       ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model SourceAsset {
+  id         String   @id @default(cuid())
+  productId  String
+  kind       String
+  role       String   @default("unknown")
+  url        String?
+  localPath  String?
+  altText    String?
+  width      Int?
+  height     Int?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  product    ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model EvidenceItem {
+  id          String   @id @default(cuid())
+  productId   String
+  sourceId    String?
+  assetId     String?
+  kind        String
+  text        String
+  selector    String?
+  url         String?
+  confidence  Float    @default(0.7)
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  product     ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+  claims      Claim[]
+}
+
+model ProductTruthSnapshot {
+  id          String   @id @default(cuid())
+  productId   String
+  schemaVersion String
+  payload     String
+  createdAt   DateTime @default(now())
+
+  product     ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Claim {
+  id          String   @id @default(cuid())
+  productId   String
+  text        String
+  claimType   String
+  confidence  Float
+  safe        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  product     ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+  evidence    EvidenceItem[]
+}
+
+model SalesPotentialScore {
+  id          String   @id @default(cuid())
+  productId   String   @unique
+  score       Int
+  grade       String
+  breakdown   String
+  penalties   String
+  rationale   String
+  createdAt   DateTime @default(now())
+
+  product     ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model CustomerPain {
+  id           String   @id @default(cuid())
+  productId    String
+  text         String
+  buyingMotive String
+  situation    String?
+  evidenceIds  String
+  createdAt    DateTime @default(now())
+
+  product      ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model SalesAngle {
+  id                 String   @id @default(cuid())
+  productId          String
+  angle              String
+  targetCustomer     String
+  customerPain       String
+  buyingMotive       String
+  corePromise        String
+  proofStrategy      String
+  requiredEvidenceIds String
+  objectionToRemove  String
+  riskFlags          String
+  score              Int
+  scoreBreakdown     String
+  createdAt          DateTime @default(now())
+
+  product            ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+  hooks              HookCandidate[]
+  storyboards        Storyboard[]
+}
+
+model HookCandidate {
+  id                    String   @id @default(cuid())
+  productId             String
+  angleId               String?
+  text                  String
+  pattern               String
+  startsWithProductName Boolean  @default(false)
+  supportedClaimIds     String
+  riskFlags             String
+  score                 Int
+  decision              String
+  rejectionReason       String?
+  createdAt             DateTime @default(now())
+
+  product               ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+  angle                 SalesAngle? @relation(fields: [angleId], references: [id], onDelete: SetNull)
+  storyboards           Storyboard[]
+}
+
+model Storyboard {
+  id                 String   @id @default(cuid())
+  productId          String
+  angleId            String?
+  hookId             String?
+  durationSec        Int
+  aspectRatio        String   @default("9:16")
+  payload            String
+  cta                String
+  missingShots       String
+  renderVariant      String
+  complianceReportId String?
+  createdAt          DateTime @default(now())
+
+  product            ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+  angle              SalesAngle? @relation(fields: [angleId], references: [id], onDelete: SetNull)
+  hook               HookCandidate? @relation(fields: [hookId], references: [id], onDelete: SetNull)
+  proofScenes        ProofScene[]
+  renders            VideoRender[]
+}
+
+model ProofScene {
+  id                String   @id @default(cuid())
+  storyboardId      String
+  type              String
+  orderIndex        Int
+  durationSec       Int
+  visualPlan        String
+  narration         String
+  onScreenText      String
+  assetIds          String
+  evidenceIds       String
+  requiresUserShot  Boolean @default(false)
+  shotRequest       String?
+  createdAt         DateTime @default(now())
+
+  storyboard        Storyboard @relation(fields: [storyboardId], references: [id], onDelete: Cascade)
+}
+
+model ShotRequest {
+  id           String   @id @default(cuid())
+  productId    String
+  storyboardId String?
+  description  String
+  reason       String
+  status       String   @default("needed")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  product      ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ComplianceReport {
+  id                          String   @id @default(cuid())
+  productId                   String
+  targetType                  String
+  targetId                    String
+  verdict                     String
+  unsupportedClaims           String
+  riskyClaims                 String
+  fakeReviewDetected          Boolean  @default(false)
+  productNameInFirstTwoSeconds Boolean @default(false)
+  ctaBeforeLastFiveSeconds    Boolean  @default(false)
+  missingEvidenceIds          String
+  requiredFixes               String
+  createdAt                   DateTime @default(now())
+
+  product                     ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model VideoRender {
+  id           String   @id @default(cuid())
+  productId    String
+  storyboardId String
+  status       String   @default("queued")
+  variant      String
+  filePath     String?
+  thumbnailPath String?
+  width        Int      @default(1080)
+  height       Int      @default(1920)
+  durationSec  Int
+  error        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  product      ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storyboard   Storyboard @relation(fields: [storyboardId], references: [id], onDelete: Cascade)
+}
+
+model ConversionPackage {
+  id            String   @id @default(cuid())
+  productId     String
+  videoRenderIds String
+  payload       String
+  createdAt     DateTime @default(now())
+
+  product       ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model PerformanceRecord {
+  id             String   @id @default(cuid())
+  productId      String
+  videoRenderId  String?
+  views          Int?
+  avgViewDuration Float?
+  retentionRate  Float?
+  clickThroughRate Float?
+  purchases      Int?
+  comments       Int?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  product        ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ImprovementPlan {
+  id            String   @id @default(cuid())
+  productId     String
+  performanceId String?
+  payload       String
+  createdAt     DateTime @default(now())
+
+  product       ProductProject @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model PromptRun {
+  id             String   @id @default(cuid())
+  productId      String?
+  task           String
+  model          String
+  input          String
+  output         String?
+  schemaVersion  String?
+  status         String
+  error          String?
+  createdAt      DateTime @default(now())
+
+  product        ProductProject? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,43 @@
+{
+  "name": "shorts-commerce-studio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "render:storyboard": "tsx scripts/render-storyboard.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@remotion/bundler": "^4.0.236",
+    "@remotion/renderer": "^4.0.236",
+    "lucide-react": "^0.468.0",
+    "next": "^15.0.3",
+    "openai": "^4.73.1",
+    "playwright": "^1.49.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.236",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "eslint": "^9.16.0",
+    "eslint-config-next": "^15.0.3",
+    "prisma": "^5.22.0",
+    "sql.js": "^1.12.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

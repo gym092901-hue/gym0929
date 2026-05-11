@@ -1,0 +1,114 @@
+import { bundle } from "@remotion/bundler";
+import { renderMedia, selectComposition } from "@remotion/renderer";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { prisma } from "@/lib/prisma/client";
+import { fromJsonString } from "@/lib/utils/json";
+import type { ShortsRenderProps } from "./types";
+
+export async function renderStoryboardToMp4(storyboardId: string) {
+  const storyboard = await prisma.storyboard.findUniqueOrThrow({
+    where: { id: storyboardId },
+    include: {
+      product: true,
+      proofScenes: { orderBy: { orderIndex: "asc" } }
+    }
+  });
+  const assets = await prisma.sourceAsset.findMany({ where: { productId: storyboard.productId } });
+  const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
+
+  const render = await prisma.videoRender.create({
+    data: {
+      productId: storyboard.productId,
+      storyboardId,
+      status: "rendering",
+      variant: storyboard.renderVariant,
+      durationSec: storyboard.durationSec
+    }
+  });
+
+  const outputDir = path.join(process.cwd(), "storage", "renders");
+  const outputLocation = path.join(outputDir, `${render.id}.mp4`);
+
+  try {
+    await fs.mkdir(outputDir, { recursive: true });
+    const inputProps: ShortsRenderProps = {
+      productName: storyboard.product.productName ?? "상품",
+      variant: storyboard.renderVariant,
+      durationSec: storyboard.durationSec,
+      scenes: storyboard.proofScenes.map((scene) => ({
+        id: scene.id,
+        type: scene.type,
+        durationSec: scene.durationSec,
+        visualPlan: scene.visualPlan,
+        narration: scene.narration,
+        onScreenText: scene.onScreenText,
+        assetUrls: readJsonArray<string>(scene.assetIds)
+          .map((assetId) => assetMap.get(assetId)?.url)
+          .filter((url): url is string => Boolean(url)),
+        requiresUserShot: scene.requiresUserShot,
+        shotRequest: scene.shotRequest ?? undefined
+      }))
+    };
+    const serveUrl = await bundle({
+      entryPoint: path.join(process.cwd(), "remotion", "index.ts"),
+      webpackOverride: (config) => config
+    });
+    const composition = await selectComposition({
+      serveUrl,
+      id: "ShortsVideo",
+      inputProps
+    });
+    await renderMedia({
+      composition,
+      serveUrl,
+      codec: "h264",
+      outputLocation,
+      inputProps
+    });
+    await prisma.videoRender.update({
+      where: { id: render.id },
+      data: {
+        status: "complete",
+        filePath: outputLocation,
+        width: 1080,
+        height: 1920,
+        durationSec: storyboard.durationSec
+      }
+    });
+  } catch (error) {
+    await prisma.videoRender.update({
+      where: { id: render.id },
+      data: {
+        status: "failed",
+        error: error instanceof Error ? error.message : String(error),
+        filePath: outputLocation
+      }
+    });
+    throw error;
+  }
+
+  await prisma.productProject.update({
+    where: { id: storyboard.productId },
+    data: { status: "rendered" }
+  });
+
+  return prisma.videoRender.findUniqueOrThrow({ where: { id: render.id } });
+}
+
+export async function renderTopStoryboards(productId: string, minimum = 3) {
+  const storyboards = await prisma.storyboard.findMany({
+    where: { productId },
+    orderBy: { createdAt: "asc" },
+    take: minimum
+  });
+  const renders = [];
+  for (const storyboard of storyboards) {
+    renders.push(await renderStoryboardToMp4(storyboard.id));
+  }
+  return renders;
+}
+
+function readJsonArray<T>(value: unknown): T[] {
+  return fromJsonString<T[]>(value, []);
+}

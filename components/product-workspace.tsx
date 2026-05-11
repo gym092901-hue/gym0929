@@ -154,6 +154,8 @@ export function ProductWorkspace() {
     }
     setBusy("상세페이지 수집");
     setError(null);
+    setWorkspace(null);
+    window.localStorage.removeItem("shorts-commerce-product-id");
     try {
       setUrl(normalizedUrl);
       const response = await fetch("/api/products/ingest", {

@@ -18,6 +18,7 @@ import {
   Upload
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { normalizeProductUrl } from "@/lib/utils/url";
 
 type Workspace = {
   id: string;
@@ -144,13 +145,21 @@ export function ProductWorkspace() {
 
   async function ingest(event: FormEvent) {
     event.preventDefault();
+    let normalizedUrl: string;
+    try {
+      normalizedUrl = normalizeProductUrl(url);
+    } catch (caught) {
+      setError(toErrorMessage(caught));
+      return;
+    }
     setBusy("상세페이지 수집");
     setError(null);
     try {
+      setUrl(normalizedUrl);
       const response = await fetch("/api/products/ingest", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url: normalizedUrl })
       });
       const data = await parseResponse<Workspace>(response);
       setWorkspace(data);
@@ -241,7 +250,11 @@ export function ProductWorkspace() {
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder="https://..."
-                type="url"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                type="text"
                 required
               />
               <button className="button" disabled={Boolean(busy)}>

@@ -24,12 +24,24 @@ export type ScrapedPage = {
 const MAX_TEXT_LENGTH = 60_000;
 const MAX_HTML_LENGTH = 500_000;
 
-export async function scrapeProductPage(url: string): Promise<ScrapedPage> {
-  try {
-    return await scrapeWithPlaywright(url);
-  } catch (error) {
-    return scrapeWithFetch(url, error instanceof Error ? error.message : String(error));
+export class ProductPageBlockedError extends Error {
+  constructor(hostname: string) {
+    super(
+      `${hostname}에서 자동 수집 요청을 차단했습니다. URL 형식은 맞지만 현재 이 상세페이지는 직접 수집할 수 없습니다.`
+    );
+    this.name = "ProductPageBlockedError";
   }
+}
+
+export async function scrapeProductPage(url: string): Promise<ScrapedPage> {
+  let page: ScrapedPage;
+  try {
+    page = await scrapeWithPlaywright(url);
+  } catch (error) {
+    page = await scrapeWithFetch(url, error instanceof Error ? error.message : String(error));
+  }
+  assertProductPageIsUsable(page);
+  return page;
 }
 
 async function scrapeWithPlaywright(url: string): Promise<ScrapedPage> {
@@ -178,4 +190,26 @@ function dedupeByUrl<T extends { url: string }>(items: T[]): T[] {
     seen.add(item.url);
     return true;
   });
+}
+
+export function isBlockedProductPage(page: Pick<ScrapedPage, "title" | "text" | "html" | "finalUrl">): boolean {
+  const haystack = `${page.title}\n${page.text}\n${page.html}\n${page.finalUrl}`.toLowerCase();
+  return [
+    "access denied",
+    "you don't have permission to access",
+    "errors.edgesuite.net",
+    "akamai",
+    "captcha",
+    "robot or human",
+    "unusual traffic",
+    "403 forbidden"
+  ].some((signal) => haystack.includes(signal));
+}
+
+function assertProductPageIsUsable(page: ScrapedPage) {
+  if (!isBlockedProductPage(page)) {
+    return;
+  }
+  const hostname = new URL(page.finalUrl || page.requestedUrl).hostname;
+  throw new ProductPageBlockedError(hostname);
 }

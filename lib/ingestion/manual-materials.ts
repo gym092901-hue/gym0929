@@ -1,6 +1,7 @@
 import type { AssetSeed, EvidenceSeed } from "./evidence";
 
 export type ManualProductMaterials = {
+  sourceSnippet?: string;
   productName: string;
   brand?: string;
   priceText?: string;

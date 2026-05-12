@@ -8,6 +8,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const images = await collectImages(formData);
     const product = await ingestManualProduct({
+      sourceSnippet: getString(formData, "sourceSnippet"),
       productName: getString(formData, "productName"),
       brand: getString(formData, "brand"),
       priceText: getString(formData, "priceText"),

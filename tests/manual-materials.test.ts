@@ -4,6 +4,7 @@ import {
   buildManualEvidenceSeeds,
   normalizeManualImageUrls
 } from "@/lib/ingestion/manual-materials";
+import { mergeManualInputWithSource } from "@/lib/services/manual-product-service";
 
 describe("manual product materials", () => {
   it("turns user-provided facts into evidence", () => {
@@ -36,5 +37,33 @@ describe("manual product materials", () => {
         imageUrls: ["https://example.com/usage-cut.jpg", "https://example.com/before-after.jpg"]
       }).map((asset) => asset.role)
     ).toEqual(["usage", "before_after"]);
+  });
+
+  it("merges Coupang widget metadata with manual materials", () => {
+    const merged = mergeManualInputWithSource(
+      {
+        sourceSnippet: '<iframe src="https://coupa.ng/cmPYDP"></iframe>',
+        productName: "",
+        purchaseLink: "",
+        imageUrls: ["https://example.com/user-usage.jpg"]
+      },
+      {
+        sourceUrl: "https://partners.coupangcdn.com/widget/product-banner/default/index.html",
+        widget: {
+          requestedUrl: "https://coupa.ng/cmPYDP",
+          finalUrl: "https://partners.coupangcdn.com/widget/product-banner/default/index.html",
+          productName: "코멧 스포츠 EPP 컴포트 폼롤러, 블랙, 1개",
+          productImage: "https://t1a.coupangcdn.com/product.jpg",
+          purchaseLink: "https://link.coupang.com/re/AFFSDP?pageKey=1"
+        }
+      }
+    );
+
+    expect(merged.productName).toBe("코멧 스포츠 EPP 컴포트 폼롤러, 블랙, 1개");
+    expect(merged.purchaseLink).toBe("https://link.coupang.com/re/AFFSDP?pageKey=1");
+    expect(merged.imageUrls).toEqual([
+      "https://t1a.coupangcdn.com/product.jpg",
+      "https://example.com/user-usage.jpg"
+    ]);
   });
 });

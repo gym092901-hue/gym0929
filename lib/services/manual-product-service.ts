@@ -2,6 +2,14 @@ import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import { extname, join } from "path";
 import {
+  buildCoupangPartnersAssets,
+  buildCoupangPartnersEvidence,
+  buildCoupangPartnersTextSnapshot,
+  isCoupangPartnersWidgetUrl,
+  resolveCoupangPartnersWidget,
+  type CoupangPartnersWidget
+} from "@/lib/ingestion/coupang-partners-widget";
+import {
   buildManualAssetSeeds,
   buildManualEvidenceSeeds,
   inferManualImageRole,
@@ -9,6 +17,7 @@ import {
 } from "@/lib/ingestion/manual-materials";
 import { prisma } from "@/lib/prisma/client";
 import { toJsonString } from "@/lib/utils/json";
+import { normalizeProductUrl } from "@/lib/utils/url";
 import { extractProductTruth } from "./product-service";
 
 export type UploadedManualImage = {
@@ -21,23 +30,33 @@ export type ManualProductInput = ManualProductMaterials & {
   images?: UploadedManualImage[];
 };
 
+type ResolvedManualSource = {
+  sourceUrl?: string;
+  widget?: CoupangPartnersWidget;
+  evidence: ReturnType<typeof buildCoupangPartnersEvidence>;
+  assets: ReturnType<typeof buildCoupangPartnersAssets>;
+  textSnapshot: string;
+};
+
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function ingestManualProduct(input: ManualProductInput) {
-  const productName = input.productName.trim();
+  const resolvedSource = await resolveManualSource(input.sourceSnippet);
+  const mergedInput = mergeManualInputWithSource(input, resolvedSource);
+  const productName = mergedInput.productName.trim();
   if (productName.length < 2) {
-    throw new Error("상품명을 입력하세요.");
+    throw new Error("상품명을 입력하거나 쿠팡 파트너스 iframe을 함께 붙여넣으세요.");
   }
-  if (!hasEnoughManualMaterial(input)) {
+  if (!hasEnoughManualMaterial(mergedInput, resolvedSource)) {
     throw new Error("상품 설명, 장점, 사용법, 주의사항, 이미지 중 하나 이상을 입력하세요.");
   }
 
   const product = await prisma.productProject.create({
     data: {
-      sourceUrl: "manual://product-materials",
+      sourceUrl: resolvedSource?.sourceUrl ?? "manual://product-materials",
       productName,
-      brand: input.brand?.trim() || null,
+      brand: mergedInput.brand?.trim() || null,
       status: "ingested"
     }
   });
@@ -45,20 +64,22 @@ export async function ingestManualProduct(input: ManualProductInput) {
   const source = await prisma.productSource.create({
     data: {
       productId: product.id,
-      url: "manual://product-materials",
+      url: resolvedSource?.sourceUrl ?? "manual://product-materials",
       status: "complete",
-      textSnapshot: buildManualTextSnapshot(input),
+      textSnapshot: [resolvedSource?.textSnapshot, buildManualTextSnapshot(mergedInput)].filter(Boolean).join("\n\n"),
       metadata: toJsonString({
         provider: "manual-materials",
-        imageCount: input.images?.length ?? 0,
+        sourceProvider: resolvedSource?.widget ? "coupang-partners-widget" : undefined,
+        sourceUrl: resolvedSource?.sourceUrl,
+        imageCount: mergedInput.images?.length ?? 0,
         capturedAt: new Date().toISOString()
       })
     }
   });
 
-  const uploadedAssets = await saveUploadedManualImages(product.id, input.images ?? []);
-  const linkedAssets = buildManualAssetSeeds({ ...input, productName });
-  const assets = [...linkedAssets, ...uploadedAssets];
+  const uploadedAssets = await saveUploadedManualImages(product.id, mergedInput.images ?? []);
+  const linkedAssets = buildManualAssetSeeds({ ...mergedInput, productName });
+  const assets = dedupeAssets([...(resolvedSource?.assets ?? []), ...linkedAssets, ...uploadedAssets]);
 
   if (assets.length > 0) {
     await prisma.sourceAsset.createMany({
@@ -74,7 +95,10 @@ export async function ingestManualProduct(input: ManualProductInput) {
     });
   }
 
-  const evidenceSeeds = buildManualEvidenceSeeds({ ...input, productName });
+  const evidenceSeeds = dedupeEvidence([
+    ...(resolvedSource?.evidence ?? []),
+    ...buildManualEvidenceSeeds({ ...mergedInput, productName })
+  ]);
   await prisma.evidenceItem.createMany({
     data: evidenceSeeds.map((item) => ({
       productId: product.id,
@@ -90,7 +114,57 @@ export async function ingestManualProduct(input: ManualProductInput) {
   return extractProductTruth(product.id);
 }
 
-function hasEnoughManualMaterial(input: ManualProductInput): boolean {
+export async function resolveManualSource(sourceSnippet: string | undefined): Promise<ResolvedManualSource | null> {
+  if (!sourceSnippet?.trim()) return null;
+
+  let sourceUrl: string;
+  try {
+    sourceUrl = normalizeProductUrl(sourceSnippet);
+  } catch {
+    throw new Error("상품 링크/iframe 주소를 확인하세요.");
+  }
+
+  if (!isCoupangPartnersWidgetUrl(sourceUrl)) {
+    return {
+      sourceUrl,
+      evidence: [
+        {
+          kind: "purchase_link",
+          text: "상품 링크",
+          url: sourceUrl,
+          confidence: 0.72,
+          metadata: { provider: "manual-source-link" }
+        }
+      ],
+      assets: [],
+      textSnapshot: `상품 링크: ${sourceUrl}`
+    };
+  }
+
+  const widget = await resolveCoupangPartnersWidget(sourceUrl);
+  return {
+    sourceUrl: widget.finalUrl,
+    widget,
+    evidence: buildCoupangPartnersEvidence(widget),
+    assets: buildCoupangPartnersAssets(widget),
+    textSnapshot: buildCoupangPartnersTextSnapshot(widget)
+  };
+}
+
+export function mergeManualInputWithSource(
+  input: ManualProductInput,
+  resolvedSource: Pick<ResolvedManualSource, "sourceUrl" | "widget"> | null
+): ManualProductInput {
+  const widget = resolvedSource?.widget;
+  return {
+    ...input,
+    productName: input.productName.trim() || widget?.productName || "",
+    purchaseLink: input.purchaseLink?.trim() || widget?.purchaseLink || resolvedSource?.sourceUrl || "",
+    imageUrls: [widget?.productImage, ...(input.imageUrls ?? [])].filter((url): url is string => Boolean(url))
+  };
+}
+
+function hasEnoughManualMaterial(input: ManualProductInput, resolvedSource: ResolvedManualSource | null): boolean {
   return Boolean(
     input.description?.trim() ||
       input.benefits?.trim() ||
@@ -100,7 +174,9 @@ function hasEnoughManualMaterial(input: ManualProductInput): boolean {
       input.imageUrls?.length ||
       input.images?.length ||
       input.priceText?.trim() ||
-      input.purchaseLink?.trim()
+      input.purchaseLink?.trim() ||
+      resolvedSource?.evidence.length ||
+      resolvedSource?.assets.length
   );
 }
 
@@ -169,6 +245,7 @@ function extensionForImage(contentType: string, originalName: string): string {
 
 function buildManualTextSnapshot(input: ManualProductInput): string {
   return [
+    input.sourceSnippet ? `상품 링크/iframe:\n${input.sourceSnippet}` : "",
     `상품명: ${input.productName}`,
     input.brand ? `브랜드: ${input.brand}` : "",
     input.priceText ? `가격: ${input.priceText}` : "",
@@ -182,4 +259,25 @@ function buildManualTextSnapshot(input: ManualProductInput): string {
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+function dedupeAssets<T extends { url?: string; localPath?: string }>(assets: T[]): T[] {
+  const seen = new Set<string>();
+  return assets.filter((asset) => {
+    const key = asset.url || asset.localPath;
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function dedupeEvidence<T extends { kind: string; text: string; url?: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${item.kind}:${item.text}:${item.url ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

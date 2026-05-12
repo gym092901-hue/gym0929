@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma/client";
 import {
+  buildCoupangPartnersAssets,
+  buildCoupangPartnersEvidence,
+  buildCoupangPartnersTextSnapshot,
   isCoupangPartnersWidgetUrl,
-  resolveCoupangPartnersWidget,
-  type CoupangPartnersWidget
+  resolveCoupangPartnersWidget
 } from "@/lib/ingestion/coupang-partners-widget";
-import { buildAssetSeeds, buildEvidenceSeeds, extractPriceAmount, type EvidenceSeed } from "@/lib/ingestion/evidence";
+import { buildAssetSeeds, buildEvidenceSeeds, extractPriceAmount } from "@/lib/ingestion/evidence";
 import { scrapeProductPage } from "@/lib/ingestion/scrape-product-page";
 import type { AssetRole } from "@/lib/schemas/common";
 import { SCHEMA_VERSION } from "@/lib/schemas/common";
@@ -97,16 +99,17 @@ async function ingestCoupangPartnersWidget(url: string) {
     }
   });
 
-  if (widget.productImage) {
-    await prisma.sourceAsset.create({
-      data: {
+  const assets = buildCoupangPartnersAssets(widget);
+  if (assets.length > 0) {
+    await prisma.sourceAsset.createMany({
+      data: assets.map((asset) => ({
         productId: product.id,
-        kind: "image",
-        role: "product",
-        url: widget.productImage,
-        altText: widget.productName,
-        metadata: toJsonString({ provider: "coupang-partners-widget", field: "productImage" })
-      }
+        kind: asset.kind,
+        role: asset.role,
+        url: asset.url,
+        altText: asset.altText,
+        metadata: toJsonString(asset.metadata ?? {})
+      }))
     });
   }
 
@@ -123,64 +126,6 @@ async function ingestCoupangPartnersWidget(url: string) {
   });
 
   return extractProductTruth(product.id);
-}
-
-function buildCoupangPartnersEvidence(widget: CoupangPartnersWidget): EvidenceSeed[] {
-  const evidence: EvidenceSeed[] = [
-    {
-      kind: "page_title",
-      text: widget.productName,
-      confidence: 0.9,
-      metadata: { provider: "coupang-partners-widget", field: "productDescription" }
-    }
-  ];
-
-  if (widget.purchaseLink) {
-    evidence.push({
-      kind: "purchase_link",
-      text: "쿠팡 파트너스 구매 링크",
-      url: widget.purchaseLink,
-      confidence: 0.82,
-      metadata: {
-        provider: "coupang-partners-widget",
-        pageKey: widget.pageKey,
-        itemId: widget.itemId,
-        trackingCode: widget.trackingCode
-      }
-    });
-  }
-
-  if (widget.pageKey) {
-    evidence.push({
-      kind: "spec",
-      text: `쿠팡 pageKey: ${widget.pageKey}`,
-      confidence: 0.8,
-      metadata: { provider: "coupang-partners-widget", field: "pageKey" }
-    });
-  }
-
-  if (widget.itemId) {
-    evidence.push({
-      kind: "spec",
-      text: `쿠팡 itemId: ${widget.itemId}`,
-      confidence: 0.8,
-      metadata: { provider: "coupang-partners-widget", field: "itemId" }
-    });
-  }
-
-  return evidence;
-}
-
-function buildCoupangPartnersTextSnapshot(widget: CoupangPartnersWidget): string {
-  return [
-    `상품명: ${widget.productName}`,
-    widget.productImage ? `상품 이미지: ${widget.productImage}` : "",
-    widget.purchaseLink ? `구매 링크: ${widget.purchaseLink}` : "",
-    widget.pageKey ? `쿠팡 pageKey: ${widget.pageKey}` : "",
-    widget.itemId ? `쿠팡 itemId: ${widget.itemId}` : ""
-  ]
-    .filter(Boolean)
-    .join("\n");
 }
 
 export async function getProductWorkspace(productId: string) {

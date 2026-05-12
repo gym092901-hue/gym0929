@@ -101,6 +101,7 @@ type CoupangConfigStatus = {
 };
 
 type ManualProductForm = {
+  sourceSnippet: string;
   productName: string;
   brand: string;
   priceText: string;
@@ -114,6 +115,7 @@ type ManualProductForm = {
 };
 
 const emptyManualProduct: ManualProductForm = {
+  sourceSnippet: "",
   productName: "",
   brand: "",
   priceText: "",
@@ -222,8 +224,8 @@ export function ProductWorkspace() {
 
   async function ingestManual(event: FormEvent) {
     event.preventDefault();
-    if (!manualProduct.productName.trim()) {
-      setError("상품명을 입력하세요.");
+    if (!manualProduct.productName.trim() && !manualProduct.sourceSnippet.trim()) {
+      setError("상품명을 입력하거나 상품 링크/iframe을 붙여넣으세요.");
       return;
     }
 
@@ -361,6 +363,15 @@ export function ProductWorkspace() {
           <section className="panel" id="수집">
             <h2>상품 자료 입력</h2>
             <form className="grid" onSubmit={ingestManual}>
+              <label className="field">
+                <span className="field-label">상품 링크/iframe</span>
+                <textarea
+                  className="textarea compact"
+                  value={manualProduct.sourceSnippet}
+                  onChange={(event) => updateManualProduct("sourceSnippet", event.target.value)}
+                  placeholder='<iframe src="https://coupa.ng/..." ...></iframe> 또는 상품 URL'
+                />
+              </label>
               <div className="grid two">
                 <label className="field">
                   <span className="field-label">상품명</span>
@@ -368,8 +379,7 @@ export function ProductWorkspace() {
                     className="input"
                     value={manualProduct.productName}
                     onChange={(event) => updateManualProduct("productName", event.target.value)}
-                    placeholder="상품명"
-                    required
+                    placeholder="상품명, iframe에 있으면 비워도 됩니다"
                   />
                 </label>
                 <label className="field">

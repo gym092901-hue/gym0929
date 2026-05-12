@@ -1,3 +1,5 @@
+import type { AssetSeed, EvidenceSeed } from "./evidence";
+
 export type CoupangPartnersWidget = {
   requestedUrl: string;
   finalUrl: string;
@@ -60,6 +62,77 @@ export function parseCoupangPartnersUrl(requestedUrl: string, finalUrl = request
     trackingCode: query.get("trackingCode") ?? linkParams.get("lptag") ?? undefined,
     traceId: query.get("traceId") ?? linkParams.get("traceid") ?? undefined
   };
+}
+
+export function buildCoupangPartnersEvidence(widget: CoupangPartnersWidget): EvidenceSeed[] {
+  const evidence: EvidenceSeed[] = [
+    {
+      kind: "page_title",
+      text: widget.productName,
+      confidence: 0.9,
+      metadata: { provider: "coupang-partners-widget", field: "productDescription" }
+    }
+  ];
+
+  if (widget.purchaseLink) {
+    evidence.push({
+      kind: "purchase_link",
+      text: "쿠팡 파트너스 구매 링크",
+      url: widget.purchaseLink,
+      confidence: 0.82,
+      metadata: {
+        provider: "coupang-partners-widget",
+        pageKey: widget.pageKey,
+        itemId: widget.itemId,
+        trackingCode: widget.trackingCode
+      }
+    });
+  }
+
+  if (widget.pageKey) {
+    evidence.push({
+      kind: "spec",
+      text: `쿠팡 pageKey: ${widget.pageKey}`,
+      confidence: 0.8,
+      metadata: { provider: "coupang-partners-widget", field: "pageKey" }
+    });
+  }
+
+  if (widget.itemId) {
+    evidence.push({
+      kind: "spec",
+      text: `쿠팡 itemId: ${widget.itemId}`,
+      confidence: 0.8,
+      metadata: { provider: "coupang-partners-widget", field: "itemId" }
+    });
+  }
+
+  return evidence;
+}
+
+export function buildCoupangPartnersAssets(widget: CoupangPartnersWidget): AssetSeed[] {
+  if (!widget.productImage) return [];
+  return [
+    {
+      kind: "image",
+      role: "product",
+      url: widget.productImage,
+      altText: widget.productName,
+      metadata: { provider: "coupang-partners-widget", field: "productImage" }
+    }
+  ];
+}
+
+export function buildCoupangPartnersTextSnapshot(widget: CoupangPartnersWidget): string {
+  return [
+    `상품명: ${widget.productName}`,
+    widget.productImage ? `상품 이미지: ${widget.productImage}` : "",
+    widget.purchaseLink ? `구매 링크: ${widget.purchaseLink}` : "",
+    widget.pageKey ? `쿠팡 pageKey: ${widget.pageKey}` : "",
+    widget.itemId ? `쿠팡 itemId: ${widget.itemId}` : ""
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function parseUrlSearchParams(value: string | undefined): URLSearchParams {

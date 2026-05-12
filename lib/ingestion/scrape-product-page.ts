@@ -25,10 +25,8 @@ const MAX_TEXT_LENGTH = 60_000;
 const MAX_HTML_LENGTH = 500_000;
 
 export class ProductPageBlockedError extends Error {
-  constructor(hostname: string) {
-    super(
-      `${hostname}에서 자동 수집 요청을 차단했습니다. URL 형식은 맞지만 현재 이 상세페이지는 직접 수집할 수 없습니다.`
-    );
+  constructor(hostname: string, requestedUrl?: string, finalUrl?: string) {
+    super(buildBlockedMessage(hostname, requestedUrl, finalUrl));
     this.name = "ProductPageBlockedError";
   }
 }
@@ -211,5 +209,23 @@ function assertProductPageIsUsable(page: ScrapedPage) {
     return;
   }
   const hostname = new URL(page.finalUrl || page.requestedUrl).hostname;
-  throw new ProductPageBlockedError(hostname);
+  throw new ProductPageBlockedError(hostname, page.requestedUrl, page.finalUrl);
+}
+
+function buildBlockedMessage(hostname: string, requestedUrl?: string, finalUrl?: string): string {
+  const isCoupang =
+    hostname.endsWith("coupang.com") ||
+    hostname.endsWith("coupangcorp.com") ||
+    Boolean(requestedUrl && new URL(requestedUrl).hostname.endsWith("coupang.com")) ||
+    Boolean(finalUrl && new URL(finalUrl).hostname.endsWith("coupang.com"));
+
+  if (!isCoupang) {
+    return `${hostname}에서 자동 수집 요청을 차단했습니다. URL 형식은 맞지만 현재 이 상세페이지는 직접 수집할 수 없습니다.`;
+  }
+
+  return [
+    "쿠팡 공개 상세페이지가 자동 수집 요청을 차단했습니다.",
+    "link.coupang.com 단축 링크는 최종 상품 페이지로 이동은 되지만 상세페이지 본문, 이미지, 가격을 안정적으로 읽을 수 없습니다.",
+    "판매자 상품이면 WING Open API의 sellerProductId로 조회하세요."
+  ].join(" ");
 }

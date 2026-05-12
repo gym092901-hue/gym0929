@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma/client";
 import { checkStoryboardCompliance } from "@/lib/compliance/rules";
+import { buildHumanSafeVisualPlan } from "@/lib/generation/human-anatomy";
 import { scoreHookCandidate } from "@/lib/scoring/hook-score";
 import { scoreSalesAngle } from "@/lib/scoring/sales-angle-score";
 import { scoreShortsSalesPotential } from "@/lib/scoring/sales-potential";
@@ -192,7 +193,7 @@ export async function generateStoryboards(productId: string) {
           id: `scene_${hook.id}_2`,
           type: "usage",
           durationSec: 8,
-          visualPlan: "상품이 쓰이는 장면을 가까운 컷으로 보여줌",
+          visualPlan: buildHumanSafeVisualPlan("상품이 쓰이는 장면을 가까운 컷으로 보여줌"),
           narration: hook.angle.proofStrategy,
           onScreenText: "먼저 쓰는 장면부터 확인",
           assetIds: usageAsset ? [usageAsset.id] : [],

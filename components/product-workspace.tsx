@@ -27,7 +27,7 @@ type Workspace = {
   status: string;
   productName?: string | null;
   evidence: Array<{ id: string; kind: string; text: string; url?: string | null }>;
-  assets: Array<{ id: string; role: string; url?: string | null; altText?: string | null }>;
+  assets: Array<{ id: string; kind: string; role: string; url?: string | null; altText?: string | null }>;
   truthSnapshots: Array<{ payload: ProductTruthPayload }>;
   claims: Array<{ id: string; text: string; claimType: string; safe: boolean }>;
   potential?: {
@@ -588,6 +588,14 @@ export function ProductWorkspace() {
                     <Film size={18} />
                     MP4 3개 렌더
                   </button>
+                  <button
+                    className="button secondary"
+                    disabled={actionDisabled || workspace.storyboards.length === 0}
+                    onClick={() => runAction("AI 사용 영상 생성", `/api/products/${workspace.id}/generate-ai-media`)}
+                  >
+                    <Sparkles size={18} />
+                    AI 사용 영상 생성
+                  </button>
                 </div>
               </section>
 
@@ -773,6 +781,7 @@ export function ProductWorkspace() {
 
                 <div className="panel">
                   <h2>촬영 컷 요청</h2>
+                  <p className="muted">API 키가 없거나 인체 검수에 실패하면 필요한 생성 프롬프트와 수정 요청이 여기에 남습니다.</p>
                   <ul className="list">
                     {workspace.shotRequests.map((request) => (
                       <li className="list-item" key={request.id}>

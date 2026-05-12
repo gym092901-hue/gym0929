@@ -2,6 +2,7 @@ export * from "./common";
 export * from "./product-truth";
 export * from "./sales-angle";
 export * from "./hook-candidate";
+export * from "./human-anatomy-report";
 export * from "./proof-scene";
 export * from "./storyboard";
 export * from "./compliance-report";

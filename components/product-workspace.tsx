@@ -77,6 +77,13 @@ type Workspace = {
   packages: Array<{ payload: ConversionPayload }>;
   performance: Array<{ id: string; views?: number; retentionRate?: number; clickThroughRate?: number; purchases?: number }>;
   improvements: Array<{ id: string; payload: { recommendations?: string[]; nextTests?: string[] } }>;
+  promptRuns: Array<{
+    id: string;
+    task: string;
+    status: string;
+    model: string;
+    output?: ProductionWorkflowPayload | null;
+  }>;
 };
 
 type ProductTruthPayload = {
@@ -93,6 +100,35 @@ type ConversionPayload = {
   hashtags?: string[];
   productTagPriority?: Array<{ label: string; url: string; priority: number; reason: string }>;
   manualUploadChecklist?: string[];
+};
+
+type ProductionWorkflowPayload = {
+  mode: string;
+  imageGenerationMode: string;
+  videoGenerationMode: string;
+  phases: Array<{ id: string; label: string; status: string; detail: string }>;
+  scenePackages: Array<{
+    sceneId: string;
+    sceneType: string;
+    onScreenText: string;
+    imageSource: string;
+    videoSource: string;
+    chatGptImagePrompt: string;
+    veoPrompt: string;
+    existingAssetIds: string[];
+    missingInputs: string[];
+    nextAction: string;
+    anatomyReport: { verdict: string; score: number; requiredFixes: string[] };
+  }>;
+  renderReadiness: {
+    hasTruth: boolean;
+    hasSalesDesign: boolean;
+    imageReadyCount: number;
+    videoReadyCount: number;
+    scenePackageCount: number;
+    readyForFinalRender: boolean;
+  };
+  manualChecklist: string[];
 };
 
 type CoupangConfigStatus = {
@@ -135,6 +171,7 @@ const navItems = [
   ["각도", Sparkles],
   ["후킹", MessageSquareText],
   ["기획", Clapperboard],
+  ["제작", Sparkles],
   ["렌더", Film],
   ["업로드", Upload]
 ] as const;
@@ -160,6 +197,10 @@ export function ProductWorkspace() {
   const truth = workspace?.truthSnapshots[0]?.payload;
   const conversion = workspace?.packages[0]?.payload;
   const keptHooks = useMemo(() => workspace?.hooks.filter((hook) => hook.decision === "keep") ?? [], [workspace]);
+  const productionPackage = useMemo(
+    () => workspace?.promptRuns.find((run) => run.task === "production_workflow_package")?.output ?? null,
+    [workspace]
+  );
 
   useEffect(() => {
     const productId = window.localStorage.getItem("shorts-commerce-product-id");
@@ -621,12 +662,110 @@ export function ProductWorkspace() {
                   <button
                     className="button secondary"
                     disabled={actionDisabled || workspace.storyboards.length === 0}
+                    onClick={() => runAction("제작 패키지 준비", `/api/products/${workspace.id}/production-workflow`)}
+                  >
+                    <Clapperboard size={18} />
+                    제작 패키지 준비
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={actionDisabled || workspace.storyboards.length === 0}
                     onClick={() => runAction("Veo3 사용 영상 생성", `/api/products/${workspace.id}/generate-ai-media`)}
                   >
                     <Sparkles size={18} />
                     Veo3 사용 영상 생성
                   </button>
                 </div>
+              </section>
+
+              <section className="panel" id="제작">
+                <h2>현실 제작 워크플로우</h2>
+                {productionPackage ? (
+                  <div className="grid">
+                    <div className="stat-grid">
+                      <div className="stat">
+                        <span className="muted">이미지 방식</span>
+                        <strong>{productionPackage.imageGenerationMode}</strong>
+                      </div>
+                      <div className="stat">
+                        <span className="muted">영상 방식</span>
+                        <strong>{productionPackage.videoGenerationMode}</strong>
+                      </div>
+                      <div className="stat">
+                        <span className="muted">장면 패키지</span>
+                        <strong>{productionPackage.renderReadiness.scenePackageCount}</strong>
+                      </div>
+                      <div className="stat">
+                        <span className="muted">렌더 준비</span>
+                        <strong>{productionPackage.renderReadiness.readyForFinalRender ? "ready" : "waiting"}</strong>
+                      </div>
+                    </div>
+
+                    <div className="grid three">
+                      {productionPackage.phases.map((phase) => (
+                        <div className="list-item" key={phase.id}>
+                          <strong>{phase.label}</strong>
+                          <p className={phase.status === "complete" || phase.status === "ready" ? "status-pass" : "status-warn"}>
+                            {phase.status}
+                          </p>
+                          <p className="muted">{phase.detail}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid two">
+                      {productionPackage.scenePackages.map((scene) => (
+                        <div className="list-item" key={scene.sceneId}>
+                          <h3>{scene.onScreenText}</h3>
+                          <p className="muted">
+                            {scene.sceneType} · anatomy {scene.anatomyReport.verdict} {scene.anatomyReport.score}
+                          </p>
+                          <p>{scene.nextAction}</p>
+                          {scene.missingInputs.length > 0 ? (
+                            <div className="pill-row">
+                              {scene.missingInputs.map((item) => (
+                                <span className="pill status-warn" key={item}>
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          <label className="field">
+                            <span className="field-label">ChatGPT Pro 이미지 프롬프트</span>
+                            <textarea className="textarea compact" readOnly value={scene.chatGptImagePrompt} />
+                          </label>
+                          <label className="field">
+                            <span className="field-label">Veo3 영상 프롬프트</span>
+                            <textarea className="textarea compact" readOnly value={scene.veoPrompt} />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="list-item">
+                      <h3>최종 체크리스트</h3>
+                      <ul className="list">
+                        {productionPackage.manualChecklist.map((item) => (
+                          <li className="list-item" key={item}>
+                            <ShieldCheck size={16} /> {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid">
+                    <p className="muted">판매 설계와 스토리보드가 준비되면 제작 패키지를 만들 수 있습니다.</p>
+                    <button
+                      className="button secondary"
+                      disabled={actionDisabled || workspace.storyboards.length === 0}
+                      onClick={() => runAction("제작 패키지 준비", `/api/products/${workspace.id}/production-workflow`)}
+                    >
+                      <Clapperboard size={18} />
+                      제작 패키지 준비
+                    </button>
+                  </div>
+                )}
               </section>
 
               <section className="grid two">

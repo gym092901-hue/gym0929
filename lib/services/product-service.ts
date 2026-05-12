@@ -150,7 +150,12 @@ export async function getProductWorkspace(productId: string) {
       renders: { orderBy: { createdAt: "desc" } },
       packages: { orderBy: { createdAt: "desc" }, take: 1 },
       performance: { orderBy: { createdAt: "desc" } },
-      improvements: { orderBy: { createdAt: "desc" }, take: 3 }
+      improvements: { orderBy: { createdAt: "desc" }, take: 3 },
+      promptRuns: {
+        where: { task: { in: ["production_workflow_package", "chatgpt_pro_image_prompt_ready", "ai_media_prompt_ready"] } },
+        orderBy: { createdAt: "desc" },
+        take: 8
+      }
     }
   });
 
@@ -348,6 +353,11 @@ function normalizeWorkspace(workspace: any) {
     improvements: workspace.improvements.map((item: any) => ({
       ...item,
       payload: fromJsonString(item.payload, null)
+    })),
+    promptRuns: workspace.promptRuns.map((item: any) => ({
+      ...item,
+      input: fromJsonString(item.input, null),
+      output: fromJsonString(item.output, null)
     }))
   };
 }

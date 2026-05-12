@@ -7,4 +7,5 @@ export * from "./proof-scene";
 export * from "./storyboard";
 export * from "./compliance-report";
 export * from "./conversion-package";
+export * from "./production-workflow";
 export * from "./performance";

@@ -484,12 +484,13 @@ export function ProductWorkspace() {
 
             <div className="source-divider">
               <h3>보조 수집</h3>
+              <p className="muted">접근 가능한 상품 URL이나 쿠팡 파트너스 iframe 코드를 붙여넣을 수 있습니다.</p>
               <form className="form-row" onSubmit={ingest}>
                 <input
                   className="input"
                   value={url}
                   onChange={(event) => setUrl(event.target.value)}
-                  placeholder="https://..."
+                  placeholder="https://... 또는 <iframe src=&quot;https://coupa.ng/...&quot;>"
                   inputMode="url"
                   autoCapitalize="none"
                   autoCorrect="off"

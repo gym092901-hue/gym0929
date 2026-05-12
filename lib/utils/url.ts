@@ -1,5 +1,5 @@
 export function normalizeProductUrl(rawUrl: string): string {
-  const trimmed = rawUrl.trim();
+  const trimmed = extractUrlFromHtml(rawUrl.trim());
   if (!trimmed) {
     throw new Error("상품 URL을 입력하세요.");
   }
@@ -27,4 +27,14 @@ export function normalizeProductUrl(rawUrl: string): string {
   }
 
   return parsed.toString();
+}
+
+function extractUrlFromHtml(value: string): string {
+  const srcMatch = value.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+  if (srcMatch?.[1]) return srcMatch[1].trim();
+
+  const hrefMatch = value.match(/\bhref\s*=\s*["']([^"']+)["']/i);
+  if (hrefMatch?.[1]) return hrefMatch[1].trim();
+
+  return value;
 }

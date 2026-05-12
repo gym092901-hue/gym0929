@@ -12,6 +12,14 @@ describe("normalizeProductUrl", () => {
     expect(normalizeProductUrl("https://example.com/item?x=1")).toBe("https://example.com/item?x=1");
   });
 
+  it("extracts src from pasted iframe snippets", () => {
+    expect(
+      normalizeProductUrl(
+        '<iframe src="https://coupa.ng/cmPYDP" width="120" height="240" frameborder="0"></iframe>'
+      )
+    ).toBe("https://coupa.ng/cmPYDP");
+  });
+
   it("rejects non-web protocols", () => {
     expect(() => normalizeProductUrl("javascript:alert(1)")).toThrow("http 또는 https");
   });

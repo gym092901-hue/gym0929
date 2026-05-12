@@ -8,3 +8,4 @@ coverage
 prisma/dev.db
 storage
 out
+public/uploads

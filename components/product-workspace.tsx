@@ -100,6 +100,32 @@ type CoupangConfigStatus = {
   missing: string[];
 };
 
+type ManualProductForm = {
+  productName: string;
+  brand: string;
+  priceText: string;
+  purchaseLink: string;
+  description: string;
+  benefits: string;
+  usage: string;
+  cautions: string;
+  imageNotes: string;
+  imageUrls: string;
+};
+
+const emptyManualProduct: ManualProductForm = {
+  productName: "",
+  brand: "",
+  priceText: "",
+  purchaseLink: "",
+  description: "",
+  benefits: "",
+  usage: "",
+  cautions: "",
+  imageNotes: "",
+  imageUrls: ""
+};
+
 const navItems = [
   ["수집", Search],
   ["근거", FileCheck2],
@@ -115,6 +141,8 @@ export function ProductWorkspace() {
   const [url, setUrl] = useState("");
   const [sellerProductId, setSellerProductId] = useState("");
   const [coupangConfig, setCoupangConfig] = useState<CoupangConfigStatus | null>(null);
+  const [manualProduct, setManualProduct] = useState<ManualProductForm>(emptyManualProduct);
+  const [manualImages, setManualImages] = useState<File[]>([]);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +209,40 @@ export function ProductWorkspace() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url: normalizedUrl })
+      });
+      const data = await parseResponse<Workspace>(response);
+      setWorkspace(data);
+      window.localStorage.setItem("shorts-commerce-product-id", data.id);
+    } catch (caught) {
+      setError(toErrorMessage(caught));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function ingestManual(event: FormEvent) {
+    event.preventDefault();
+    if (!manualProduct.productName.trim()) {
+      setError("상품명을 입력하세요.");
+      return;
+    }
+
+    setBusy("상품 자료 수집");
+    setError(null);
+    setWorkspace(null);
+    window.localStorage.removeItem("shorts-commerce-product-id");
+    try {
+      const formData = new FormData();
+      for (const [key, value] of Object.entries(manualProduct)) {
+        formData.append(key, value);
+      }
+      for (const image of manualImages) {
+        formData.append("images", image);
+      }
+
+      const response = await fetch("/api/products/manual", {
+        method: "POST",
+        body: formData
       });
       const data = await parseResponse<Workspace>(response);
       setWorkspace(data);
@@ -262,6 +324,10 @@ export function ProductWorkspace() {
     }
   }
 
+  function updateManualProduct(key: keyof ManualProductForm, value: string) {
+    setManualProduct((prev) => ({ ...prev, [key]: value }));
+  }
+
   const actionDisabled = Boolean(busy || !workspace);
 
   return (
@@ -286,32 +352,158 @@ export function ProductWorkspace() {
         <main className="main">
           <section className="topbar">
             <p className="eyebrow">Evidence-first sales design</p>
-            <h1>상세페이지 근거로 쇼츠 판매 설계</h1>
+            <h1>상품 자료 근거로 쇼츠 판매 설계</h1>
             <p className="muted">
               자동 업로드 없이, 상품 사실과 사용 증거를 먼저 잠그고 20~35초 9:16 영상 변형을 생성합니다.
             </p>
           </section>
 
           <section className="panel" id="수집">
-            <h2>상품 URL</h2>
-            <form className="form-row" onSubmit={ingest}>
-              <input
-                className="input"
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                placeholder="https://..."
-                inputMode="url"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                type="text"
-                required
-              />
-              <button className="button" disabled={Boolean(busy)}>
-                {busy === "상세페이지 수집" ? <Loader2 size={18} /> : <Search size={18} />}
-                수집
-              </button>
+            <h2>상품 자료 입력</h2>
+            <form className="grid" onSubmit={ingestManual}>
+              <div className="grid two">
+                <label className="field">
+                  <span className="field-label">상품명</span>
+                  <input
+                    className="input"
+                    value={manualProduct.productName}
+                    onChange={(event) => updateManualProduct("productName", event.target.value)}
+                    placeholder="상품명"
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">브랜드</span>
+                  <input
+                    className="input"
+                    value={manualProduct.brand}
+                    onChange={(event) => updateManualProduct("brand", event.target.value)}
+                    placeholder="브랜드"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">가격</span>
+                  <input
+                    className="input"
+                    value={manualProduct.priceText}
+                    onChange={(event) => updateManualProduct("priceText", event.target.value)}
+                    placeholder="12,900원"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">구매 링크</span>
+                  <input
+                    className="input"
+                    value={manualProduct.purchaseLink}
+                    onChange={(event) => updateManualProduct("purchaseLink", event.target.value)}
+                    placeholder="https://..."
+                    inputMode="url"
+                  />
+                </label>
+              </div>
+
+              <label className="field">
+                <span className="field-label">상품 설명/상세페이지 문구</span>
+                <textarea
+                  className="textarea compact"
+                  value={manualProduct.description}
+                  onChange={(event) => updateManualProduct("description", event.target.value)}
+                  placeholder="상세페이지에 있는 문구나 상품 사실을 붙여넣기"
+                />
+              </label>
+
+              <div className="grid two">
+                <label className="field">
+                  <span className="field-label">장점/특징</span>
+                  <textarea
+                    className="textarea compact"
+                    value={manualProduct.benefits}
+                    onChange={(event) => updateManualProduct("benefits", event.target.value)}
+                    placeholder="한 줄에 하나씩 입력"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">사용법/사용 장면</span>
+                  <textarea
+                    className="textarea compact"
+                    value={manualProduct.usage}
+                    onChange={(event) => updateManualProduct("usage", event.target.value)}
+                    placeholder="사용 순서, 사용 장면, 촬영 가능한 컷"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">주의사항</span>
+                  <textarea
+                    className="textarea compact"
+                    value={manualProduct.cautions}
+                    onChange={(event) => updateManualProduct("cautions", event.target.value)}
+                    placeholder="상세페이지나 포장에 있는 주의 문구"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">사진에서 확인되는 내용</span>
+                  <textarea
+                    className="textarea compact"
+                    value={manualProduct.imageNotes}
+                    onChange={(event) => updateManualProduct("imageNotes", event.target.value)}
+                    placeholder="사진/이미지에 보이는 구성, 사용 장면, 전후 차이"
+                  />
+                </label>
+              </div>
+
+              <div className="grid two">
+                <label className="field">
+                  <span className="field-label">이미지 URL</span>
+                  <textarea
+                    className="textarea compact"
+                    value={manualProduct.imageUrls}
+                    onChange={(event) => updateManualProduct("imageUrls", event.target.value)}
+                    placeholder="한 줄에 하나씩 입력"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">이미지 파일</span>
+                  <input
+                    className="input"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(event) => setManualImages(Array.from(event.target.files ?? []))}
+                  />
+                  <span className="muted">{manualImages.length > 0 ? `${manualImages.length}개 선택됨` : "선택된 파일 없음"}</span>
+                </label>
+              </div>
+
+              <div className="footer-actions">
+                <button className="button" disabled={Boolean(busy)}>
+                  {busy === "상품 자료 수집" ? <Loader2 size={18} /> : <FileCheck2 size={18} />}
+                  자료로 수집
+                </button>
+              </div>
             </form>
+
+            <div className="source-divider">
+              <h3>보조 수집</h3>
+              <form className="form-row" onSubmit={ingest}>
+                <input
+                  className="input"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="https://..."
+                  inputMode="url"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  type="text"
+                  required
+                />
+                <button className="button secondary" disabled={Boolean(busy)}>
+                  {busy === "상세페이지 수집" ? <Loader2 size={18} /> : <Search size={18} />}
+                  URL 수집
+                </button>
+              </form>
+            </div>
+
             <div className="grid" style={{ marginTop: 18 }}>
               <div>
                 <h3>쿠팡 WING Open API</h3>

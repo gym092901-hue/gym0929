@@ -39,7 +39,8 @@ export async function ingestProduct(url: string) {
       url: asset.url,
       altText: asset.altText,
       width: asset.width,
-      height: asset.height
+      height: asset.height,
+      metadata: asset.metadata ? toJsonString(asset.metadata) : undefined
     }))
   });
 

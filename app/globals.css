@@ -205,6 +205,27 @@ h3 {
   resize: vertical;
 }
 
+.textarea.compact {
+  min-height: 88px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.source-divider {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
 .input:focus,
 .textarea:focus,
 .select:focus {

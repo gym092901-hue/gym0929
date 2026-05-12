@@ -4,9 +4,11 @@ export type AssetSeed = {
   kind: string;
   role: string;
   url?: string;
+  localPath?: string;
   altText?: string;
   width?: number;
   height?: number;
+  metadata?: Record<string, unknown>;
 };
 
 export type EvidenceSeed = {

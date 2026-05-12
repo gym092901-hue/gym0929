@@ -26,7 +26,7 @@ export function RemotionRoot() {
         width={1080}
         height={1920}
         fps={30}
-        durationInFrames={27 * 30}
+        durationInFrames={29 * 30}
         defaultProps={defaultFoamRollerExerciseAdProps}
       />
     </>

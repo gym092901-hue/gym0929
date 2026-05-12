@@ -123,20 +123,40 @@ function SceneVisual({
     return <ProofVisual local={local} />;
   }
   if (scene === "cta") {
-    return <PhotoVisual src={personShots.quad} local={local} sceneLength={sceneLength} zoomFrom={1.03} zoomTo={1.12} xFrom={0} xTo={-22} />;
+    return (
+      <>
+        <PhotoVisual
+          src={personShots.quad}
+          local={local}
+          sceneLength={sceneLength}
+          scene="cta"
+          zoomFrom={1.03}
+          zoomTo={1.12}
+          xFrom={0}
+          xTo={-22}
+        />
+        <CutFlash local={local} />
+      </>
+    );
   }
   const src = scene === "calf" ? personShots.calf : scene === "back" ? personShots.back : personShots.quad;
   const xWave = Math.sin(second * 2.7) * 10;
   return (
-    <PhotoVisual
-      src={src}
-      local={local}
-      sceneLength={sceneLength}
-      zoomFrom={1.04}
-      zoomTo={1.14}
-      xFrom={scene === "back" ? -24 : 18}
-      xTo={scene === "back" ? 22 + xWave : -24 + xWave}
-    />
+    <>
+      <PhotoVisual
+        src={src}
+        local={local}
+        sceneLength={sceneLength}
+        scene={scene}
+        zoomFrom={1.04}
+        zoomTo={1.14}
+        xFrom={scene === "back" ? -24 : 18}
+        xTo={scene === "back" ? 22 + xWave : -24 + xWave}
+      />
+      <MotionEcho src={src} scene={scene} local={local} sceneLength={sceneLength} />
+      <RollingCue scene={scene} local={local} />
+      <CutFlash local={local} />
+    </>
   );
 }
 
@@ -248,6 +268,7 @@ function PhotoVisual({
   src,
   local,
   sceneLength,
+  scene,
   zoomFrom,
   zoomTo,
   xFrom,
@@ -256,11 +277,14 @@ function PhotoVisual({
   src: string;
   local: number;
   sceneLength: number;
+  scene: SceneType;
   zoomFrom: number;
   zoomTo: number;
   xFrom: number;
   xTo: number;
 }) {
+  const roll = isExerciseScene(scene) ? Math.sin(local * Math.PI * 1.55) * rollAmplitude(scene) : 0;
+  const bounce = isExerciseScene(scene) ? Math.sin(local * Math.PI * 3.1) * 2.5 : 0;
   const scale = interpolate(local, [0, sceneLength], [zoomFrom, zoomTo], { extrapolateRight: "clamp" });
   const x = interpolate(local, [0, sceneLength], [xFrom, xTo], { extrapolateRight: "clamp" });
   const y = interpolate(local, [0, sceneLength], [0, -18], { extrapolateRight: "clamp" });
@@ -273,12 +297,115 @@ function PhotoVisual({
         width: "100%",
         height: "100%",
         objectFit: "cover",
-        transform: `scale(${scale}) translate(${x}px, ${y}px)`,
+        transform: `scale(${scale}) translate(${x + roll}px, ${y + bounce}px)`,
         filter: "saturate(1.04) contrast(1.05)",
         transformOrigin: "center"
       }}
     />
   );
+}
+
+function MotionEcho({
+  src,
+  scene,
+  local,
+  sceneLength
+}: {
+  src: string;
+  scene: SceneType;
+  local: number;
+  sceneLength: number;
+}) {
+  const direction = Math.sin(local * Math.PI * 1.55);
+  const fade = interpolate(local, [0.2, 0.7, sceneLength - 0.5, sceneLength], [0, 0.16, 0.16, 0], { extrapolateRight: "clamp" });
+  const offset = direction * rollAmplitude(scene) * -0.85;
+  return (
+    <Img
+      src={src}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        opacity: fade,
+        transform: `scale(1.12) translateX(${offset}px)`,
+        filter: "blur(2px) saturate(1.08) contrast(1.06)",
+        mixBlendMode: "screen"
+      }}
+    />
+  );
+}
+
+function RollingCue({ scene, local }: { scene: SceneType; local: number }) {
+  const progress = ((local * 0.95) % 1) * 100;
+  const isForward = Math.sin(local * Math.PI * 1.55) >= 0;
+  const placement = cuePlacement(scene);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: placement.left,
+        top: placement.top,
+        width: placement.width,
+        height: 86,
+        borderRadius: 999,
+        background: "rgba(0,0,0,0.48)",
+        border: "2px solid rgba(244,201,93,0.84)",
+        boxShadow: "0 18px 44px rgba(0,0,0,0.28)",
+        overflow: "hidden",
+        opacity: interpolate(local, [0, 0.35], [0, 1], { extrapolateRight: "clamp" })
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 26,
+          right: 26,
+          top: 39,
+          height: 8,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.34)"
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: 25,
+          left: `calc(${progress}% - 19px)`,
+          width: 38,
+          height: 38,
+          borderRadius: 999,
+          background: "#f4c95d",
+          boxShadow: "0 0 24px rgba(244,201,93,0.76)"
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 18,
+          fontSize: 28,
+          fontWeight: 980,
+          letterSpacing: 0,
+          color: "white",
+          textShadow: "0 4px 12px rgba(0,0,0,0.46)"
+        }}
+      >
+        <span style={{ color: isForward ? "#f4c95d" : "rgba(255,255,255,0.62)" }}>앞으로</span>
+        <span style={{ color: "rgba(255,255,255,0.58)" }}>↔</span>
+        <span style={{ color: isForward ? "rgba(255,255,255,0.62)" : "#f4c95d" }}>뒤로</span>
+      </div>
+    </div>
+  );
+}
+
+function CutFlash({ local }: { local: number }) {
+  const opacity = interpolate(local, [0, 0.08, 0.22], [0.32, 0.14, 0], { extrapolateRight: "clamp" });
+  return <AbsoluteFill style={{ background: "white", opacity, pointerEvents: "none" }} />;
 }
 
 function Header({ scene }: { scene: AdScene }) {
@@ -379,4 +506,20 @@ function fitTitle(text: string): number {
   if (text.length <= 13) return 82;
   if (text.length <= 18) return 74;
   return 62;
+}
+
+function isExerciseScene(scene: SceneType): boolean {
+  return scene === "calf" || scene === "back" || scene === "quad";
+}
+
+function rollAmplitude(scene: SceneType): number {
+  if (scene === "back") return 18;
+  if (scene === "quad") return 24;
+  return 28;
+}
+
+function cuePlacement(scene: SceneType): { left: number; top: number; width: number } {
+  if (scene === "back") return { left: 108, top: 900, width: 420 };
+  if (scene === "quad") return { left: 118, top: 980, width: 430 };
+  return { left: 92, top: 1020, width: 440 };
 }

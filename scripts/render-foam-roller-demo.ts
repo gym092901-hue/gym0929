@@ -6,7 +6,7 @@ import { ensureNarrationAudio } from "@/lib/tts/narration";
 import type { RenderScene } from "@/lib/remotion/types";
 import type { FoamRollerExerciseAdProps } from "@/remotion/compositions/FoamRollerExerciseAd";
 
-const storyboardId = "foam-roller-person-demo";
+const storyboardId = "foam-roller-photo-motion-demo";
 const outputFileName = `${storyboardId}.mp4`;
 
 const narrationScenes: RenderScene[] = [

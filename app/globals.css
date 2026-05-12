@@ -470,6 +470,37 @@ h3 {
   gap: 10px;
 }
 
+.link-first-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.fallback-note {
+  margin-top: 14px;
+  border: 1px solid rgba(168, 105, 0, 0.3);
+  border-radius: 8px;
+  background: #fff8e7;
+  padding: 12px;
+}
+
+.fallback-note p {
+  margin-bottom: 0;
+}
+
+.fallback-toggle-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.fallback-form {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
 .scene-package-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -545,7 +576,8 @@ h3 {
   .production-layout,
   .scene-package-grid,
   .upload-strip,
-  .action-grid {
+  .action-grid,
+  .link-first-form {
     grid-template-columns: 1fr;
   }
 

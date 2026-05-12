@@ -60,11 +60,13 @@ export async function prepareProductionWorkflow(productId: string) {
   }
 
   const scenePackages = sceneInputs.map(buildProductionScenePackage);
-  const imageReadyCount = scenePackages.filter((scene) => scene.existingAssetIds.length > 0 && !scene.missingInputs.includes("ChatGPT Pro 이미지")).length;
+  const imageReadyCount = sceneInputs.filter((scene) => scene.existingAssets.some((asset) => asset.kind === "image")).length;
   const videoReadyCount = sceneInputs.filter((scene) => scene.existingAssets.some((asset) => asset.kind === "video")).length;
   const hasSalesDesign = product.storyboards.length > 0;
   const hasTruth = product.truthSnapshots.length > 0;
-  const readyForFinalRender = hasTruth && hasSalesDesign && scenePackages.every((scene) => scene.anatomyReport.verdict !== "fail");
+  const hasAnyVisualAsset = imageReadyCount + videoReadyCount > 0;
+  const readyForFinalRender =
+    hasTruth && hasSalesDesign && hasAnyVisualAsset && scenePackages.every((scene) => scene.anatomyReport.verdict !== "fail");
 
   const productionPackage = ProductionWorkflowPackageSchema.parse({
     productId,
@@ -103,7 +105,9 @@ export async function prepareProductionWorkflow(productId: string) {
         id: "remotion_render",
         label: "최종 MP4 렌더",
         status: readyForFinalRender ? "ready" : "waiting",
-        detail: "업로드/생성된 이미지와 영상을 Remotion 9:16 쇼츠로 합성합니다."
+        detail: readyForFinalRender
+          ? "업로드/생성된 이미지와 영상을 Remotion 9:16 쇼츠로 합성할 수 있습니다."
+          : "최소 1개 이상의 사용 이미지나 사용 영상을 업로드한 뒤 최종 MP4 렌더를 진행하세요."
       },
       {
         id: "manual_upload",

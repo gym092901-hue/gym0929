@@ -7,8 +7,10 @@ import {
   Clipboard,
   Download,
   Film,
+  LinkIcon,
   Loader2,
   Play,
+  Search,
   Sparkles,
   Upload
 } from "lucide-react";
@@ -74,6 +76,9 @@ const emptyManualProduct: ManualProductForm = {
 };
 
 export function LocalStudioApp() {
+  const [sourceLink, setSourceLink] = useState("");
+  const [fallbackOpen, setFallbackOpen] = useState(false);
+  const [linkFailureReason, setLinkFailureReason] = useState<string | null>(null);
   const [manualProduct, setManualProduct] = useState<ManualProductForm>(emptyManualProduct);
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [generatedAssets, setGeneratedAssets] = useState<File[]>([]);
@@ -114,10 +119,44 @@ export function LocalStudioApp() {
     }
   }
 
+  async function ingestLink(event: FormEvent) {
+    event.preventDefault();
+    if (!sourceLink.trim()) {
+      setError("상품 링크를 입력하세요.");
+      return;
+    }
+
+    setBusy("링크 수집");
+    setError(null);
+    setLinkFailureReason(null);
+    try {
+      const response = await fetch("/api/products/ingest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: sourceLink.trim() })
+      });
+      const data = await parseResponse<Workspace>(response);
+      setWorkspace(data);
+      setFallbackOpen(false);
+      window.localStorage.setItem("shorts-commerce-product-id", data.id);
+    } catch (caught) {
+      const message = toErrorMessage(caught);
+      setLinkFailureReason(message);
+      setFallbackOpen(true);
+      setManualProduct((prev) => ({
+        ...prev,
+        purchaseLink: prev.purchaseLink || sourceLink.trim()
+      }));
+      setError("링크만으로는 충분히 수집되지 않았습니다. 아래에 상품명, 설명, 이미지/영상 중 필요한 자료를 추가하면 계속 진행됩니다.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function ingestManual(event: FormEvent) {
     event.preventDefault();
     if (!manualProduct.productName.trim()) {
-      setError("상품명을 입력하세요.");
+      setError("링크 보강 모드에서는 최소한 상품명을 입력하세요.");
       return;
     }
     if (!manualProduct.description.trim() && !manualProduct.benefits.trim() && !manualProduct.usage.trim() && sourceFiles.length === 0) {
@@ -129,6 +168,7 @@ export function LocalStudioApp() {
     setError(null);
     try {
       const formData = new FormData();
+      formData.append("sourceSnippet", sourceLink.trim());
       for (const [key, value] of Object.entries(manualProduct)) {
         formData.append(key, value);
       }
@@ -139,6 +179,7 @@ export function LocalStudioApp() {
       const response = await fetch("/api/products/manual", { method: "POST", body: formData });
       const data = await parseResponse<Workspace>(response);
       setWorkspace(data);
+      setFallbackOpen(false);
       window.localStorage.setItem("shorts-commerce-product-id", data.id);
     } catch (caught) {
       setError(toErrorMessage(caught));
@@ -247,11 +288,42 @@ export function LocalStudioApp() {
           <div className="section-heading">
             <span className="step-badge">1</span>
             <div>
-              <h2>상품 자료</h2>
-              <p className="muted">상세페이지 사실, 가격, 사용법, 이미지/영상만 넣습니다.</p>
+              <h2>상품 링크</h2>
+              <p className="muted">먼저 링크만 넣고 시작합니다. 막히면 필요한 자료만 보강합니다.</p>
             </div>
           </div>
-          <form className="grid" onSubmit={ingestManual}>
+          <form className="link-first-form" onSubmit={ingestLink}>
+            <label className="field">
+              <span className="field-label">상품 URL 또는 iframe</span>
+              <input
+                className="input"
+                value={sourceLink}
+                onChange={(event) => setSourceLink(event.target.value)}
+                placeholder="https://... 또는 <iframe src=&quot;https://coupa.ng/...&quot;>"
+              />
+            </label>
+            <button className="button" disabled={Boolean(busy)}>
+              {busy === "링크 수집" ? <Loader2 size={18} /> : <Search size={18} />}
+              링크로 시작
+            </button>
+          </form>
+
+          {linkFailureReason ? (
+            <div className="fallback-note">
+              <strong>링크 수집 보강 필요</strong>
+              <p className="muted">{linkFailureReason}</p>
+            </div>
+          ) : null}
+
+          <div className="fallback-toggle-row">
+            <button className="button ghost" type="button" onClick={() => setFallbackOpen((prev) => !prev)}>
+              <LinkIcon size={18} />
+              {fallbackOpen ? "보강 입력 닫기" : "링크가 안 먹히면 보강 입력"}
+            </button>
+          </div>
+
+          {fallbackOpen ? (
+          <form className="grid fallback-form" onSubmit={ingestManual}>
             <div className="grid two">
               <label className="field">
                 <span className="field-label">상품명</span>
@@ -297,9 +369,10 @@ export function LocalStudioApp() {
             </label>
             <button className="button" disabled={Boolean(busy)}>
               <Upload size={18} />
-              상품 작업 시작
+              보강 자료로 시작
             </button>
           </form>
+          ) : null}
         </section>
 
         <section className="panel">

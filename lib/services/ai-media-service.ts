@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma/client";
 import { buildHumanAnatomyReport, buildHumanSafeVisualPlan } from "@/lib/generation/human-anatomy";
-import { buildUsageImagePrompt, generateUsageImageWithOpenAI } from "@/lib/generation/openai-image";
+import { buildChatGptProImagePrompt, generateUsageImageWithOpenAI } from "@/lib/generation/openai-image";
 import { DEFAULT_VEO_MODEL, buildVeoUsagePrompt, generateUsageVideoWithVeo } from "@/lib/generation/google-veo";
 import { fromJsonString, toJsonString } from "@/lib/utils/json";
 import { getProductWorkspace } from "./product-service";
@@ -70,7 +70,7 @@ async function generateSceneMedia(productId: string, productName: string, scene:
     productName
   });
   const scenePrompt = [scene.visualPlan, scene.narration, scene.onScreenText].join("\n");
-  const imagePrompt = buildUsageImagePrompt({ productName, sceneType: scene.type, prompt: scenePrompt });
+  const imagePrompt = buildChatGptProImagePrompt({ productName, sceneType: scene.type, prompt: scenePrompt });
   const veoPrompt = buildVeoUsagePrompt({ productName, sceneType: scene.type, prompt: scenePrompt });
 
   await prisma.promptRun.create({
@@ -106,7 +106,7 @@ async function generateSceneMedia(productId: string, productName: string, scene:
   let sourceImageAssetId: string | null = null;
 
   if (!generatedImage) {
-    await recordMissingProvider(productId, scene, "OPENAI_API_KEY", imagePrompt, false);
+    await recordChatGptProImagePrompt(productId, scene, imagePrompt);
   } else {
     const imageAsset = await prisma.sourceAsset.create({
       data: {
@@ -205,6 +205,26 @@ async function recordMissingProvider(
       model: missingEnv,
       input: toJsonString({ sceneId: scene.id, prompt }),
       status: "blocked_missing_api_key",
+      schemaVersion: "2026-05-12"
+    }
+  });
+}
+
+async function recordChatGptProImagePrompt(productId: string, scene: SceneForGeneration, prompt: string) {
+  await prisma.shotRequest.create({
+    data: {
+      productId,
+      description: `ChatGPT Pro 이미지 생성 필요: ${scene.onScreenText}`,
+      reason: `ChatGPT 이미지 생성창에 아래 프롬프트를 붙여넣고, 생성된 이미지를 이 앱의 "ChatGPT 이미지/영상 업로드"에 올리세요.\n\n${prompt}`
+    }
+  });
+  await prisma.promptRun.create({
+    data: {
+      productId,
+      task: "chatgpt_pro_image_prompt_ready",
+      model: "chatgpt-pro-manual",
+      input: toJsonString({ sceneId: scene.id, prompt }),
+      status: "waiting_for_manual_chatgpt_image",
       schemaVersion: "2026-05-12"
     }
   });

@@ -183,7 +183,7 @@ function hasEnoughManualMaterial(input: ManualProductInput, resolvedSource: Reso
   );
 }
 
-async function saveUploadedManualImages(productId: string, images: UploadedManualImage[]) {
+export async function saveUploadedManualImages(productId: string, images: UploadedManualImage[]) {
   const assets: Array<{
     kind: string;
     role: string;

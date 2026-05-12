@@ -3,6 +3,8 @@ import path from "node:path";
 import OpenAI from "openai";
 import { HUMAN_ANATOMY_GUARDRAILS, HUMAN_ANATOMY_NEGATIVE_PROMPT } from "@/lib/generation/human-anatomy";
 
+export const DEFAULT_IMAGE_GENERATION_MODE = "chatgpt-pro-manual";
+
 export type GenerateUsageImageInput = {
   productId: string;
   sceneId: string;
@@ -20,6 +22,10 @@ export type GeneratedUsageImage = {
   mimeType: string;
 };
 
+export function getImageGenerationMode(): string {
+  return process.env.IMAGE_GENERATION_MODE?.trim() || DEFAULT_IMAGE_GENERATION_MODE;
+}
+
 export function buildUsageImagePrompt(input: Pick<GenerateUsageImageInput, "productName" | "sceneType" | "prompt">): string {
   return [
     "Create a photorealistic vertical 9:16 commercial fitness product usage frame.",
@@ -33,7 +39,19 @@ export function buildUsageImagePrompt(input: Pick<GenerateUsageImageInput, "prod
   ].join("\n");
 }
 
+export function buildChatGptProImagePrompt(input: Pick<GenerateUsageImageInput, "productName" | "sceneType" | "prompt">): string {
+  return [
+    "ChatGPT Pro 이미지 생성에서 아래 요청을 그대로 사용하세요.",
+    "",
+    buildUsageImagePrompt(input),
+    "",
+    "Output: one realistic vertical 9:16 image. After generation, download the image and upload it back to this app as a usage image."
+  ].join("\n");
+}
+
 export async function generateUsageImageWithOpenAI(input: GenerateUsageImageInput): Promise<GeneratedUsageImage | null> {
+  if (getImageGenerationMode() !== "openai-api") return null;
+
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
 

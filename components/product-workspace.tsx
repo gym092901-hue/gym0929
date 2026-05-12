@@ -145,6 +145,7 @@ export function ProductWorkspace() {
   const [coupangConfig, setCoupangConfig] = useState<CoupangConfigStatus | null>(null);
   const [manualProduct, setManualProduct] = useState<ManualProductForm>(emptyManualProduct);
   const [manualImages, setManualImages] = useState<File[]>([]);
+  const [assetUploads, setAssetUploads] = useState<File[]>([]);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -293,6 +294,35 @@ export function ProductWorkspace() {
       const response = await fetch(endpoint, { method: "POST" });
       const data = await parseResponse<Workspace>(response);
       setWorkspace(data);
+    } catch (caught) {
+      setError(toErrorMessage(caught));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function uploadGeneratedAssets(event: FormEvent) {
+    event.preventDefault();
+    if (!workspace) return;
+    if (assetUploads.length === 0) {
+      setError("업로드할 이미지나 영상을 선택하세요.");
+      return;
+    }
+
+    setBusy("ChatGPT 이미지/영상 업로드");
+    setError(null);
+    try {
+      const formData = new FormData();
+      for (const asset of assetUploads) {
+        formData.append("assets", asset);
+      }
+      const response = await fetch(`/api/products/${workspace.id}/assets`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await parseResponse<Workspace>(response);
+      setWorkspace(data);
+      setAssetUploads([]);
     } catch (caught) {
       setError(toErrorMessage(caught));
     } finally {
@@ -781,7 +811,26 @@ export function ProductWorkspace() {
 
                 <div className="panel">
                   <h2>촬영 컷 요청</h2>
-                  <p className="muted">API 키가 없거나 인체 검수에 실패하면 필요한 생성 프롬프트와 수정 요청이 여기에 남습니다.</p>
+                  <p className="muted">ChatGPT Pro 이미지 프롬프트, Veo3 키 누락, 인체 검수 수정 요청이 여기에 남습니다.</p>
+                  <form className="grid" onSubmit={uploadGeneratedAssets} style={{ marginBottom: 16 }}>
+                    <label className="field">
+                      <span className="field-label">ChatGPT 이미지/영상 업로드</span>
+                      <input
+                        className="input"
+                        type="file"
+                        accept="image/*,video/mp4,video/webm,video/quicktime"
+                        multiple
+                        onChange={(event) => setAssetUploads(Array.from(event.target.files ?? []))}
+                      />
+                      <span className="muted">
+                        {assetUploads.length > 0 ? `${assetUploads.length}개 선택됨` : "ChatGPT Pro에서 만든 이미지를 선택하세요"}
+                      </span>
+                    </label>
+                    <button className="button secondary" disabled={actionDisabled || assetUploads.length === 0}>
+                      <Upload size={18} />
+                      현재 상품에 추가
+                    </button>
+                  </form>
                   <ul className="list">
                     {workspace.shotRequests.map((request) => (
                       <li className="list-item" key={request.id}>

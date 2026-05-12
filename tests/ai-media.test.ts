@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildHumanAnatomyReport, buildHumanSafeVisualPlan } from "@/lib/generation/human-anatomy";
-import { buildUsageImagePrompt } from "@/lib/generation/openai-image";
+import { buildChatGptProImagePrompt, buildUsageImagePrompt } from "@/lib/generation/openai-image";
 import { DEFAULT_VEO_MODEL, buildVeoGenerationRequest, buildVeoUsagePrompt } from "@/lib/generation/google-veo";
 
 describe("ai media guardrails", () => {
@@ -43,6 +43,18 @@ describe("ai media guardrails", () => {
     expect(imagePrompt).toContain("Human anatomy requirements");
     expect(veoPrompt).toContain("Human anatomy guardrails");
     expect(veoPrompt).toContain("9:16");
+  });
+
+  it("builds a manual ChatGPT Pro image prompt", () => {
+    const prompt = buildChatGptProImagePrompt({
+      productName: "폼롤러",
+      sceneType: "usage",
+      prompt: "adult person rolling calves on a black foam roller"
+    });
+
+    expect(prompt).toContain("ChatGPT Pro");
+    expect(prompt).toContain("download the image and upload it back");
+    expect(prompt).toContain("Human anatomy requirements");
   });
 
   it("builds a Gemini-compatible Veo3 request", () => {

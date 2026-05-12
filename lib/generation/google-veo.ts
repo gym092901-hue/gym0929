@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { GoogleGenAI, type GenerateVideosOperation, type Image as GeminiImage } from "@google/genai";
+import { GoogleGenAI, type GenerateVideosOperation, type GenerateVideosParameters, type Image as GeminiImage } from "@google/genai";
 import { HUMAN_ANATOMY_GUARDRAILS, HUMAN_ANATOMY_NEGATIVE_PROMPT } from "@/lib/generation/human-anatomy";
+
+export const DEFAULT_VEO_MODEL = "veo-3.0-generate-001";
 
 export type GenerateVeoUsageVideoInput = {
   productId: string;
@@ -35,18 +37,19 @@ export function buildVeoUsagePrompt(input: Pick<GenerateVeoUsageVideoInput, "pro
   ].join("\n");
 }
 
-export async function generateUsageVideoWithVeo(input: GenerateVeoUsageVideoInput): Promise<GeneratedVeoVideo | null> {
-  const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
-  if (!apiKey) return null;
+export function getVeoModel(): string {
+  return process.env.GOOGLE_VEO_MODEL?.trim() || DEFAULT_VEO_MODEL;
+}
 
-  const model = process.env.GOOGLE_VEO_MODEL?.trim() || "veo-3.1-generate-preview";
-  const prompt = buildVeoUsagePrompt(input);
-  const ai = new GoogleGenAI({ apiKey });
-  const image = input.imagePath ? await readGeminiImage(input.imagePath, input.imageMimeType ?? "image/png") : undefined;
-  const request = {
-    model,
-    prompt,
-    ...(image ? { image } : {}),
+export function buildVeoGenerationRequest(input: {
+  model: string;
+  prompt: string;
+  image?: GeminiImage;
+}): GenerateVideosParameters {
+  return {
+    model: input.model,
+    prompt: input.prompt,
+    ...(input.image ? { image: input.image } : {}),
     config: {
       numberOfVideos: 1,
       aspectRatio: "9:16",
@@ -54,10 +57,20 @@ export async function generateUsageVideoWithVeo(input: GenerateVeoUsageVideoInpu
       resolution: process.env.GOOGLE_VEO_RESOLUTION || "720p",
       personGeneration: "allow_adult",
       negativePrompt: HUMAN_ANATOMY_NEGATIVE_PROMPT,
-      enhancePrompt: true,
-      generateAudio: false
+      enhancePrompt: true
     }
-  } as any;
+  };
+}
+
+export async function generateUsageVideoWithVeo(input: GenerateVeoUsageVideoInput): Promise<GeneratedVeoVideo | null> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const model = getVeoModel();
+  const prompt = buildVeoUsagePrompt(input);
+  const ai = new GoogleGenAI({ apiKey });
+  const image = input.imagePath ? await readGeminiImage(input.imagePath, input.imageMimeType ?? "image/png") : undefined;
+  const request = buildVeoGenerationRequest({ model, prompt, image });
   let operation = await ai.models.generateVideos(request);
 
   operation = await waitForVeoOperation(ai, operation);

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { buildHumanAnatomyReport, buildHumanSafeVisualPlan } from "@/lib/generation/human-anatomy";
 import { buildUsageImagePrompt, generateUsageImageWithOpenAI } from "@/lib/generation/openai-image";
-import { buildVeoUsagePrompt, generateUsageVideoWithVeo } from "@/lib/generation/google-veo";
+import { DEFAULT_VEO_MODEL, buildVeoUsagePrompt, generateUsageVideoWithVeo } from "@/lib/generation/google-veo";
 import { fromJsonString, toJsonString } from "@/lib/utils/json";
 import { getProductWorkspace } from "./product-service";
 
@@ -46,7 +46,7 @@ export async function generateAiUsageMediaForProduct(productId: string) {
     data: {
       productId,
       task: "ai_usage_media_generation_started",
-      model: [process.env.OPENAI_IMAGE_MODEL || "gpt-image-2", process.env.GOOGLE_VEO_MODEL || "veo-3.1-generate-preview"].join(" + "),
+      model: [process.env.OPENAI_IMAGE_MODEL || "gpt-image-2", process.env.GOOGLE_VEO_MODEL || DEFAULT_VEO_MODEL].join(" + "),
       input: toJsonString({ sceneIds: scenes.map((scene) => scene.id) }),
       status: "started",
       schemaVersion: "2026-05-12"
@@ -103,32 +103,32 @@ async function generateSceneMedia(productId: string, productName: string, scene:
     sceneType: scene.type,
     prompt: scenePrompt
   });
+  let sourceImageAssetId: string | null = null;
 
   if (!generatedImage) {
-    await createMissingProviderRequest(productId, scene, "OPENAI_API_KEY", imagePrompt);
-    return;
+    await recordMissingProvider(productId, scene, "OPENAI_API_KEY", imagePrompt, false);
+  } else {
+    const imageAsset = await prisma.sourceAsset.create({
+      data: {
+        productId,
+        kind: "image",
+        role: "usage",
+        url: generatedImage.publicUrl,
+        localPath: generatedImage.localPath,
+        altText: `${productName} AI 사용 장면 기준 이미지`,
+        metadata: toJsonString({
+          provider: "openai-image",
+          model: generatedImage.model,
+          sceneId: scene.id,
+          prompt: generatedImage.prompt,
+          negativePrompt: generatedImage.negativePrompt,
+          humanAnatomyReport: anatomyReport
+        })
+      }
+    });
+    sourceImageAssetId = imageAsset.id;
+    await appendAssetToScene(scene.id, imageAsset.id);
   }
-
-  const imageAsset = await prisma.sourceAsset.create({
-    data: {
-      productId,
-      kind: "image",
-      role: "usage",
-      url: generatedImage.publicUrl,
-      localPath: generatedImage.localPath,
-      altText: `${productName} AI 사용 장면 기준 이미지`,
-      metadata: toJsonString({
-        provider: "openai-image",
-        model: generatedImage.model,
-        sceneId: scene.id,
-        prompt: generatedImage.prompt,
-        negativePrompt: generatedImage.negativePrompt,
-        humanAnatomyReport: anatomyReport
-      })
-    }
-  });
-
-  await appendAssetToScene(scene.id, imageAsset.id);
 
   const generatedVideo = await generateUsageVideoWithVeo({
     productId,
@@ -136,12 +136,12 @@ async function generateSceneMedia(productId: string, productName: string, scene:
     productName,
     sceneType: scene.type,
     prompt: scenePrompt,
-    imagePath: generatedImage.localPath,
-    imageMimeType: generatedImage.mimeType
+    imagePath: generatedImage?.localPath,
+    imageMimeType: generatedImage?.mimeType
   });
 
   if (!generatedVideo) {
-    await createMissingProviderRequest(productId, scene, "GEMINI_API_KEY", veoPrompt);
+    await recordMissingProvider(productId, scene, "GEMINI_API_KEY", veoPrompt, true);
     return;
   }
 
@@ -159,7 +159,7 @@ async function generateSceneMedia(productId: string, productName: string, scene:
         sceneId: scene.id,
         operationName: generatedVideo.operationName,
         prompt: generatedVideo.prompt,
-        sourceImageAssetId: imageAsset.id,
+        sourceImageAssetId,
         humanAnatomyReport: anatomyReport
       })
     }
@@ -182,14 +182,22 @@ async function appendAssetToScene(sceneId: string, assetId: string) {
   });
 }
 
-async function createMissingProviderRequest(productId: string, scene: SceneForGeneration, missingEnv: string, prompt: string) {
-  await prisma.shotRequest.create({
-    data: {
-      productId,
-      description: `${missingEnv} 설정 후 AI 사용 영상 생성 가능: ${scene.onScreenText}`,
-      reason: `현재 ${missingEnv}가 없어 실제 생성은 건너뛰었습니다. 생성 프롬프트: ${prompt}`
-    }
-  });
+async function recordMissingProvider(
+  productId: string,
+  scene: SceneForGeneration,
+  missingEnv: string,
+  prompt: string,
+  createShotRequest: boolean
+) {
+  if (createShotRequest) {
+    await prisma.shotRequest.create({
+      data: {
+        productId,
+        description: `${missingEnv} 설정 후 AI 사용 영상 생성 가능: ${scene.onScreenText}`,
+        reason: `현재 ${missingEnv}가 없어 실제 생성은 건너뛰었습니다. 생성 프롬프트: ${prompt}`
+      }
+    });
+  }
   await prisma.promptRun.create({
     data: {
       productId,

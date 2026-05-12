@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildHumanAnatomyReport, buildHumanSafeVisualPlan } from "@/lib/generation/human-anatomy";
 import { buildUsageImagePrompt } from "@/lib/generation/openai-image";
-import { buildVeoUsagePrompt } from "@/lib/generation/google-veo";
+import { DEFAULT_VEO_MODEL, buildVeoGenerationRequest, buildVeoUsagePrompt } from "@/lib/generation/google-veo";
 
 describe("ai media guardrails", () => {
   it("requires explicit anatomy checks for human usage scenes", () => {
@@ -43,5 +43,18 @@ describe("ai media guardrails", () => {
     expect(imagePrompt).toContain("Human anatomy requirements");
     expect(veoPrompt).toContain("Human anatomy guardrails");
     expect(veoPrompt).toContain("9:16");
+  });
+
+  it("builds a Gemini-compatible Veo3 request", () => {
+    const request = buildVeoGenerationRequest({
+      model: DEFAULT_VEO_MODEL,
+      prompt: "adult person using a foam roller in a safe home workout scene"
+    });
+
+    expect(request.model).toBe("veo-3.0-generate-001");
+    expect(request.prompt).toContain("foam roller");
+    expect(request.config?.aspectRatio).toBe("9:16");
+    expect(request.config?.personGeneration).toBe("allow_adult");
+    expect(request.config).not.toHaveProperty("generateAudio");
   });
 });

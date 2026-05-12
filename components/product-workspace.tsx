@@ -591,10 +591,10 @@ export function ProductWorkspace() {
                   <button
                     className="button secondary"
                     disabled={actionDisabled || workspace.storyboards.length === 0}
-                    onClick={() => runAction("AI 사용 영상 생성", `/api/products/${workspace.id}/generate-ai-media`)}
+                    onClick={() => runAction("Veo3 사용 영상 생성", `/api/products/${workspace.id}/generate-ai-media`)}
                   >
                     <Sparkles size={18} />
-                    AI 사용 영상 생성
+                    Veo3 사용 영상 생성
                   </button>
                 </div>
               </section>

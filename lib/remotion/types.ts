@@ -6,6 +6,11 @@ export type RenderScene = {
   narration: string;
   onScreenText: string;
   assetUrls: string[];
+  assetMedia?: Array<{
+    url: string;
+    kind: string;
+    role?: string;
+  }>;
   requiresUserShot: boolean;
   shotRequest?: string;
 };
@@ -14,6 +19,7 @@ export type ShortsRenderProps = {
   productName: string;
   variant: string;
   durationSec: number;
+  narrationAudioUrl?: string;
   scenes: RenderScene[];
 };
 

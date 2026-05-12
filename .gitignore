@@ -9,3 +9,4 @@ prisma/dev.db
 storage
 out
 public/uploads
+public/generated

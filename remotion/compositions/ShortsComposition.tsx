@@ -1,40 +1,19 @@
-import { AbsoluteFill, Img, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import type { ShortsRenderProps } from "../../lib/remotion/types";
+import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import type { RenderScene, ShortsRenderProps } from "../../lib/remotion/types";
 
-export function ShortsComposition({ productName, variant, scenes }: ShortsRenderProps) {
+export function ShortsComposition({ productName, variant, scenes, narrationAudioUrl }: ShortsRenderProps) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const scene = getCurrentScene(scenes, frame, fps);
   const sceneStart = getSceneStartFrame(scenes, scene.index, fps);
   const localFrame = frame - sceneStart;
   const fade = interpolate(localFrame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
-  const assetUrl = scene.item.assetUrls[0];
+  const sceneFrames = Math.max(1, scene.item.durationSec * fps);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#17211b", color: "white", fontFamily: "Inter, Arial, sans-serif" }}>
-      {assetUrl ? (
-        <Img
-          src={assetUrl}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            opacity: 0.58,
-            filter: "saturate(1.02) contrast(1.08)"
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(140deg, #17211b 0%, #284339 45%, #f4c95d 46%, #f4c95d 48%, #163329 49%, #0f1d18 100%)"
-          }}
-        />
-      )}
+      <SceneMedia scene={scene.item} localFrame={localFrame} sceneFrames={sceneFrames} />
+      {narrationAudioUrl ? <Audio src={narrationAudioUrl} volume={0.9} /> : null}
       <div
         style={{
           position: "absolute",
@@ -128,6 +107,69 @@ export function ShortsComposition({ productName, variant, scenes }: ShortsRender
   );
 }
 
+function SceneMedia({
+  scene,
+  localFrame,
+  sceneFrames
+}: {
+  scene: RenderScene;
+  localFrame: number;
+  sceneFrames: number;
+}) {
+  const media = scene.assetMedia?.[0] ?? scene.assetUrls.map((url) => ({ url, kind: inferMediaKind(url) }))[0];
+  const pan = interpolate(localFrame, [0, sceneFrames], [0, -28], { extrapolateRight: "clamp" });
+  const scale = interpolate(localFrame, [0, sceneFrames], [1.03, 1.14], { extrapolateRight: "clamp" });
+
+  if (media?.url && (media.kind === "video" || inferMediaKind(media.url) === "video")) {
+    return (
+      <Video
+        src={media.url}
+        muted
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 0.68,
+          filter: "saturate(1.08) contrast(1.08)"
+        }}
+      />
+    );
+  }
+
+  if (media?.url) {
+    return (
+      <Img
+        src={media.url}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 0.6,
+          filter: "saturate(1.02) contrast(1.08)",
+          transform: `scale(${scale}) translateX(${pan}px)`,
+          transformOrigin: "center"
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background:
+          "linear-gradient(140deg, #17211b 0%, #284339 45%, #f4c95d 46%, #f4c95d 48%, #163329 49%, #0f1d18 100%)",
+        transform: `scale(${scale}) translateX(${pan}px)`
+      }}
+    />
+  );
+}
+
 function getCurrentScene(scenes: ShortsRenderProps["scenes"], frame: number, fps: number) {
   let cursor = 0;
   for (let index = 0; index < scenes.length; index += 1) {
@@ -149,4 +191,8 @@ function fitFontSize(text: string): number {
   if (text.length <= 24) return 76;
   if (text.length <= 38) return 62;
   return 52;
+}
+
+function inferMediaKind(url: string): string {
+  return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? "video" : "image";
 }

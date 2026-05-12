@@ -39,6 +39,15 @@ describe("manual product materials", () => {
     ).toEqual(["usage", "before_after"]);
   });
 
+  it("keeps video URLs as video assets", () => {
+    expect(
+      buildManualAssetSeeds({
+        productName: "테스트 상품",
+        imageUrls: ["https://example.com/usage.mp4"]
+      })[0]
+    ).toMatchObject({ kind: "video", role: "usage" });
+  });
+
   it("merges Coupang widget metadata with manual materials", () => {
     const merged = mergeManualInputWithSource(
       {

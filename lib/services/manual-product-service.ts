@@ -12,6 +12,7 @@ import {
 import {
   buildManualAssetSeeds,
   buildManualEvidenceSeeds,
+  inferManualAssetKind,
   inferManualImageRole,
   type ManualProductMaterials
 } from "@/lib/ingestion/manual-materials";
@@ -39,7 +40,9 @@ type ResolvedManualSource = {
 };
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 80 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/x-m4v"]);
 
 export async function ingestManualProduct(input: ManualProductInput) {
   const resolvedSource = await resolveManualSource(input.sourceSnippet);
@@ -194,22 +197,24 @@ async function saveUploadedManualImages(productId: string, images: UploadedManua
 
   for (const image of images.slice(0, 12)) {
     if (image.bytes.byteLength === 0) continue;
-    if (image.bytes.byteLength > MAX_IMAGE_BYTES) {
-      throw new Error(`${image.originalName} 파일은 8MB 이하 이미지만 업로드할 수 있습니다.`);
+    const isVideo = image.contentType.startsWith("video/");
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (image.bytes.byteLength > maxBytes) {
+      throw new Error(`${image.originalName} 파일은 ${isVideo ? "80MB 이하 영상" : "8MB 이하 이미지"}만 업로드할 수 있습니다.`);
     }
-    if (!ALLOWED_IMAGE_TYPES.has(image.contentType)) {
-      throw new Error(`${image.originalName} 파일 형식은 jpg, png, webp, gif만 지원합니다.`);
+    if (!ALLOWED_IMAGE_TYPES.has(image.contentType) && !ALLOWED_VIDEO_TYPES.has(image.contentType)) {
+      throw new Error(`${image.originalName} 파일 형식은 jpg, png, webp, gif, mp4, webm, mov만 지원합니다.`);
     }
 
-    const extension = extensionForImage(image.contentType, image.originalName);
+    const extension = extensionForMedia(image.contentType, image.originalName);
     const fileName = `${randomUUID()}${extension}`;
     const localPath = join(uploadDir, fileName);
     await writeFile(localPath, image.bytes);
     const publicUrl = `/uploads/manual/${productId}/${fileName}`;
 
     assets.push({
-      kind: "image",
-      role: inferManualImageRole(image.originalName),
+      kind: inferManualAssetKind(fileName),
+      role: isVideo ? inferManualVideoRole(image.originalName) : inferManualImageRole(image.originalName),
       url: publicUrl,
       localPath,
       altText: image.originalName,
@@ -226,9 +231,9 @@ async function saveUploadedManualImages(productId: string, images: UploadedManua
   return assets;
 }
 
-function extensionForImage(contentType: string, originalName: string): string {
+function extensionForMedia(contentType: string, originalName: string): string {
   const current = extname(originalName).toLowerCase();
-  if ([".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(current)) return current;
+  if ([".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mov", ".m4v"].includes(current)) return current;
   switch (contentType) {
     case "image/jpeg":
       return ".jpg";
@@ -238,9 +243,23 @@ function extensionForImage(contentType: string, originalName: string): string {
       return ".webp";
     case "image/gif":
       return ".gif";
+    case "video/mp4":
+      return ".mp4";
+    case "video/webm":
+      return ".webm";
+    case "video/quicktime":
+      return ".mov";
+    case "video/x-m4v":
+      return ".m4v";
     default:
-      return ".img";
+      return ".bin";
   }
+}
+
+function inferManualVideoRole(value: string): string {
+  if (/전후|비교|before|after/i.test(value)) return "before_after";
+  if (/주의|경고|caution|warning/i.test(value)) return "caution";
+  return "usage";
 }
 
 function buildManualTextSnapshot(input: ManualProductInput): string {

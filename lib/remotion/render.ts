@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/prisma/client";
 import { fromJsonString } from "@/lib/utils/json";
+import { ensureNarrationAudio } from "@/lib/tts/narration";
 import type { ShortsRenderProps } from "./types";
 
 export async function renderStoryboardToMp4(storyboardId: string) {
@@ -32,23 +33,43 @@ export async function renderStoryboardToMp4(storyboardId: string) {
 
   try {
     await fs.mkdir(outputDir, { recursive: true });
-    const inputProps: ShortsRenderProps = {
-      productName: storyboard.product.productName ?? "상품",
-      variant: storyboard.renderVariant,
-      durationSec: storyboard.durationSec,
-      scenes: storyboard.proofScenes.map((scene) => ({
+    const scenes = storyboard.proofScenes.map((scene) => {
+      const media = readJsonArray<string>(scene.assetIds)
+        .map((assetId) => assetMap.get(assetId))
+        .filter((asset): asset is NonNullable<typeof asset> => Boolean(asset));
+      return {
         id: scene.id,
         type: scene.type,
         durationSec: scene.durationSec,
         visualPlan: scene.visualPlan,
         narration: scene.narration,
         onScreenText: scene.onScreenText,
-        assetUrls: readJsonArray<string>(scene.assetIds)
-          .map((assetId) => assetMap.get(assetId)?.url)
-          .filter((url): url is string => Boolean(url)),
-          requiresUserShot: scene.requiresUserShot,
-          shotRequest: scene.shotRequest ?? undefined
-      }))
+        assetUrls: media
+          .map((asset) => asset.url)
+          .filter((url): url is string => Boolean(url))
+          .map(toRemotionAssetUrl),
+        assetMedia: media
+          .filter((asset) => asset.url)
+          .map((asset) => ({
+            url: toRemotionAssetUrl(asset.url!),
+            kind: asset.kind,
+            role: asset.role
+          })),
+        requiresUserShot: scene.requiresUserShot,
+        shotRequest: scene.shotRequest ?? undefined
+      };
+    });
+    const narrationAudioUrl = await ensureNarrationAudio({
+      storyboardId,
+      productName: storyboard.product.productName ?? "상품",
+      scenes
+    });
+    const inputProps: ShortsRenderProps = {
+      productName: storyboard.product.productName ?? "상품",
+      variant: storyboard.renderVariant,
+      durationSec: storyboard.durationSec,
+      narrationAudioUrl: narrationAudioUrl ? toRemotionAssetUrl(narrationAudioUrl) : undefined,
+      scenes
     };
     await renderWithRetry(inputProps, outputLocation);
     await prisma.videoRender.update({
@@ -129,4 +150,10 @@ async function renderWithRetry(inputProps: ShortsRenderProps, outputLocation: st
 
 function readJsonArray<T>(value: unknown): T[] {
   return fromJsonString<T[]>(value, []);
+}
+
+function toRemotionAssetUrl(url: string): string {
+  if (url.startsWith("/public/")) return url;
+  if (url.startsWith("/")) return `/public${url}`;
+  return url;
 }

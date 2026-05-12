@@ -463,7 +463,7 @@ export function ProductWorkspace() {
 
               <div className="grid two">
                 <label className="field">
-                  <span className="field-label">이미지 URL</span>
+                  <span className="field-label">이미지/영상 URL</span>
                   <textarea
                     className="textarea compact"
                     value={manualProduct.imageUrls}
@@ -472,11 +472,11 @@ export function ProductWorkspace() {
                   />
                 </label>
                 <label className="field">
-                  <span className="field-label">이미지 파일</span>
+                  <span className="field-label">이미지/사용 영상 파일</span>
                   <input
                     className="input"
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/mp4,video/webm,video/quicktime"
                     multiple
                     onChange={(event) => setManualImages(Array.from(event.target.files ?? []))}
                   />

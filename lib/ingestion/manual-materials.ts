@@ -64,11 +64,11 @@ export function buildManualEvidenceSeeds(input: ManualProductMaterials): Evidenc
 
 export function buildManualAssetSeeds(input: ManualProductMaterials): AssetSeed[] {
   return normalizeManualImageUrls(input.imageUrls ?? []).map((url) => ({
-    kind: "image",
+    kind: inferManualAssetKind(url),
     role: inferManualImageRole(url),
     url,
     altText: input.productName,
-    metadata: { provider: "manual-materials", source: "imageUrl" }
+    metadata: { provider: "manual-materials", source: "mediaUrl" }
   }));
 }
 
@@ -93,6 +93,10 @@ export function inferManualImageRole(value: string): string {
   if (/상세|detail|스펙|spec/i.test(value)) return "detail";
   if (/주의|경고|caution|warning/i.test(value)) return "caution";
   return "product";
+}
+
+export function inferManualAssetKind(value: string): string {
+  return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(value) ? "video" : "image";
 }
 
 function linesToEvidence(

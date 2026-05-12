@@ -8,6 +8,7 @@ import {
   FileCheck2,
   Film,
   Gauge,
+  KeyRound,
   LinkIcon,
   Loader2,
   MessageSquareText,
@@ -94,6 +95,11 @@ type ConversionPayload = {
   manualUploadChecklist?: string[];
 };
 
+type CoupangConfigStatus = {
+  configured: boolean;
+  missing: string[];
+};
+
 const navItems = [
   ["수집", Search],
   ["근거", FileCheck2],
@@ -107,6 +113,8 @@ const navItems = [
 
 export function ProductWorkspace() {
   const [url, setUrl] = useState("");
+  const [sellerProductId, setSellerProductId] = useState("");
+  const [coupangConfig, setCoupangConfig] = useState<CoupangConfigStatus | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -124,9 +132,20 @@ export function ProductWorkspace() {
 
   useEffect(() => {
     const productId = window.localStorage.getItem("shorts-commerce-product-id");
+    void loadCoupangConfig();
     if (!productId) return;
     void loadProduct(productId);
   }, []);
+
+  async function loadCoupangConfig() {
+    try {
+      const response = await fetch("/api/coupang/config");
+      const data = await parseResponse<CoupangConfigStatus>(response);
+      setCoupangConfig(data);
+    } catch {
+      setCoupangConfig({ configured: false, missing: ["COUPANG_ACCESS_KEY", "COUPANG_SECRET_KEY", "COUPANG_VENDOR_ID"] });
+    }
+  }
 
   async function loadProduct(productId: string) {
     setBusy("작업 불러오기");
@@ -170,6 +189,35 @@ export function ProductWorkspace() {
       setError(toErrorMessage(caught));
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function ingestCoupangSellerProduct(event: FormEvent) {
+    event.preventDefault();
+    const cleanId = sellerProductId.trim();
+    if (!/^\d+$/.test(cleanId)) {
+      setError("쿠팡 sellerProductId는 숫자만 입력해야 합니다.");
+      return;
+    }
+
+    setBusy("쿠팡 WING API 조회");
+    setError(null);
+    setWorkspace(null);
+    window.localStorage.removeItem("shorts-commerce-product-id");
+    try {
+      const response = await fetch("/api/coupang/seller-product", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sellerProductId: cleanId })
+      });
+      const data = await parseResponse<Workspace>(response);
+      setWorkspace(data);
+      window.localStorage.setItem("shorts-commerce-product-id", data.id);
+    } catch (caught) {
+      setError(toErrorMessage(caught));
+    } finally {
+      setBusy(null);
+      void loadCoupangConfig();
     }
   }
 
@@ -264,6 +312,37 @@ export function ProductWorkspace() {
                 수집
               </button>
             </form>
+            <div className="grid" style={{ marginTop: 18 }}>
+              <div>
+                <h3>쿠팡 WING Open API</h3>
+                <p className="muted">판매자센터 등록상품 데이터 소스</p>
+              </div>
+              <form className="form-row" onSubmit={ingestCoupangSellerProduct}>
+                <input
+                  className="input"
+                  value={sellerProductId}
+                  onChange={(event) => setSellerProductId(event.target.value)}
+                  placeholder="sellerProductId"
+                  inputMode="numeric"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  type="text"
+                  required
+                />
+                <button className="button secondary" disabled={Boolean(busy)}>
+                  {busy === "쿠팡 WING API 조회" ? <Loader2 size={18} /> : <KeyRound size={18} />}
+                  WING API 조회
+                </button>
+              </form>
+              {coupangConfig ? (
+                coupangConfig.configured ? (
+                  <p className="status-pass">쿠팡 WING API 환경변수가 설정되어 있습니다.</p>
+                ) : (
+                  <p className="status-warn">필요한 환경변수: {coupangConfig.missing.join(", ")}</p>
+                )
+              ) : null}
+            </div>
             {error ? <p className="status-fail">{error}</p> : null}
             {busy ? <p className="muted">{busy} 진행 중입니다.</p> : null}
           </section>

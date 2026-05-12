@@ -46,26 +46,11 @@ export async function renderStoryboardToMp4(storyboardId: string) {
         assetUrls: readJsonArray<string>(scene.assetIds)
           .map((assetId) => assetMap.get(assetId)?.url)
           .filter((url): url is string => Boolean(url)),
-        requiresUserShot: scene.requiresUserShot,
-        shotRequest: scene.shotRequest ?? undefined
+          requiresUserShot: scene.requiresUserShot,
+          shotRequest: scene.shotRequest ?? undefined
       }))
     };
-    const serveUrl = await bundle({
-      entryPoint: path.join(process.cwd(), "remotion", "index.ts"),
-      webpackOverride: (config) => config
-    });
-    const composition = await selectComposition({
-      serveUrl,
-      id: "ShortsVideo",
-      inputProps
-    });
-    await renderMedia({
-      composition,
-      serveUrl,
-      codec: "h264",
-      outputLocation,
-      inputProps
-    });
+    await renderWithRetry(inputProps, outputLocation);
     await prisma.videoRender.update({
       where: { id: render.id },
       data: {
@@ -99,14 +84,47 @@ export async function renderStoryboardToMp4(storyboardId: string) {
 export async function renderTopStoryboards(productId: string, minimum = 3) {
   const storyboards = await prisma.storyboard.findMany({
     where: { productId },
+    include: { renders: true },
     orderBy: { createdAt: "asc" },
-    take: minimum
   });
   const renders = [];
-  for (const storyboard of storyboards) {
+  for (const storyboard of storyboards.slice(0, minimum)) {
+    const completeRender = storyboard.renders.find((render) => render.status === "complete");
+    if (completeRender) {
+      renders.push(completeRender);
+      continue;
+    }
     renders.push(await renderStoryboardToMp4(storyboard.id));
   }
   return renders;
+}
+
+async function renderWithRetry(inputProps: ShortsRenderProps, outputLocation: string) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const serveUrl = await bundle({
+        entryPoint: path.join(process.cwd(), "remotion", "index.ts"),
+        webpackOverride: (config) => config
+      });
+      const composition = await selectComposition({
+        serveUrl,
+        id: "ShortsVideo",
+        inputProps
+      });
+      await renderMedia({
+        composition,
+        serveUrl,
+        codec: "h264",
+        outputLocation,
+        inputProps
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 function readJsonArray<T>(value: unknown): T[] {

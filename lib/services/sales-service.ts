@@ -315,8 +315,9 @@ export async function createConversionPackage(productId: string) {
     }
   });
   const truth = ProductTruthSchema.parse(fromJsonString(product.truthSnapshots[0]?.payload, null));
+  const completeRenders = product.renders.filter((render) => render.status === "complete");
   const renderIds =
-    product.renders.length > 0 ? product.renders.map((render) => render.id) : product.storyboards.map((item) => item.id);
+    completeRenders.length > 0 ? completeRenders.map((render) => render.id) : product.storyboards.map((item) => item.id);
   const hashtags = ["#쇼츠", "#상품추천", truth.category ? `#${truth.category.replace(/\s+/g, "")}` : "#구매전확인"].slice(0, 5);
   const payload = {
     id: `package_${productId}`,

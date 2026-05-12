@@ -1,5 +1,5 @@
-import { ProductWorkspace } from "@/components/product-workspace";
+import { LocalStudioApp } from "@/components/local-studio-app";
 
 export default function Home() {
-  return <ProductWorkspace />;
+  return <LocalStudioApp />;
 }

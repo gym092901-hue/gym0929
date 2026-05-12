@@ -20,7 +20,7 @@ export async function ensureNarrationAudio(input: NarrationInput): Promise<strin
   const publicDir = path.join(process.cwd(), "public", "generated", "tts");
   await fs.mkdir(publicDir, { recursive: true });
 
-  if (process.env.OPENAI_API_KEY?.trim()) {
+  if (process.env.OPENAI_TTS_ENABLED === "true" && process.env.OPENAI_API_KEY?.trim()) {
     const mp3Path = path.join(publicDir, `${input.storyboardId}.mp3`);
     await synthesizeWithOpenAI(narration, mp3Path);
     return `/generated/tts/${input.storyboardId}.mp3`;

@@ -470,6 +470,11 @@ h3 {
   gap: 10px;
 }
 
+.local-media-note {
+  align-self: center;
+  margin-bottom: 0;
+}
+
 .link-first-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

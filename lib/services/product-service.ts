@@ -152,7 +152,11 @@ export async function getProductWorkspace(productId: string) {
       performance: { orderBy: { createdAt: "desc" } },
       improvements: { orderBy: { createdAt: "desc" }, take: 3 },
       promptRuns: {
-        where: { task: { in: ["production_workflow_package", "chatgpt_pro_image_prompt_ready", "ai_media_prompt_ready"] } },
+        where: {
+          task: {
+            in: ["production_workflow_package", "local_media_generation", "chatgpt_pro_image_prompt_ready", "ai_media_prompt_ready"]
+          }
+        },
         orderBy: { createdAt: "desc" },
         take: 8
       }

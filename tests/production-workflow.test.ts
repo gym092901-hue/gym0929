@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildProductionScenePackage } from "@/lib/services/production-workflow-service";
 
 describe("production workflow package", () => {
-  it("packages human-in-loop image and Veo3 prompts for a usage scene", () => {
+  it("packages local media defaults and optional external prompts for a usage scene", () => {
     const scene = buildProductionScenePackage({
       productName: "폼롤러",
       storyboardId: "storyboard_1",
@@ -16,12 +16,11 @@ describe("production workflow package", () => {
       existingAssets: []
     });
 
-    expect(scene.imageSource).toBe("chatgpt-pro-manual");
-    expect(scene.videoSource).toBe("veo3");
+    expect(scene.imageSource).toBe("local-template");
+    expect(scene.videoSource).toBe("remotion-motion");
     expect(scene.chatGptImagePrompt).toContain("ChatGPT Pro");
     expect(scene.veoPrompt).toContain("Vertical 9:16");
-    expect(scene.missingInputs).toContain("ChatGPT Pro 이미지");
-    expect(scene.missingInputs).toContain("Veo3 영상 또는 직접 촬영 영상");
+    expect(scene.missingInputs).toContain("로컬 생성 이미지 또는 직접 업로드 영상");
     expect(scene.anatomyReport.verdict).toBe("pass");
   });
 

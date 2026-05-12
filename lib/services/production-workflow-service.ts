@@ -25,8 +25,8 @@ export async function prepareProductionWorkflow(productId: string) {
       truthSnapshots: { orderBy: { createdAt: "desc" }, take: 1 },
       assets: true,
       storyboards: {
-        orderBy: { createdAt: "asc" },
-        include: { proofScenes: { orderBy: { orderIndex: "asc" } } }
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        include: { proofScenes: { orderBy: [{ orderIndex: "asc" }, { id: "asc" }] } }
       }
     }
   });
@@ -72,8 +72,8 @@ export async function prepareProductionWorkflow(productId: string) {
     productId,
     productName,
     mode: "sales-design-first-human-in-loop",
-    imageGenerationMode: "chatgpt-pro-manual",
-    videoGenerationMode: "veo3-or-uploaded-footage",
+    imageGenerationMode: "local-template-or-chatgpt-pro-manual",
+    videoGenerationMode: "local-remotion-or-veo3-or-uploaded-footage",
     phases: [
       {
         id: "truth",
@@ -89,25 +89,25 @@ export async function prepareProductionWorkflow(productId: string) {
       },
       {
         id: "image_reference",
-        label: "ChatGPT Pro 이미지",
+        label: "로컬/ChatGPT 이미지",
         status: imageReadyCount > 0 ? "ready" : "waiting",
-        detail: `${scenePackages.length}개 사용 장면에 대한 이미지 프롬프트를 준비했습니다.`
+        detail: `${scenePackages.length}개 사용 장면을 로컬 SVG 이미지로 만들거나 프롬프트로 외부 생성할 수 있습니다.`
       },
       {
         id: "veo_motion",
-        label: "Veo3 실사용 영상",
-        status: process.env.GEMINI_API_KEY?.trim() ? "ready" : "waiting",
-        detail: process.env.GEMINI_API_KEY?.trim()
-          ? "Veo3 생성 키가 있어 사용 장면 영상을 생성할 수 있습니다."
-          : "GEMINI_API_KEY가 없으면 Veo3 프롬프트를 복사해 외부에서 생성하거나 사용 영상을 업로드합니다."
+        label: "로컬 모션 영상",
+        status: imageReadyCount > 0 || videoReadyCount > 0 ? "ready" : "waiting",
+        detail: imageReadyCount > 0 || videoReadyCount > 0
+          ? "로컬 이미지 또는 업로드 영상이 있어 Remotion 모션 MP4로 합성할 수 있습니다."
+          : "로컬 이미지/모션 생성을 실행하거나 직접 촬영 영상을 업로드하세요."
       },
       {
         id: "remotion_render",
         label: "최종 MP4 렌더",
         status: readyForFinalRender ? "ready" : "waiting",
         detail: readyForFinalRender
-          ? "업로드/생성된 이미지와 영상을 Remotion 9:16 쇼츠로 합성할 수 있습니다."
-          : "최소 1개 이상의 사용 이미지나 사용 영상을 업로드한 뒤 최종 MP4 렌더를 진행하세요."
+          ? "로컬/업로드 이미지와 영상을 Remotion 9:16 쇼츠로 합성할 수 있습니다."
+          : "최소 1개 이상의 사용 이미지나 사용 영상을 준비한 뒤 최종 MP4 렌더를 진행하세요."
       },
       {
         id: "manual_upload",
@@ -133,9 +133,9 @@ export async function prepareProductionWorkflow(productId: string) {
     },
     manualChecklist: [
       "상세페이지 근거에 없는 효능/성능 주장이 없는지 확인",
-      "ChatGPT Pro 이미지 프롬프트로 9:16 사용 장면 이미지 생성",
+      "로컬 이미지/모션 생성 또는 직접 업로드 중 하나를 선택",
       "생성 이미지에서 손, 발, 관절, 사지 수, 폼롤러 접촉점 확인",
-      "이미지를 앱에 업로드하거나 Veo3 프롬프트로 5~8초 사용 영상 생성",
+      "실사 품질이 필요하면 촬영 영상이나 외부 생성 영상을 추가 업로드",
       "최소 3개 스토리보드 MP4 렌더 후 사람이 확인",
       "제목, 설명, 고정 댓글, 해시태그를 수동 업로드 패키지에서 복사",
       "업로드 후 조회수, 유지율, 클릭률, 구매 수를 입력해 다음 개선안 생성"
@@ -170,8 +170,7 @@ export function buildProductionScenePackage(input: ProductionSceneInput): Produc
   const hasImage = input.existingAssets.some((asset) => asset.kind === "image");
   const hasVideo = input.existingAssets.some((asset) => asset.kind === "video");
   const missingInputs = [
-    hasImage ? "" : "ChatGPT Pro 이미지",
-    hasVideo ? "" : "Veo3 영상 또는 직접 촬영 영상",
+    hasImage || hasVideo ? "" : "로컬 생성 이미지 또는 직접 업로드 영상",
     anatomyReport.verdict === "fail" ? "인체 구성 수정" : ""
   ].filter(Boolean);
 
@@ -181,8 +180,8 @@ export function buildProductionScenePackage(input: ProductionSceneInput): Produc
     sceneType: input.sceneType,
     onScreenText: input.onScreenText,
     narration: input.narration,
-    imageSource: hasImage ? "uploaded" : "chatgpt-pro-manual",
-    videoSource: hasVideo ? "uploaded" : "veo3",
+    imageSource: hasImage ? "uploaded" : "local-template",
+    videoSource: hasVideo ? "uploaded" : "remotion-motion",
     chatGptImagePrompt: buildChatGptProImagePrompt({
       productName: input.productName,
       sceneType: input.sceneType,
@@ -202,7 +201,7 @@ export function buildProductionScenePackage(input: ProductionSceneInput): Produc
 
 function resolveSceneNextAction(input: { hasImage: boolean; hasVideo: boolean; anatomyVerdict: string }) {
   if (input.anatomyVerdict === "fail") return "인체 구성 프롬프트를 먼저 수정하세요.";
-  if (!input.hasImage) return "ChatGPT Pro에서 기준 이미지를 생성해 업로드하세요.";
-  if (!input.hasVideo) return "Veo3로 5~8초 실사용 영상을 생성하거나 직접 촬영 영상을 업로드하세요.";
+  if (!input.hasImage && !input.hasVideo) return "로컬 이미지/모션 생성을 실행하거나 직접 촬영 영상을 업로드하세요.";
+  if (input.hasImage && !input.hasVideo) return "이 이미지를 Remotion 모션 MP4로 바로 합성할 수 있습니다.";
   return "최종 MP4 렌더에 사용할 준비가 되었습니다.";
 }

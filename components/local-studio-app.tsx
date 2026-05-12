@@ -425,8 +425,8 @@ export function LocalStudioApp() {
           <div className="section-heading">
             <span className="step-badge">3</span>
             <div>
-              <h2>이미지와 실사용 영상</h2>
-              <p className="muted">ChatGPT Pro 이미지를 만들고, Veo3 영상이나 직접 촬영 영상을 업로드합니다.</p>
+              <h2>로컬 이미지와 모션 영상</h2>
+              <p className="muted">외부 GPT/Veo 없이 장면 이미지를 만들고, Remotion으로 움직이는 MP4를 합성합니다.</p>
             </div>
           </div>
 
@@ -451,6 +451,20 @@ export function LocalStudioApp() {
                 </div>
               </div>
 
+              <div className="action-grid">
+                <button
+                  className="button secondary"
+                  disabled={actionDisabled || !workspace?.storyboards.length}
+                  onClick={() => runAction("로컬 이미지/모션 생성", `/api/products/${workspace?.id}/generate-local-media`)}
+                >
+                  <Play size={18} />
+                  로컬 이미지/모션 생성
+                </button>
+                <p className="muted local-media-note">
+                  생성된 SVG 장면 이미지는 자동으로 스토리보드에 연결되고, 다음 단계 MP4 렌더에서 줌/패닝/TTS가 붙습니다.
+                </p>
+              </div>
+
               <div className="scene-package-grid">
                 {productionPackage.scenePackages.slice(0, 5).map((scene, index) => (
                   <div className="list-item" key={scene.sceneId}>
@@ -463,7 +477,7 @@ export function LocalStudioApp() {
                     <p className="muted">{scene.nextAction}</p>
                     <div className="prompt-box">
                       <div className="prompt-header">
-                        <strong>ChatGPT Pro 이미지</strong>
+                        <strong>선택: 외부 이미지 프롬프트</strong>
                         <button className="button ghost" onClick={() => copyText(`image-${scene.sceneId}`, scene.chatGptImagePrompt)}>
                           <Clipboard size={16} />
                           {copied === `image-${scene.sceneId}` ? "복사됨" : "복사"}
@@ -473,7 +487,7 @@ export function LocalStudioApp() {
                     </div>
                     <div className="prompt-box">
                       <div className="prompt-header">
-                        <strong>Veo3 영상</strong>
+                        <strong>선택: 외부 영상 프롬프트</strong>
                         <button className="button ghost" onClick={() => copyText(`veo-${scene.sceneId}`, scene.veoPrompt)}>
                           <Clipboard size={16} />
                           {copied === `veo-${scene.sceneId}` ? "복사됨" : "복사"}
@@ -486,12 +500,12 @@ export function LocalStudioApp() {
               </div>
             </div>
           ) : (
-            <p className="muted">제작 패키지를 준비하면 장면별 ChatGPT Pro 이미지 프롬프트와 Veo3 프롬프트가 여기에 표시됩니다.</p>
+            <p className="muted">제작 패키지를 준비하면 로컬 이미지/모션 생성 버튼과 선택용 외부 프롬프트가 여기에 표시됩니다.</p>
           )}
 
           <form className="upload-strip" onSubmit={uploadGeneratedAssets}>
             <label className="field">
-              <span className="field-label">생성 이미지/영상 업로드</span>
+              <span className="field-label">직접 만든 이미지/촬영 영상 업로드</span>
               <input
                 className="input"
                 type="file"

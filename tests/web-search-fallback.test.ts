@@ -38,7 +38,11 @@ describe("web search fallback", () => {
     const html = `
       <html>
         <head><title>BFIT EVA 폼롤러 : 네이버 검색</title><meta name="description" content="홈트레이닝 폼롤러 검색 결과" /></head>
-        <body><a href="https://example.com/product">BFIT EVA 폼롤러 운동 스트레칭</a></body>
+        <body>
+          <img src="https://ssl.pstatic.net/sstatic/search/common/og_v3.png" alt="네이버" />
+          <img src="https://shopping-phinf.pstatic.net/main_5029448/50294488640.jpg?type=f200" alt="BFIT EVA 폼롤러" />
+          <a href="https://example.com/product">BFIT EVA 폼롤러 운동 스트레칭</a>
+        </body>
       </html>
     `;
     const fetcher = async () => new Response(html, { status: 200 }) as Response;
@@ -48,5 +52,8 @@ describe("web search fallback", () => {
     expect(fallback.productName).toBe("BFIT 폼롤러");
     expect(fallback.evidence.some((item) => item.kind === "purchase_link")).toBe(true);
     expect(fallback.evidence.some((item) => item.text.includes("BFIT EVA 폼롤러"))).toBe(true);
+    expect(fallback.assets).toHaveLength(1);
+    expect(fallback.assets[0].url).toContain("type=f640");
+    expect(fallback.assets[0].url).not.toContain("og_v3");
   });
 });

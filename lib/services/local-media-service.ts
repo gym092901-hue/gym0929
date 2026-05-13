@@ -35,6 +35,7 @@ export async function generateLocalSceneMedia(productId: string) {
   const product = await prisma.productProject.findUniqueOrThrow({
     where: { id: productId },
     include: {
+      assets: true,
       storyboards: {
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         include: { proofScenes: { orderBy: [{ orderIndex: "asc" }, { id: "asc" }] } }
@@ -62,6 +63,7 @@ export async function generateLocalSceneMedia(productId: string) {
   await fs.mkdir(outputRoot, { recursive: true });
 
   const result: LocalMediaGenerationResult = { assetIds: [], sceneIds: [] };
+  const assetMap = new Map(product.assets.map((asset) => [asset.id, asset]));
   const existingLocalAssets = await prisma.sourceAsset.findMany({
     where: { productId, kind: "image", role: "usage" }
   });
@@ -143,16 +145,24 @@ export async function generateLocalSceneMedia(productId: string) {
     }
 
     const currentAssetIds = fromJsonString<string[]>(item.scene.assetIds, []);
+    const referenceAssetIds = currentAssetIds.filter((id) => {
+      const sourceAsset = assetMap.get(id);
+      if (!sourceAsset || id === asset.id || duplicateAssetIds.includes(id)) return false;
+      return getAssetProvider(sourceAsset.metadata) !== "local-template-generator";
+    });
+    const localAssetIds = currentAssetIds.filter((id) => {
+      const sourceAsset = assetMap.get(id);
+      if (!sourceAsset || id === asset.id || duplicateAssetIds.includes(id)) return false;
+      return getAssetProvider(sourceAsset.metadata) === "local-template-generator";
+    });
+    const nextAssetIds = referenceAssetIds.length > 0 ? [...referenceAssetIds, asset.id, ...localAssetIds] : [asset.id, ...localAssetIds];
     await prisma.proofScene.update({
       where: { id: item.scene.id },
       data: {
         visualPlan,
         narration: safeCopy.narration,
         onScreenText: safeCopy.onScreenText,
-        assetIds: toJsonString([
-          asset.id,
-          ...currentAssetIds.filter((id) => id !== asset.id && !duplicateAssetIds.includes(id))
-        ]),
+        assetIds: toJsonString([...new Set(nextAssetIds)]),
         requiresUserShot: false,
         shotRequest: null
       }
@@ -177,6 +187,10 @@ export async function generateLocalSceneMedia(productId: string) {
   await prepareProductionWorkflow(productId);
   await prisma.productProject.update({ where: { id: productId }, data: { status: "local_media_ready" } });
   return getProductWorkspace(productId);
+}
+
+function getAssetProvider(metadata: unknown): string {
+  return String(fromJsonString<Record<string, unknown>>(metadata, {}).provider ?? "");
 }
 
 export function sanitizeLocalSceneCopy(input: {

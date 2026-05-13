@@ -5,6 +5,11 @@ export type ScrapedImage = {
   height?: number;
 };
 
+export type ScrapedVideo = {
+  url: string;
+  altText?: string;
+};
+
 export type ScrapedLink = {
   url: string;
   label: string;
@@ -17,6 +22,7 @@ export type ScrapedPage = {
   html: string;
   text: string;
   images: ScrapedImage[];
+  videos: ScrapedVideo[];
   links: ScrapedLink[];
   metadata: Record<string, string>;
 };
@@ -81,6 +87,14 @@ async function scrapeWithPlaywright(url: string): Promise<ScrapedPage> {
         .filter((image) => image.url)
         .slice(0, 80);
 
+      const videos = Array.from(document.querySelectorAll("video, video source, source[type^='video/']"))
+        .map((node) => ({
+          url: absoluteUrl(node.getAttribute("src") || node.getAttribute("data-src")),
+          altText: node.getAttribute("title") || node.getAttribute("aria-label") || undefined
+        }))
+        .filter((video) => video.url)
+        .slice(0, 20);
+
       const links = Array.from(document.querySelectorAll("a[href]"))
         .map((anchor) => ({
           url: absoluteUrl(anchor.getAttribute("href")),
@@ -95,6 +109,7 @@ async function scrapeWithPlaywright(url: string): Promise<ScrapedPage> {
         html: document.documentElement.outerHTML,
         text: document.body.innerText || "",
         images,
+        videos,
         links,
         metadata
       };
@@ -107,6 +122,7 @@ async function scrapeWithPlaywright(url: string): Promise<ScrapedPage> {
       html: result.html.slice(0, MAX_HTML_LENGTH),
       text: cleanText(result.text).slice(0, MAX_TEXT_LENGTH),
       images: dedupeByUrl(result.images),
+      videos: dedupeByUrl(result.videos),
       links: dedupeByUrl(result.links),
       metadata: result.metadata
     };
@@ -135,6 +151,7 @@ async function scrapeWithFetch(url: string, reason: string): Promise<ScrapedPage
     html: html.slice(0, MAX_HTML_LENGTH),
     text: `${cleanText(decodeEntities(text)).slice(0, MAX_TEXT_LENGTH)}\n\n수집 참고: Playwright 실패 후 fetch fallback 사용 (${reason})`,
     images: extractImagesFromHtml(html, response.url || url),
+    videos: extractVideosFromHtml(html, response.url || url),
     links: extractLinksFromHtml(html, response.url || url),
     metadata: { httpStatus: String(response.status) }
   };
@@ -148,6 +165,16 @@ function extractImagesFromHtml(html: string, baseUrl: string): ScrapedImage[] {
     if (url) images.push({ url });
   }
   return dedupeByUrl(images).slice(0, 80);
+}
+
+function extractVideosFromHtml(html: string, baseUrl: string): ScrapedVideo[] {
+  const videos: ScrapedVideo[] = [];
+  const matches = html.matchAll(/<(?:video|source)[^>]+src=["']([^"']+)["'][^>]*>/gi);
+  for (const match of matches) {
+    const url = toAbsoluteUrl(match[1], baseUrl);
+    if (url && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)) videos.push({ url });
+  }
+  return dedupeByUrl(videos).slice(0, 20);
 }
 
 function extractLinksFromHtml(html: string, baseUrl: string): ScrapedLink[] {

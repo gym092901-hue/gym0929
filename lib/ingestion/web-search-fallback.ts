@@ -17,6 +17,12 @@ type SearchResult = {
   url?: string;
 };
 
+type SearchMedia = {
+  url: string;
+  kind: "image" | "video";
+  altText?: string;
+};
+
 const SEARCH_TIMEOUT_MS = 10_000;
 
 export async function buildWebSearchFallback(
@@ -26,7 +32,8 @@ export async function buildWebSearchFallback(
 ): Promise<WebSearchFallbackResult> {
   const query = buildProductSearchQuery(sourceUrl);
   const productName = inferProductNameFromQuery(sourceUrl, query);
-  const searchResults = await searchSameProduct(query, fetcher).catch(() => []);
+  const fallbackSearch = await searchSameProduct(query, fetcher).catch(() => ({ results: [], media: [] }));
+  const searchResults = fallbackSearch.results;
   const evidence = buildSearchEvidence({ sourceUrl, query, productName, reason, searchResults });
 
   return {
@@ -35,7 +42,7 @@ export async function buildWebSearchFallback(
     productName,
     textSnapshot: buildTextSnapshot({ sourceUrl, query, productName, reason, searchResults }),
     evidence,
-    assets: [],
+    assets: buildSearchAssets(fallbackSearch.media, productName),
     metadata: {
       provider: "web-search-fallback",
       query,
@@ -88,22 +95,31 @@ export function inferProductNameFromQuery(sourceUrl: string, query: string): str
   return query.replace(/\b상품\s+\d+\b/g, "").replace(/\s+/g, " ").trim() || "웹검색 보강 상품";
 }
 
-async function searchSameProduct(query: string, fetcher: typeof fetch): Promise<SearchResult[]> {
+async function searchSameProduct(
+  query: string,
+  fetcher: typeof fetch
+): Promise<{ results: SearchResult[]; media: SearchMedia[] }> {
   const urls = [
     `https://search.naver.com/search.naver?where=nexearch&query=${encodeURIComponent(query)}`,
     `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(query)}`,
     `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`
   ];
   const results: SearchResult[] = [];
+  const media: SearchMedia[] = [];
 
   for (const url of urls) {
     const html = await fetchText(url, fetcher).catch(() => "");
     if (!html) continue;
-    results.push(...parseSearchResults(html));
-    if (results.length >= 8) break;
+    const parsed = parseSearchPage(html, url);
+    results.push(...parsed.results);
+    media.push(...parsed.media);
+    if (results.length >= 8 && media.length >= 4) break;
   }
 
-  return dedupeResults(results).slice(0, 8);
+  return {
+    results: dedupeResults(results).slice(0, 8),
+    media: dedupeMedia(media).slice(0, 10)
+  };
 }
 
 async function fetchText(url: string, fetcher: typeof fetch): Promise<string> {
@@ -124,13 +140,18 @@ async function fetchText(url: string, fetcher: typeof fetch): Promise<string> {
   }
 }
 
-function parseSearchResults(html: string): SearchResult[] {
+function parseSearchPage(html: string, baseUrl: string): { results: SearchResult[]; media: SearchMedia[] } {
   const results: SearchResult[] = [];
+  const media: SearchMedia[] = [];
   const title = decodeHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
   const description = decodeHtml(
     html.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)["']/i)?.[1] ?? ""
   );
   if (title) results.push({ title: clean(title), snippet: clean(description) });
+
+  for (const url of extractMetaImages(html, baseUrl)) {
+    media.push({ url, kind: "image", altText: title || undefined });
+  }
 
   const anchorMatches = html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi);
   for (const match of anchorMatches) {
@@ -142,7 +163,8 @@ function parseSearchResults(html: string): SearchResult[] {
     if (results.length >= 16) break;
   }
 
-  return results;
+  media.push(...extractMediaCandidates(html, baseUrl));
+  return { results, media };
 }
 
 function buildSearchEvidence(input: {
@@ -222,6 +244,85 @@ function buildTextSnapshot(input: {
     .join("\n");
 }
 
+function buildSearchAssets(media: SearchMedia[], productName: string): AssetSeed[] {
+  return media
+    .filter((item) => isUsableMediaUrl(item.url))
+    .slice(0, 8)
+    .map((item, index) => ({
+      kind: item.kind,
+      role: inferSearchMediaRole(item),
+      url: normalizeSearchMediaUrl(item.url),
+      altText: item.altText || `${productName} 참고 자료 ${index + 1}`,
+      metadata: {
+        provider: "web-search-fallback",
+        source: "search-media",
+        referenceOnly: true
+      }
+    }));
+}
+
+function extractMetaImages(html: string, baseUrl: string): string[] {
+  const urls: string[] = [];
+  const matches = html.matchAll(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["'][^>]*>/gi);
+  for (const match of matches) {
+    const url = toAbsoluteUrl(decodeHtml(match[1]), baseUrl);
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+function extractMediaCandidates(html: string, baseUrl: string): SearchMedia[] {
+  const media: SearchMedia[] = [];
+  const imageMatches = html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi);
+  for (const match of imageMatches) {
+    const url = toAbsoluteUrl(decodeHtml(match[1]), baseUrl);
+    const attrs = match[0];
+    const altText = decodeHtml(attrs.match(/alt=["']([^"']+)["']/i)?.[1] ?? "");
+    if (url) media.push({ url, kind: "image", altText: clean(altText) || undefined });
+  }
+
+  const videoMatches = html.matchAll(/<(?:video|source)[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi);
+  for (const match of videoMatches) {
+    const url = toAbsoluteUrl(decodeHtml(match[1]), baseUrl);
+    if (url && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)) media.push({ url, kind: "video" });
+  }
+
+  return media;
+}
+
+function inferSearchMediaRole(item: SearchMedia) {
+  if (item.kind === "video") return "usage";
+  const text = `${item.url} ${item.altText ?? ""}`;
+  if (/사용|운동|스트레칭|필라테스|마사지|usage|how|use/i.test(text)) return "usage";
+  if (/전후|비교|before|after/i.test(text)) return "before_after";
+  if (/상세|스펙|detail|spec/i.test(text)) return "detail";
+  return "product";
+}
+
+function isUsableMediaUrl(url: string) {
+  return (
+    /^https?:\/\//i.test(url) &&
+    !/^data:/i.test(url) &&
+    !/sprite|favicon|logo|blank|loading|pixel|icon|og_v\d*\.png|sstatic\/search\/common/i.test(url) &&
+    !/\.svg(\?|$)/i.test(url)
+  );
+}
+
+function normalizeSearchMediaUrl(url: string) {
+  if (/shopping-phinf\.pstatic\.net/i.test(url)) {
+    return url.replace(/([?&])type=f\d+/i, "$1type=f640");
+  }
+  return url;
+}
+
+function toAbsoluteUrl(value: string, baseUrl: string): string {
+  try {
+    return new URL(value, baseUrl).href;
+  } catch {
+    return "";
+  }
+}
+
 function inferSearchEvidenceKind(text: string) {
   if (/가격|원|무료배송|할인/.test(text)) return "price";
   if (/사용|운동|스트레칭|홈트|필라테스|마사지|루틴/.test(text)) return "usage";
@@ -279,6 +380,15 @@ function dedupeResults(results: SearchResult[]) {
     const key = `${result.title}:${result.url ?? ""}`;
     if (seen.has(key)) return false;
     seen.add(key);
+    return true;
+  });
+}
+
+function dedupeMedia(media: SearchMedia[]) {
+  const seen = new Set<string>();
+  return media.filter((item) => {
+    if (!isUsableMediaUrl(item.url) || seen.has(item.url)) return false;
+    seen.add(item.url);
     return true;
   });
 }

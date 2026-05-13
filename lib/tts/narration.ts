@@ -63,23 +63,37 @@ async function synthesizeWithWindowsSpeech(text: string, outputPath: string) {
   const scriptPath = path.join(tempDir, "synthesize-windows-speech.ps1");
   await fs.writeFile(textPath, text, "utf8");
 
-  const script = [
-    "param([string]$TextPath, [string]$OutputPath)",
-    "Add-Type -AssemblyName System.Speech",
-    "$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer",
-    "$synth.Rate = 0",
-    "$synth.Volume = 92",
-    "$text = [System.IO.File]::ReadAllText($TextPath, [System.Text.Encoding]::UTF8)",
-    "$synth.SetOutputToWaveFile($OutputPath)",
-    "$synth.Speak($text)",
-    "$synth.Dispose()"
-  ].join("\n");
+  const script = buildWindowsSpeechScript();
   await fs.writeFile(scriptPath, script, "utf8");
 
   await execFileAsync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath, textPath, outputPath], {
     windowsHide: true,
     timeout: 120_000
   });
+}
+
+export function buildWindowsSpeechScript() {
+  return [
+    "param([string]$TextPath, [string]$OutputPath)",
+    "Add-Type -AssemblyName System.Speech",
+    "$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer",
+    "$preferredVoice = $env:LOCAL_TTS_VOICE",
+    "if ([string]::IsNullOrWhiteSpace($preferredVoice)) {",
+    "  $voice = $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo } | Where-Object { $_.Culture.Name -like 'ko*' -or $_.Name -match 'Heami|Hyeri|SunHi|Korean|Yuna' } | Select-Object -First 1",
+    "  if ($voice) { $preferredVoice = $voice.Name }",
+    "}",
+    "if (-not [string]::IsNullOrWhiteSpace($preferredVoice)) {",
+    "  try { $synth.SelectVoice($preferredVoice) } catch { }",
+    "}",
+    "$synth.Rate = -1",
+    "$synth.Volume = 96",
+    "$text = [System.IO.File]::ReadAllText($TextPath, [System.Text.Encoding]::UTF8)",
+    "$text = $text -replace '([.!?。！？])\\s*', '$1 '",
+    "$text = $text -replace '(하세요|보세요|확인하세요)\\s+', '$1. '",
+    "$synth.SetOutputToWaveFile($OutputPath)",
+    "$synth.Speak($text)",
+    "$synth.Dispose()"
+  ].join("\n");
 }
 
 function cleanNarrationLine(value: string): string {

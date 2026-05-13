@@ -20,14 +20,22 @@ export type EvidenceSeed = {
 };
 
 export function buildAssetSeeds(page: ScrapedPage): AssetSeed[] {
-  return page.images.slice(0, 40).map((image) => ({
-    kind: "image",
-    role: inferImageRole(image.altText ?? image.url),
-    url: image.url,
-    altText: image.altText,
-    width: image.width,
-    height: image.height
-  }));
+  return [
+    ...page.images.slice(0, 40).map((image) => ({
+      kind: "image",
+      role: inferImageRole(image.altText ?? image.url),
+      url: image.url,
+      altText: image.altText,
+      width: image.width,
+      height: image.height
+    })),
+    ...(page.videos ?? []).slice(0, 12).map((video) => ({
+      kind: "video",
+      role: inferImageRole(video.altText ?? video.url),
+      url: video.url,
+      altText: video.altText
+    }))
+  ];
 }
 
 export function buildEvidenceSeeds(page: ScrapedPage): EvidenceSeed[] {

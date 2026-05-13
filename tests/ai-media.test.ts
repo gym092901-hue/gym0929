@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildHumanAnatomyReport, buildHumanSafeVisualPlan } from "@/lib/generation/human-anatomy";
 import { buildChatGptProImagePrompt, buildUsageImagePrompt } from "@/lib/generation/openai-image";
 import { DEFAULT_VEO_MODEL, buildVeoGenerationRequest, buildVeoUsagePrompt } from "@/lib/generation/google-veo";
+import { buildWindowsSpeechScript } from "@/lib/tts/narration";
 
 describe("ai media guardrails", () => {
   it("requires explicit anatomy checks for human usage scenes", () => {
@@ -68,5 +69,14 @@ describe("ai media guardrails", () => {
     expect(request.config?.aspectRatio).toBe("9:16");
     expect(request.config?.personGeneration).toBe("allow_adult");
     expect(request.config).not.toHaveProperty("generateAudio");
+  });
+
+  it("selects Korean-like installed voices for local Windows TTS", () => {
+    const script = buildWindowsSpeechScript();
+
+    expect(script).toContain("LOCAL_TTS_VOICE");
+    expect(script).toContain("Culture.Name -like 'ko*'");
+    expect(script).toContain("SelectVoice");
+    expect(script).toContain("$synth.Rate = -1");
   });
 });

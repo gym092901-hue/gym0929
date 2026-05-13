@@ -89,7 +89,7 @@ export async function generateSalesAngles(productId: string) {
       customerPain: "좋은 점이 많아도 실제로 내게 필요한지 빠르게 판단하기 어렵다",
       buyingMotive: "근거가 있는 장점만 짧게 확인하고 구매 여부를 결정하고 싶다",
       corePromise: claims[0].text,
-      proofStrategy: "상세페이지 이미지와 문구를 순서대로 보여준다",
+      proofStrategy: "상품 이미지와 근거 문구를 순서대로 보여준다",
       requiredEvidenceIds: claimEvidenceIds,
       objectionToRemove: ["근거 없는 과장인지 걱정"],
       riskFlags: []
@@ -98,11 +98,11 @@ export async function generateSalesAngles(productId: string) {
       data: {
         productId,
         angle: "근거가 있는 핵심 장점만 빠르게 보여주기",
-        targetCustomer: "상세페이지를 길게 읽기 어려운 구매자",
+        targetCustomer: "상품 정보를 길게 읽기 어려운 구매자",
         customerPain: "좋은 점이 많아도 실제로 내게 필요한지 빠르게 판단하기 어렵다",
         buyingMotive: "근거가 있는 장점만 짧게 확인하고 구매 여부를 결정하고 싶다",
         corePromise: claims[0].text,
-        proofStrategy: "상세페이지 이미지와 문구를 순서대로 보여준다",
+        proofStrategy: "상품 이미지와 근거 문구를 순서대로 보여준다",
         requiredEvidenceIds: toJsonString(claimEvidenceIds),
         objectionToRemove: toJsonString(["근거 없는 과장인지 걱정"]),
         riskFlags: toJsonString(scored.riskFlags),
@@ -161,6 +161,14 @@ export async function generateStoryboards(productId: string) {
     const evidenceIds = readJsonArray<string>(hook.angle.requiredEvidenceIds);
     const missingUsage = !usageAsset || usageAsset.role !== "usage";
     const durationSec = 27;
+    const sceneCopy = buildStoryboardSceneCopy({
+      truth,
+      hookText: hook.text,
+      angleCorePromise: hook.angle.corePromise,
+      angleProofStrategy: hook.angle.proofStrategy,
+      objections: readJsonArray<string>(hook.angle.objectionToRemove),
+      variantIndex: index
+    });
     const storyboard: Storyboard = {
       id: `storyboard_${hook.id}`,
       productId,
@@ -170,21 +178,21 @@ export async function generateStoryboards(productId: string) {
       aspectRatio: "9:16",
       renderVariant: variants[index] ?? String(index + 1),
       cta: {
-        text: "상세페이지에서 옵션과 가격을 확인하세요",
+        text: sceneCopy.ctaText,
         startsAtSec: durationSec - 5,
         purchaseLinkId
       },
       missingShots: missingUsage
-        ? ["상품을 실제로 사용하는 손/상황 컷 1개", "사용 전후 또는 사용 결과를 비교할 수 있는 컷 1개"]
+        ? sceneCopy.missingShots
         : [],
       scenes: [
         {
           id: `scene_${hook.id}_1`,
           type: "problem",
           durationSec: 4,
-          visualPlan: "불편한 상황을 먼저 보여주고 후킹 문장을 크게 배치",
-          narration: hook.text,
-          onScreenText: hook.text,
+          visualPlan: sceneCopy.problemVisualPlan,
+          narration: sceneCopy.problemNarration,
+          onScreenText: sceneCopy.problemText,
           assetIds: beforeAfterAsset ? [beforeAfterAsset.id] : [],
           evidenceIds,
           requiresUserShot: false
@@ -193,33 +201,33 @@ export async function generateStoryboards(productId: string) {
           id: `scene_${hook.id}_2`,
           type: "usage",
           durationSec: 8,
-          visualPlan: buildHumanSafeVisualPlan("상품이 쓰이는 장면을 가까운 컷으로 보여줌"),
-          narration: hook.angle.proofStrategy,
-          onScreenText: "먼저 쓰는 장면부터 확인",
+          visualPlan: buildHumanSafeVisualPlan(sceneCopy.usageVisualPlan),
+          narration: sceneCopy.usageNarration,
+          onScreenText: sceneCopy.usageText,
           assetIds: usageAsset ? [usageAsset.id] : [],
           evidenceIds,
           requiresUserShot: missingUsage,
-          shotRequest: missingUsage ? "상품을 손으로 사용하는 3~5초 세로 영상" : undefined
+          shotRequest: missingUsage ? sceneCopy.usageShotRequest : undefined
         },
         {
           id: `scene_${hook.id}_3`,
           type: "before_after",
           durationSec: 5,
-          visualPlan: "사용 전 불편과 사용 후 달라진 지점을 나란히 제시",
-          narration: hook.angle.corePromise,
-          onScreenText: "전후 차이를 짧게 비교",
+          visualPlan: sceneCopy.compareVisualPlan,
+          narration: sceneCopy.compareNarration,
+          onScreenText: sceneCopy.compareText,
           assetIds: beforeAfterAsset ? [beforeAfterAsset.id] : [],
           evidenceIds,
           requiresUserShot: missingUsage,
-          shotRequest: missingUsage ? "사용 전 상태와 사용 후 상태 비교 컷" : undefined
+          shotRequest: missingUsage ? sceneCopy.compareShotRequest : undefined
         },
         {
           id: `scene_${hook.id}_4`,
           type: "objection_removal",
           durationSec: 5,
-          visualPlan: "가격, 구성, 사용법, 주의사항 중 구매 전 걱정을 줄이는 정보 제시",
-          narration: readJsonArray<string>(hook.angle.objectionToRemove)[0] ?? "구매 전 확인할 점을 짚어드립니다.",
-          onScreenText: "구매 전 확인할 점",
+          visualPlan: sceneCopy.objectionVisualPlan,
+          narration: sceneCopy.objectionNarration,
+          onScreenText: sceneCopy.objectionText,
           assetIds: assets.slice(0, 2).map((asset) => asset.id),
           evidenceIds,
           requiresUserShot: false
@@ -228,9 +236,9 @@ export async function generateStoryboards(productId: string) {
           id: `scene_${hook.id}_5`,
           type: "cta",
           durationSec: 5,
-          visualPlan: "상품 이미지와 구매 링크 안내를 마지막 5초에만 노출",
-          narration: "필요한 옵션과 가격은 상세페이지에서 직접 확인하세요.",
-          onScreenText: "옵션과 가격은 상세페이지에서 확인",
+          visualPlan: sceneCopy.ctaVisualPlan,
+          narration: sceneCopy.ctaNarration,
+          onScreenText: sceneCopy.ctaText,
           assetIds: assets.slice(0, 1).map((asset) => asset.id),
           evidenceIds: truth.purchaseLinks[0]?.evidenceIds ?? [],
           requiresUserShot: false
@@ -296,7 +304,7 @@ export async function generateStoryboards(productId: string) {
           productId,
           storyboardId: created.id,
           description: missingShot,
-          reason: "상세페이지에 실제 사용 장면 자료가 부족합니다."
+          reason: "상품 사용 장면 자료가 부족해 로컬 사용 컷 또는 직접 촬영 컷이 필요합니다."
         }
       });
     }
@@ -304,6 +312,78 @@ export async function generateStoryboards(productId: string) {
 
   await prisma.productProject.update({ where: { id: productId }, data: { status: "storyboards_generated" } });
   return getProductWorkspace(productId);
+}
+
+function buildStoryboardSceneCopy(input: {
+  truth: ProductTruth;
+  hookText: string;
+  angleCorePromise: string;
+  angleProofStrategy: string;
+  objections: string[];
+  variantIndex: number;
+}) {
+  const productName = cleanPublicCopy(input.truth.productName ?? "상품");
+  const usageStep = pickMeaningfulByIndex(
+    input.truth.usageSteps.map((step) => step.text),
+    input.variantIndex
+  );
+  let safeClaim = pickMeaningfulByIndex(
+    [
+      ...input.truth.allowedClaims.map((claim) => claim.text),
+      ...input.truth.benefits.map((benefit) => benefit.text),
+      ...input.truth.facts.filter((fact) => fact.type === "feature" || fact.type === "usage").map((fact) => fact.text)
+    ],
+    input.variantIndex
+  );
+  if (safeClaim && isFoamRollerProduct(productName, input.truth.category) && !isFoamRollerRelevantCopy(safeClaim)) {
+    safeClaim = undefined;
+  }
+  const caution = pickMeaningfulByIndex(input.truth.cautions.map((item) => item.text), input.variantIndex);
+  const usageFallback = buildUsageFallback(input.truth, input.variantIndex);
+  const compareFallback = buildFeatureFallback(input.truth, input.variantIndex);
+  const cautionFallback = buildCautionFallback(input.truth, input.variantIndex);
+  const problemText = cleanPublicCopy(input.hookText, "운동 전 준비가 번거롭다면 이 장면부터 보세요");
+  const usageNarration = cleanPublicCopy(usageStep, usageFallback);
+  const usageText = shortCopy(usageStep, usageFallback, 22);
+  const compareNarration = cleanPublicCopy(
+    safeClaim ?? input.angleCorePromise,
+    compareFallback
+  );
+  const compareText = shortCopy(safeClaim ?? usageStep, compareFallback, 22);
+  const objectionNarration = cleanPublicCopy(
+    caution ?? input.objections[0],
+    cautionFallback
+  );
+  const objectionText = shortCopy(caution ?? input.objections[0], cautionFallback, 22);
+  const rawPrice = input.truth.price.rawText;
+  const priceOrOption = /불명|없음|미확인/i.test(rawPrice) ? "" : cleanPublicCopy(rawPrice, "");
+  const ctaText = priceOrOption ? `구성 확인 · ${shortCopy(priceOrOption, "옵션 확인", 16)}` : `${shortCopy(productName, "상품", 16)} 옵션 확인`;
+
+  return {
+    ctaText,
+    problemText,
+    problemNarration: problemText,
+    problemVisualPlan: "상품명이 아니라 운동 전 준비 상황과 사용 이유를 먼저 보여주고 후킹 문장을 크게 배치",
+    usageText,
+    usageNarration,
+    usageVisualPlan: `${productName}를 한국인 성인 남성 또는 여성이 자연스럽게 사용하는 장면. ${usageNarration}`,
+    compareText,
+    compareNarration,
+    compareVisualPlan: "제품 사진, 구성 포인트, 실제 사용 순서를 이어 붙여 구매 판단에 필요한 근거를 제시",
+    objectionText,
+    objectionNarration,
+    objectionVisualPlan: "구성, 사용법, 주의사항 중 구매 전 확인해야 할 정보를 짧게 제시",
+    ctaNarration: priceOrOption
+      ? `${productName} 구성과 ${priceOrOption} 정보를 확인하고 필요한 옵션을 선택하세요.`
+      : `${productName} 구성과 옵션을 확인하고 필요한 경우 구매 링크로 이동하세요.`,
+    ctaVisualPlan: "상품 이미지와 구매 링크 안내를 마지막 5초에만 노출",
+    usageShotRequest: `${productName}를 사용하는 3~5초 세로 영상. 신체 접촉점과 제품이 함께 보이게 촬영`,
+    compareShotRequest: `${productName}의 구성, 사용 위치, 사용 순서를 비교할 수 있는 세로 컷`,
+    missingShots: [
+      `${productName}를 실제 사용하는 손/상황 컷 1개`,
+      `${productName} 사용 위치와 구성 포인트가 보이는 컷 1개`
+    ]
+  };
 }
 
 export async function createConversionPackage(productId: string) {
@@ -332,16 +412,16 @@ export async function createConversionPackage(productId: string) {
     descriptions: renderIds.slice(0, 5).map((id) => ({
       videoRenderId: id,
       text: [
-        `${truth.productName ?? "상품"} 상세페이지 근거만 바탕으로 만든 쇼츠입니다.`,
-        "가격, 옵션, 주의사항은 구매 전 상세페이지에서 다시 확인하세요.",
-        truth.purchaseLinks[0]?.url ? `구매 링크: ${truth.purchaseLinks[0].url}` : "구매 링크는 상세페이지에서 확인하세요."
+        `${truth.productName ?? "상품"} 상품 정보와 참고 자료를 바탕으로 만든 쇼츠입니다.`,
+        "구성, 옵션, 주의사항은 구매 전 상품 정보에서 다시 확인하세요.",
+        truth.purchaseLinks[0]?.url ? `구매 링크: ${truth.purchaseLinks[0].url}` : "구매 링크는 상품 정보에서 확인하세요."
       ].join("\n")
     })),
     pinnedComments: renderIds.slice(0, 5).map((id) => ({
       videoRenderId: id,
       text: truth.purchaseLinks[0]?.url
         ? `옵션/가격은 여기서 확인하세요: ${truth.purchaseLinks[0].url}`
-        : "옵션과 가격은 상세페이지에서 직접 확인하세요."
+        : "옵션과 구성은 상품 정보에서 직접 확인하세요."
     })),
     hashtags,
     productTagPriority: truth.purchaseLinks.map((link, index) => ({
@@ -351,11 +431,11 @@ export async function createConversionPackage(productId: string) {
       reason: index === 0 ? "가장 직접적인 구매 링크" : "보조 구매 링크"
     })),
     manualUploadChecklist: [
-      "영상 첫 2초가 상품명이 아닌 문제/결과/전후 차이로 시작하는지 확인",
-      "상세페이지에 없는 효능/성능 주장이 없는지 확인",
+      "영상 첫 2초가 상품명이 아닌 문제/결과/사용 장면으로 시작하는지 확인",
+      "상품 정보에 없는 효능/성능 주장이 없는지 확인",
       "가짜 리뷰처럼 보이는 문구가 없는지 확인",
       "CTA가 마지막 5초에만 나오는지 확인",
-      "가격과 옵션이 현재 상세페이지와 일치하는지 확인",
+      "가격과 옵션이 현재 상품 정보와 일치하는지 확인",
       "사람이 최종 미리보기 후 다운로드"
     ],
     performanceInputTemplate: ["조회수", "평균 시청 지속 시간", "유지율", "클릭률", "구매 수", "댓글 반응", "메모"]
@@ -488,15 +568,22 @@ function buildAngleSeeds(truth: ProductTruth) {
     ...truth.allowedClaims.flatMap((claim) => claim.evidenceIds),
     ...truth.usageSteps.flatMap((step) => step.evidenceIds)
   ].slice(0, 8);
-  const productLabel = truth.productName ?? "이 상품";
-  const firstBenefit = truth.allowedClaims[0]?.text ?? truth.benefits[0]?.text ?? "상세페이지에 제시된 장점";
-  const usageProof = truth.usageSteps[0]?.text ?? "상세페이지 이미지와 설명으로 사용 맥락 확인";
+  const productLabel = cleanPublicCopy(truth.productName ?? "이 상품");
+  let firstBenefit =
+    pickMeaningfulByIndex(
+      [...truth.allowedClaims.map((claim) => claim.text), ...truth.benefits.map((benefit) => benefit.text)],
+      0
+    ) ?? buildFeatureFallback(truth, 0);
+  if (isFoamRollerProduct(productLabel, truth.category) && !isFoamRollerRelevantCopy(firstBenefit)) {
+    firstBenefit = buildFeatureFallback(truth, 0);
+  }
+  const usageProof = pickMeaningfulByIndex(truth.usageSteps.map((step) => step.text), 0) ?? buildUsageFallback(truth, 0);
 
   return [
     {
       angle: "구매 전 불편을 먼저 짚고 사용 장면으로 해소",
       targetCustomer: "상품이 필요한 상황은 있지만 구매 확신이 부족한 고객",
-      customerPain: "지금 불편한 점을 해결할 수 있는지 상세페이지를 오래 읽어야 한다",
+      customerPain: "지금 상황에 맞는 상품인지 설명을 오래 읽어야 한다",
       buyingMotive: "내 상황에 바로 쓸 수 있다는 확신을 얻고 싶다",
       corePromise: firstBenefit,
       proofStrategy: usageProof,
@@ -505,14 +592,14 @@ function buildAngleSeeds(truth: ProductTruth) {
       riskFlags: []
     },
     {
-      angle: "전후 차이 중심 비교",
+      angle: "사용 장면 중심 비교",
       targetCustomer: "구매 전 결과를 먼저 보고 싶은 고객",
-      customerPain: "설명보다 실제 차이를 봐야 구매 판단이 된다",
-      buyingMotive: "전후 차이가 명확하면 빠르게 구매를 결정할 수 있다",
+      customerPain: "설명보다 실제 사용 장면을 봐야 구매 판단이 된다",
+      buyingMotive: "사용 장면과 구성 포인트가 명확하면 빠르게 구매를 결정할 수 있다",
       corePromise: firstBenefit,
-      proofStrategy: "사용 전 문제와 사용 후 기대 변화를 나란히 보여준다",
+      proofStrategy: "운동 전 준비 상황과 실제 사용 순서를 나란히 보여준다",
       requiredEvidenceIds: evidenceIds,
-      objectionToRemove: ["차이가 눈에 보이는지"],
+      objectionToRemove: ["사용 장면이 내 상황과 맞는지"],
       riskFlags: []
     },
     {
@@ -543,9 +630,9 @@ function buildAngleSeeds(truth: ProductTruth) {
       customerPain: "가격, 구성, 주의사항을 한 번 더 확인해야 안심된다",
       buyingMotive: "구매 전 필요한 정보를 빠르게 확인하고 싶다",
       corePromise: firstBenefit,
-      proofStrategy: "가격, 구매 링크, 주의사항을 마지막 CTA 전에 정리한다",
+      proofStrategy: "구성, 구매 링크, 주의사항을 마지막 CTA 전에 정리한다",
       requiredEvidenceIds: evidenceIds,
-      objectionToRemove: ["가격 불명확", "구성 불명확", "주의사항 누락"],
+      objectionToRemove: ["구성 확인 필요", "옵션 확인 필요", "주의사항 확인 필요"],
       riskFlags: []
     }
   ];
@@ -559,11 +646,11 @@ function buildHookTexts(customerPain: string, corePromise: string, buyingMotive:
     "이 불편함, 설명보다 먼저 장면으로 보세요",
     "구매 전 이 장면부터 확인하세요",
     "왜 계속 불편했는지 여기서 갈립니다",
-    "전후 차이를 먼저 보고 판단하세요",
+    "사용 장면을 먼저 보고 판단하세요",
     "이걸 놓치면 옵션 선택이 헷갈립니다",
     `${shortPain}면 먼저 보세요`,
     `${shortPromise}가 핵심이면 이 장면입니다`,
-    "상세페이지에서 이 부분만 먼저 확인하세요",
+    "상품 정보에서 이 부분만 먼저 확인하세요",
     "사기 전에 사용 장면부터 보세요",
     "좋아 보여도 이 기준은 확인해야 합니다",
     "결제 전 마지막으로 볼 장면입니다",
@@ -572,9 +659,9 @@ function buildHookTexts(customerPain: string, corePromise: string, buyingMotive:
     "이런 상황이면 구매 이유가 분명해집니다",
     `${shortMotive}면 이 포인트를 보세요`,
     "가격 보기 전에 이 장면부터 확인하세요",
-    "사용 전후가 애매하면 이 부분을 보세요",
+    "사용 장면이 애매하면 이 부분을 보세요",
     "구매 망설이는 이유, 여기서 줄어듭니다",
-    "상세페이지 긴 설명 대신 이 순서로 보세요",
+    "긴 설명 대신 이 순서로 보세요",
     "이 실수만 피하면 선택이 쉬워집니다",
     "문제 장면부터 보면 필요한지 바로 압니다",
     "먼저 불편함을 보고, 그다음 사용 장면입니다",
@@ -584,7 +671,7 @@ function buildHookTexts(customerPain: string, corePromise: string, buyingMotive:
     "처음 사는 사람은 이 장면부터 보세요",
     "구매 전 체크할 장면만 모았습니다",
     "결과보다 먼저 원인을 봐야 합니다",
-    "이 상황이면 상세페이지를 다시 보게 됩니다",
+    "이 상황이면 상품 정보를 다시 보게 됩니다",
     "마지막 5초 전에 판단 근거를 보여드릴게요"
   ];
 }
@@ -598,8 +685,95 @@ function inferHookPattern(text: string): HookPattern {
   return "result";
 }
 
+function pickByIndex<T>(values: Array<T | null | undefined>, index: number): T | undefined {
+  const cleanValues = values.filter((value): value is T => value !== null && value !== undefined && String(value).trim().length > 0);
+  if (cleanValues.length === 0) return undefined;
+  return cleanValues[index % cleanValues.length];
+}
+
+function pickMeaningfulByIndex(values: Array<string | null | undefined>, index: number): string | undefined {
+  return pickByIndex(
+    values.map((value) => cleanPublicCopy(value ?? "")).filter((value) => value && !isLowSignalCopy(value)),
+    index
+  );
+}
+
+function shortCopy(value: string | null | undefined, fallback: string, maxLength: number): string {
+  const clean = cleanPublicCopy(value ?? "", fallback);
+  const chars = [...clean];
+  if (chars.length <= maxLength) return clean;
+  return `${chars.slice(0, Math.max(1, maxLength - 3)).join("")}...`;
+}
+
+function cleanPublicCopy(value: string | null | undefined, fallback = ""): string {
+  const clean = String(value ?? "")
+    .replace(/상세\s*본문/g, "상품 설명")
+    .replace(/상세\s*페이지|상세페이지/g, "상품 정보")
+    .replace(/가격\s*불명확|가격\s*불명|가격\s*미확인|가격 정보 없음/g, "구성 확인")
+    .replace(/불명확|불명|미확인/g, "확인 필요")
+    .replace(/먼저 쓰는 장면부터 확인/g, "사용 장면부터 확인")
+    .replace(/구매 전 확인할 점/g, "구성·사용법·주의사항")
+    .replace(/옵션과 가격은 상품 정보에서 확인/g, "구성·옵션 확인")
+    .replace(/사용 후 기대 변화|달라진 지점|전후 차이/g, "사용 장면")
+    .replace(/통증|아픔/g, "운동 전 뻐근함")
+    .replace(/치료|재활|완치|교정|완화|회복|개선/g, "사용")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (isLowSignalCopy(clean)) return fallback;
+  return clean || fallback;
+}
+
+function isLowSignalCopy(value: string): boolean {
+  return /^(naver|네이버)\.?$/i.test(value.trim()) || /직접\s*확인하지\s*못|자동\s*수집|웹검색|같은 상품 후보|수집이 막|원본 상품|페이지 차단|본문 확인|네이버\s*검색|검색\s*결과|상품\s*\d{5,}|메뉴\s*영역|본문\s*바로가기|바로가기|상품 정보에 제시된 장점|구성 확인 필요|옵션 확인 필요|주의사항 확인 필요/i.test(value);
+}
+
+function buildUsageFallback(truth: ProductTruth, index: number): string {
+  const productName = cleanPublicCopy(truth.productName ?? "상품", "상품");
+  if (isFoamRollerProduct(productName, truth.category)) {
+    return [
+      "등 아래에 두고 천천히 굴리는 사용 장면입니다.",
+      "종아리 아래에 두고 앞뒤로 움직이는 사용 장면입니다.",
+      "허벅지 아래에 대고 압력을 조절하는 사용 장면입니다.",
+      "운동 전후 루틴에 짧게 더하는 사용 장면입니다."
+    ][index % 4];
+  }
+  return `${productName}를 실제 사용하는 장면을 확인하세요.`;
+}
+
+function buildFeatureFallback(truth: ProductTruth, index: number): string {
+  const productName = cleanPublicCopy(truth.productName ?? "상품", "상품");
+  if (isFoamRollerProduct(productName, truth.category)) {
+    return [
+      "등·종아리·허벅지에 대고 굴리는 사용 예시입니다.",
+      "운동 전후에 짧게 따라 하기 쉬운 사용 예시입니다.",
+      "제품과 신체 접촉점을 함께 보여주는 사용 예시입니다."
+    ][index % 3];
+  }
+  return `${productName}의 구성과 사용 포인트를 확인하세요.`;
+}
+
+function buildCautionFallback(truth: ProductTruth, index: number): string {
+  const productName = cleanPublicCopy(truth.productName ?? "상품", "상품");
+  if (isFoamRollerProduct(productName, truth.category)) {
+    return [
+      "목과 관절을 직접 누르지 말고 천천히 사용하세요.",
+      "처음에는 짧게 움직이며 압력을 조절하세요.",
+      "불편하면 멈추고 사용 위치를 바꿔 확인하세요."
+    ][index % 3];
+  }
+  return `${productName} 사용법과 주의사항을 확인하세요.`;
+}
+
+function isFoamRollerProduct(productName: string, category?: string | null): boolean {
+  return /폼\s*롤러|폼롤러|foam\s*roller/i.test(`${productName} ${category ?? ""}`);
+}
+
+function isFoamRollerRelevantCopy(value: string): boolean {
+  return /폼\s*롤러|폼롤러|foam\s*roller|운동|스트레칭|등|허리|종아리|허벅지|다리|롤링|굴리|사용|요가|필라테스/i.test(value);
+}
+
 function trimSentence(value: string, max: number): string {
-  const compact = value.replace(/\s+/g, " ").trim();
+  const compact = cleanPublicCopy(value).replace(/\s+/g, " ").trim();
   return compact.length <= max ? compact : `${compact.slice(0, max - 1)}...`;
 }
 

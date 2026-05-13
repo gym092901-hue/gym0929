@@ -116,44 +116,52 @@ function SceneMedia({
   localFrame: number;
   sceneFrames: number;
 }) {
-  const media = scene.assetMedia?.[0] ?? scene.assetUrls.map((url) => ({ url, kind: inferMediaKind(url) }))[0];
+  const mediaItems = normalizeSceneMedia(scene);
+  const media = mediaItems[0];
+  const referenceMedia = mediaItems.find((item, index) => index > 0 && item.url && !isLocalGeneratedMedia(item.url));
   const pan = interpolate(localFrame, [0, sceneFrames], [0, -28], { extrapolateRight: "clamp" });
   const scale = interpolate(localFrame, [0, sceneFrames], [1.03, 1.14], { extrapolateRight: "clamp" });
 
   if (media?.url && (media.kind === "video" || inferMediaKind(media.url) === "video")) {
     return (
-      <Video
-        src={media.url}
-        muted
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          opacity: 0.68,
-          filter: "saturate(1.08) contrast(1.08)"
-        }}
-      />
+      <>
+        <Video
+          src={media.url}
+          muted
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0.68,
+            filter: "saturate(1.08) contrast(1.08)"
+          }}
+        />
+        <ReferenceMedia media={referenceMedia} />
+      </>
     );
   }
 
   if (media?.url) {
     return (
-      <Img
-        src={media.url}
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          opacity: 0.6,
-          filter: "saturate(1.02) contrast(1.08)",
-          transform: `scale(${scale}) translateX(${pan}px)`,
-          transformOrigin: "center"
-        }}
-      />
+      <>
+        <Img
+          src={media.url}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: isLocalGeneratedMedia(media.url) ? 0.78 : 0.6,
+            filter: "saturate(1.02) contrast(1.08)",
+            transform: `scale(${scale}) translateX(${pan}px)`,
+            transformOrigin: "center"
+          }}
+        />
+        <ReferenceMedia media={referenceMedia} />
+      </>
     );
   }
 
@@ -168,6 +176,38 @@ function SceneMedia({
       }}
     />
   );
+}
+
+function ReferenceMedia({ media }: { media?: { url: string; kind: string; role?: string } }) {
+  if (!media?.url || inferMediaKind(media.url) === "video") return null;
+
+  return (
+    <Img
+      src={media.url}
+      style={{
+        position: "absolute",
+        right: 56,
+        top: 180,
+        width: 250,
+        height: 250,
+        objectFit: "cover",
+        borderRadius: 8,
+        border: "5px solid rgba(255,255,255,0.78)",
+        boxShadow: "0 18px 42px rgba(0,0,0,0.32)",
+        opacity: 0.9
+      }}
+    />
+  );
+}
+
+function normalizeSceneMedia(scene: RenderScene) {
+  const media = scene.assetMedia?.length
+    ? scene.assetMedia
+    : scene.assetUrls.map((url) => ({ url, kind: inferMediaKind(url) }));
+
+  return media
+    .filter((item) => item.url)
+    .map((item) => ({ ...item, kind: item.kind || inferMediaKind(item.url) }));
 }
 
 function getCurrentScene(scenes: ShortsRenderProps["scenes"], frame: number, fps: number) {
@@ -195,4 +235,8 @@ function fitFontSize(text: string): number {
 
 function inferMediaKind(url: string): string {
   return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? "video" : "image";
+}
+
+function isLocalGeneratedMedia(url: string): boolean {
+  return /\/generated\/local-media\//.test(url);
 }

@@ -15,7 +15,7 @@ describe("local media generator", () => {
 
     expect(svg).toContain('width="1080"');
     expect(svg).toContain('height="1920"');
-    expect(svg).toContain("성인 1명");
+    expect(svg).toContain("한국인 남성");
     expect(svg).toContain("폼롤러");
     expect(svg).not.toContain("<script");
   });
@@ -47,5 +47,41 @@ describe("local media generator", () => {
     const combined = `${safe.visualPlan} ${safe.narration} ${safe.onScreenText}`;
     expect(combined).not.toMatch(/통증|완화|교정|달라진 지점|전후 차이/);
     expect(combined).toContain("운동 전 준비");
+  });
+
+  it("alternates Korean male and female usage scene labels", () => {
+    const maleSvg = buildLocalSceneSvg({
+      productName: "폼롤러",
+      sceneType: "usage",
+      visualPlan: "성인 사람이 폼롤러를 등 아래에 접촉해 사용하는 장면",
+      narration: "등 아래에 두고 천천히 움직입니다.",
+      onScreenText: "등 아래 사용 장면",
+      sceneIndex: 0,
+      totalScenes: 2
+    });
+    const femaleSvg = buildLocalSceneSvg({
+      productName: "폼롤러",
+      sceneType: "usage",
+      visualPlan: "성인 사람이 폼롤러를 다리 아래에 접촉해 사용하는 장면",
+      narration: "다리 아래에 두고 천천히 움직입니다.",
+      onScreenText: "다리 아래 사용 장면",
+      sceneIndex: 1,
+      totalScenes: 2
+    });
+
+    expect(maleSvg).toContain("한국인 남성");
+    expect(femaleSvg).toContain("한국인 여성");
+  });
+
+  it("removes unknown-detail-page wording from generated usage copy", () => {
+    const safe = sanitizeLocalSceneCopy({
+      visualPlan: "상세페이지 불명확 정보와 전후 차이 제시",
+      narration: "가격 불명확, 구매 전 확인할 점을 짚어드립니다.",
+      onScreenText: "옵션과 가격은 상세페이지에서 확인"
+    });
+
+    const combined = `${safe.visualPlan} ${safe.narration} ${safe.onScreenText}`;
+    expect(combined).not.toMatch(/상세페이지|불명|전후 차이|구매 전 확인할 점/);
+    expect(combined).toContain("상품 정보");
   });
 });

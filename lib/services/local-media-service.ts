@@ -60,6 +60,7 @@ export async function generateLocalSceneMedia(productId: string) {
   }
 
   const outputRoot = path.join(process.cwd(), "public", "generated", "local-media", productId);
+  await fs.rm(outputRoot, { recursive: true, force: true });
   await fs.mkdir(outputRoot, { recursive: true });
 
   const result: LocalMediaGenerationResult = { assetIds: [], sceneIds: [] };
@@ -155,7 +156,7 @@ export async function generateLocalSceneMedia(productId: string) {
       if (!sourceAsset || id === asset.id || duplicateAssetIds.includes(id)) return false;
       return getAssetProvider(sourceAsset.metadata) === "local-template-generator";
     });
-    const nextAssetIds = referenceAssetIds.length > 0 ? [...referenceAssetIds, asset.id, ...localAssetIds] : [asset.id, ...localAssetIds];
+    const nextAssetIds = [asset.id, ...referenceAssetIds, ...localAssetIds];
     await prisma.proofScene.update({
       where: { id: item.scene.id },
       data: {
@@ -170,6 +171,18 @@ export async function generateLocalSceneMedia(productId: string) {
 
     result.assetIds.push(asset.id);
     result.sceneIds.push(item.scene.id);
+  }
+
+  if (result.assetIds.length > 0) {
+    await prisma.sourceAsset.deleteMany({
+      where: {
+        productId,
+        kind: "image",
+        role: "usage",
+        id: { notIn: result.assetIds },
+        metadata: { contains: "local-template-generator" }
+      }
+    });
   }
 
   await prisma.promptRun.create({
@@ -211,10 +224,11 @@ export function buildLocalSceneSvg(input: LocalSceneSvgInput): string {
   const narrationLines = wrapText(input.narration, 19).slice(0, 3);
   const visualLines = wrapText(simplifyVisualPlan(input.visualPlan), 22).slice(0, 4);
   const pose = selectPose(input);
+  const person = selectPerson(input.sceneIndex);
   const progress = `${input.sceneIndex + 1}/${input.totalScenes}`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${OUTPUT_WIDTH}" height="${OUTPUT_HEIGHT}" viewBox="0 0 ${OUTPUT_WIDTH} ${OUTPUT_HEIGHT}" role="img" aria-label="${escapeXml(input.productName)} local usage scene">
+<svg xmlns="http://www.w3.org/2000/svg" width="${OUTPUT_WIDTH}" height="${OUTPUT_HEIGHT}" viewBox="0 0 ${OUTPUT_WIDTH} ${OUTPUT_HEIGHT}" role="img" aria-label="${escapeXml(`${person.label} ${input.productName} 사용 장면`)}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="${palette.bg}"/>
@@ -226,8 +240,8 @@ export function buildLocalSceneSvg(input: LocalSceneSvgInput): string {
   </defs>
   <rect width="1080" height="1920" fill="url(#bg)"/>
   <rect x="72" y="72" width="936" height="1776" rx="36" fill="${palette.panel}" filter="url(#softShadow)"/>
-  <rect x="118" y="126" width="228" height="54" rx="27" fill="${palette.accent}" opacity="0.12"/>
-  <text x="146" y="162" font-family="Arial, sans-serif" font-size="27" font-weight="800" fill="${palette.accent}">LOCAL SCENE ${escapeXml(progress)}</text>
+  <rect x="118" y="126" width="286" height="54" rx="27" fill="${palette.accent}" opacity="0.12"/>
+  <text x="146" y="162" font-family="Arial, sans-serif" font-size="27" font-weight="800" fill="${palette.accent}">${escapeXml(person.label)} 컷 ${escapeXml(progress)}</text>
 
   <text x="118" y="270" font-family="Arial, sans-serif" font-size="78" font-weight="900" fill="${palette.ink}">
     ${toTspans(titleLines, 118, 0, 88)}
@@ -241,18 +255,19 @@ export function buildLocalSceneSvg(input: LocalSceneSvgInput): string {
       <rect x="${pose.rollerX}" y="${pose.rollerY}" width="330" height="82" rx="41" fill="${palette.accent}"/>
       <path d="M${pose.rollerX + 32} ${pose.rollerY + 18} H${pose.rollerX + 298}" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
       <path d="M${pose.rollerX + 34} ${pose.rollerY + 58} H${pose.rollerX + 296}" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.36"/>
-      <circle cx="${pose.headX}" cy="${pose.headY}" r="52" fill="#f0c7a8"/>
-      <path d="${pose.bodyPath}" fill="none" stroke="${palette.ink}" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${pose.armPath}" fill="none" stroke="${palette.ink}" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${pose.legPath}" fill="none" stroke="${palette.ink}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${pose.handX}" cy="${pose.handY}" r="18" fill="#f0c7a8"/>
-      <circle cx="${pose.footX}" cy="${pose.footY}" r="20" fill="#f0c7a8"/>
+      ${renderHair(person.kind, pose.headX, pose.headY, palette.ink)}
+      <circle cx="${pose.headX}" cy="${pose.headY}" r="52" fill="${person.skin}"/>
+      <path d="${pose.bodyPath}" fill="none" stroke="${person.outfit}" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${pose.armPath}" fill="none" stroke="${person.outfit}" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${pose.legPath}" fill="none" stroke="${person.outfit}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${pose.handX}" cy="${pose.handY}" r="18" fill="${person.skin}"/>
+      <circle cx="${pose.footX}" cy="${pose.footY}" r="20" fill="${person.skin}"/>
     </g>
     <g transform="translate(626 96)">
       <circle cx="0" cy="0" r="44" fill="${palette.warm}" opacity="0.18"/>
       <path d="M-18 -5 L0 -23 L18 -5 M0 -23 V28" stroke="${palette.accent}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text x="58" y="760" font-family="Arial, sans-serif" font-size="31" font-weight="800" fill="${palette.accent}">성인 1명 · 관절 자연 · 접촉점 명확</text>
+    <text x="58" y="760" font-family="Arial, sans-serif" font-size="31" font-weight="800" fill="${palette.accent}">${escapeXml(person.label)} · 성인 · 관절/사지 자연 · 접촉점 명확</text>
   </g>
 
   <g transform="translate(118 1340)">
@@ -272,6 +287,23 @@ export function buildLocalSceneSvg(input: LocalSceneSvgInput): string {
   </g>
   <text x="118" y="1810" font-family="Arial, sans-serif" font-size="26" font-weight="800" fill="${palette.ink}" opacity="0.62">${escapeXml(input.productName)}</text>
 </svg>`;
+}
+
+function selectPerson(index: number) {
+  return index % 2 === 0
+    ? { label: "한국인 남성", kind: "male" as const, skin: "#edc39f", outfit: "#1f4d5f" }
+    : { label: "한국인 여성", kind: "female" as const, skin: "#f0c7a8", outfit: "#7a3e3e" };
+}
+
+function renderHair(kind: "male" | "female", headX: number, headY: number, color: string) {
+  if (kind === "female") {
+    return [
+      `<path d="M${headX - 56} ${headY - 8} C${headX - 74} ${headY - 74} ${headX + 72} ${headY - 84} ${headX + 60} ${headY - 6} C${headX + 84} ${headY + 64} ${headX - 78} ${headY + 72} ${headX - 56} ${headY - 8}Z" fill="${color}" opacity="0.95"/>`,
+      `<path d="M${headX - 34} ${headY - 46} C${headX - 10} ${headY - 76} ${headX + 40} ${headY - 60} ${headX + 46} ${headY - 20}" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.18"/>`
+    ].join("");
+  }
+
+  return `<path d="M${headX - 54} ${headY - 14} C${headX - 42} ${headY - 76} ${headX + 46} ${headY - 78} ${headX + 58} ${headY - 12} C${headX + 16} ${headY - 34} ${headX - 16} ${headY - 32} ${headX - 54} ${headY - 14}Z" fill="${color}" opacity="0.95"/>`;
 }
 
 function selectPose(input: LocalSceneSvgInput) {
@@ -329,7 +361,14 @@ function simplifyVisualPlan(value: string) {
 }
 
 function sanitizeClaimRisk(value: string) {
-  return value
+  const clean = value
+    .replace(/상세\s*본문/g, "상품 설명")
+    .replace(/상세\s*페이지|상세페이지/g, "상품 정보")
+    .replace(/가격\s*불명확|가격\s*불명|가격\s*미확인|가격 정보 없음/g, "구성 확인")
+    .replace(/불명확|불명|미확인/g, "확인 필요")
+    .replace(/먼저 쓰는 장면부터 확인/g, "사용 장면부터 확인")
+    .replace(/구매 전 확인할 점/g, "구성, 사용법, 주의사항")
+    .replace(/옵션과 가격은 상품 정보에서 확인/g, "구성, 옵션 확인")
     .replace(/통증|아픔|불편/g, "운동 전 준비")
     .replace(/치료|재활|완치|교정|완화|회복|개선/g, "사용")
     .replace(/사용 후 기대 변화|달라진 지점|전후 차이/g, "사용 전 준비와 사용 장면")
@@ -337,6 +376,10 @@ function sanitizeClaimRisk(value: string) {
     .replace(/가격, 구매 링크, 주의사항/g, "구성, 사용법, 주의사항")
     .replace(/\s+/g, " ")
     .trim();
+  if (/^(naver|네이버)\.?$/i.test(clean.trim()) || /직접\s*확인하지\s*못|자동\s*수집|웹검색|같은 상품 후보|수집이 막|원본 상품|페이지 차단|본문 확인|네이버\s*검색|검색\s*결과|상품\s*\d{5,}|메뉴\s*영역|본문\s*바로가기|바로가기|상품 정보에 제시된 장점|구성 확인 필요|옵션 확인 필요|주의사항 확인 필요/i.test(clean)) {
+    return "";
+  }
+  return clean;
 }
 
 function wrapText(value: string, maxLength: number): string[] {

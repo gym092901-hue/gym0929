@@ -67,25 +67,30 @@ export async function generateLocalSceneMedia(productId: string) {
   });
 
   for (const [index, item] of scenes.entries()) {
-    const visualPlan = buildHumanSafeVisualPlan(item.scene.visualPlan);
+    const safeCopy = sanitizeLocalSceneCopy({
+      visualPlan: item.scene.visualPlan,
+      narration: item.scene.narration,
+      onScreenText: item.scene.onScreenText
+    });
+    const visualPlan = buildHumanSafeVisualPlan(safeCopy.visualPlan);
     const anatomyReport = buildHumanAnatomyReport({
       sceneType: item.scene.type,
       visualPlan,
-      narration: item.scene.narration,
-      onScreenText: item.scene.onScreenText,
+      narration: safeCopy.narration,
+      onScreenText: safeCopy.onScreenText,
       productName
     });
 
     if (anatomyReport.verdict === "fail") {
-      throw new Error(`인체 구성 검수 실패: ${item.scene.onScreenText} - ${anatomyReport.requiredFixes.join(", ")}`);
+      throw new Error(`인체 구성 검수 실패: ${safeCopy.onScreenText} - ${anatomyReport.requiredFixes.join(", ")}`);
     }
 
     const svg = buildLocalSceneSvg({
       productName,
       sceneType: item.scene.type,
       visualPlan,
-      narration: item.scene.narration,
-      onScreenText: item.scene.onScreenText,
+      narration: safeCopy.narration,
+      onScreenText: safeCopy.onScreenText,
       sceneIndex: index,
       totalScenes: scenes.length
     });
@@ -141,6 +146,9 @@ export async function generateLocalSceneMedia(productId: string) {
     await prisma.proofScene.update({
       where: { id: item.scene.id },
       data: {
+        visualPlan,
+        narration: safeCopy.narration,
+        onScreenText: safeCopy.onScreenText,
         assetIds: toJsonString([
           asset.id,
           ...currentAssetIds.filter((id) => id !== asset.id && !duplicateAssetIds.includes(id))
@@ -169,6 +177,18 @@ export async function generateLocalSceneMedia(productId: string) {
   await prepareProductionWorkflow(productId);
   await prisma.productProject.update({ where: { id: productId }, data: { status: "local_media_ready" } });
   return getProductWorkspace(productId);
+}
+
+export function sanitizeLocalSceneCopy(input: {
+  visualPlan: string;
+  narration: string;
+  onScreenText: string;
+}) {
+  return {
+    visualPlan: sanitizeClaimRisk(input.visualPlan) || "성인 인물이 상품을 사용하는 장면을 가까운 컷으로 보여줌",
+    narration: sanitizeClaimRisk(input.narration) || "사용 장면을 천천히 확인하세요.",
+    onScreenText: sanitizeClaimRisk(input.onScreenText) || "사용 장면 확인"
+  };
 }
 
 export function buildLocalSceneSvg(input: LocalSceneSvgInput): string {
@@ -292,6 +312,17 @@ function selectPose(input: LocalSceneSvgInput) {
 
 function simplifyVisualPlan(value: string) {
   return value.replace(/\s+/g, " ").replace(/인체 검수:.*/g, "인체 검수 포함").trim();
+}
+
+function sanitizeClaimRisk(value: string) {
+  return value
+    .replace(/통증|아픔|불편/g, "운동 전 준비")
+    .replace(/치료|재활|완치|교정|완화|회복|개선/g, "사용")
+    .replace(/사용 후 기대 변화|달라진 지점|전후 차이/g, "사용 전 준비와 사용 장면")
+    .replace(/몸이 달라지는|체형 변화|자세 교정/g, "사용 루틴")
+    .replace(/가격, 구매 링크, 주의사항/g, "구성, 사용법, 주의사항")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function wrapText(value: string, maxLength: number): string[] {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLocalSceneSvg } from "@/lib/services/local-media-service";
+import { buildLocalSceneSvg, sanitizeLocalSceneCopy } from "@/lib/services/local-media-service";
 
 describe("local media generator", () => {
   it("builds a safe 9:16 SVG scene from storyboard text", () => {
@@ -35,5 +35,17 @@ describe("local media generator", () => {
     expect(svg).toContain("&quot;");
     expect(svg).toContain("&amp;");
     expect(svg).not.toContain("비교 < 금지");
+  });
+
+  it("sanitizes medical-looking copy before local media generation", () => {
+    const safe = sanitizeLocalSceneCopy({
+      visualPlan: "사용 전 불편과 사용 후 달라진 지점을 나란히 제시",
+      narration: "통증 완화와 자세 교정을 기대하는 장면",
+      onScreenText: "전후 차이 확인"
+    });
+
+    const combined = `${safe.visualPlan} ${safe.narration} ${safe.onScreenText}`;
+    expect(combined).not.toMatch(/통증|완화|교정|달라진 지점|전후 차이/);
+    expect(combined).toContain("운동 전 준비");
   });
 });

@@ -8,6 +8,7 @@ import {
 } from "@/lib/ingestion/coupang-partners-widget";
 import { buildAssetSeeds, buildEvidenceSeeds, extractPriceAmount } from "@/lib/ingestion/evidence";
 import { scrapeProductPage } from "@/lib/ingestion/scrape-product-page";
+import { buildWebSearchFallback, shouldUseWebSearchFallback } from "@/lib/ingestion/web-search-fallback";
 import type { AssetRole } from "@/lib/schemas/common";
 import { SCHEMA_VERSION } from "@/lib/schemas/common";
 import type { ProductTruth } from "@/lib/schemas/product-truth";
@@ -19,7 +20,17 @@ export async function ingestProduct(url: string) {
     return ingestCoupangPartnersWidget(url);
   }
 
-  const page = await scrapeProductPage(url);
+  let page;
+  try {
+    page = await scrapeProductPage(url);
+  } catch (error) {
+    return ingestWebSearchFallback(url, error instanceof Error ? error.message : String(error));
+  }
+
+  if (shouldUseWebSearchFallback(page)) {
+    return ingestWebSearchFallback(url, `원본 페이지가 상품 상세 대신 오류/빈 페이지를 반환했습니다: ${page.title || page.finalUrl}`);
+  }
+
   const assetSeeds = buildAssetSeeds(page);
   const evidenceSeeds = buildEvidenceSeeds(page);
 
@@ -68,6 +79,58 @@ export async function ingestProduct(url: string) {
   });
 
   return getProductWorkspace(product.id);
+}
+
+async function ingestWebSearchFallback(url: string, reason: string) {
+  const fallback = await buildWebSearchFallback(url, reason);
+
+  const product = await prisma.productProject.create({
+    data: {
+      sourceUrl: fallback.sourceUrl,
+      productName: fallback.productName,
+      status: "web_search_fallback_ingested"
+    }
+  });
+
+  const source = await prisma.productSource.create({
+    data: {
+      productId: product.id,
+      url: fallback.sourceUrl,
+      status: "web_search_fallback",
+      textSnapshot: fallback.textSnapshot,
+      metadata: toJsonString(fallback.metadata)
+    }
+  });
+
+  if (fallback.assets.length > 0) {
+    await prisma.sourceAsset.createMany({
+      data: fallback.assets.map((asset) => ({
+        productId: product.id,
+        kind: asset.kind,
+        role: asset.role,
+        url: asset.url,
+        localPath: asset.localPath,
+        altText: asset.altText,
+        width: asset.width,
+        height: asset.height,
+        metadata: asset.metadata ? toJsonString(asset.metadata) : undefined
+      }))
+    });
+  }
+
+  await prisma.evidenceItem.createMany({
+    data: fallback.evidence.map((item) => ({
+      productId: product.id,
+      sourceId: source.id,
+      kind: item.kind,
+      text: item.text,
+      url: item.url,
+      confidence: item.confidence,
+      metadata: toJsonString(item.metadata ?? {})
+    }))
+  });
+
+  return extractProductTruth(product.id);
 }
 
 async function ingestCoupangPartnersWidget(url: string) {

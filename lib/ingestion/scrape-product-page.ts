@@ -136,7 +136,7 @@ async function scrapeWithFetch(url: string, reason: string): Promise<ScrapedPage
     text: `${cleanText(decodeEntities(text)).slice(0, MAX_TEXT_LENGTH)}\n\n수집 참고: Playwright 실패 후 fetch fallback 사용 (${reason})`,
     images: extractImagesFromHtml(html, response.url || url),
     links: extractLinksFromHtml(html, response.url || url),
-    metadata: {}
+    metadata: { httpStatus: String(response.status) }
   };
 }
 
@@ -200,7 +200,12 @@ export function isBlockedProductPage(page: Pick<ScrapedPage, "title" | "text" | 
     "captcha",
     "robot or human",
     "unusual traffic",
-    "403 forbidden"
+    "403 forbidden",
+    "429",
+    "에러페이지",
+    "시스템오류",
+    "현재 서비스 접속이 불가",
+    "동시에 접속하는 이용자 수가 많거나"
   ].some((signal) => haystack.includes(signal));
 }
 

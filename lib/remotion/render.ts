@@ -72,11 +72,18 @@ export async function renderStoryboardToMp4(storyboardId: string) {
       scenes
     };
     await renderWithRetry(inputProps, outputLocation);
+    const desktopCopyPath = await copyRenderToDesktop({
+      sourcePath: outputLocation,
+      renderId: render.id,
+      productName: storyboard.product.productName ?? "상품",
+      variant: storyboard.renderVariant
+    }).catch(() => undefined);
     await prisma.videoRender.update({
       where: { id: render.id },
       data: {
         status: "complete",
         filePath: outputLocation,
+        thumbnailPath: desktopCopyPath,
         width: 1080,
         height: 1920,
         durationSec: storyboard.durationSec
@@ -106,7 +113,7 @@ export async function renderTopStoryboards(productId: string, minimum = 3) {
   const storyboards = await prisma.storyboard.findMany({
     where: { productId },
     include: { renders: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }]
   });
   const renders = [];
   for (const storyboard of storyboards.slice(0, minimum)) {
@@ -156,4 +163,51 @@ function toRemotionAssetUrl(url: string): string {
   if (url.startsWith("/public/")) return url;
   if (url.startsWith("/")) return `/public${url}`;
   return url;
+}
+
+async function copyRenderToDesktop(input: {
+  sourcePath: string;
+  renderId: string;
+  productName: string;
+  variant: string;
+}): Promise<string | undefined> {
+  const desktopDir = await resolveDesktopOutputDir();
+  if (!desktopDir) return undefined;
+
+  await fs.mkdir(desktopDir, { recursive: true });
+  const fileName = safeFileName(`${input.productName}-쇼츠-${input.variant}-${input.renderId}.mp4`);
+  const outputPath = path.join(desktopDir, fileName);
+  await fs.copyFile(input.sourcePath, outputPath);
+  return outputPath;
+}
+
+async function resolveDesktopOutputDir(): Promise<string | undefined> {
+  const home = process.env.USERPROFILE || process.env.HOME;
+  if (!home) return undefined;
+
+  const candidates = [
+    path.join(home, "Desktop"),
+    path.join(home, "OneDrive", "Desktop"),
+    path.join(home, "OneDrive", "바탕 화면"),
+    path.join(home, "바탕 화면")
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const stat = await fs.stat(candidate);
+      if (stat.isDirectory()) return path.join(candidate, "쇼츠완성본");
+    } catch {
+      // Try the next common desktop location.
+    }
+  }
+
+  return path.join(home, "Desktop", "쇼츠완성본");
+}
+
+function safeFileName(value: string): string {
+  return value
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
 }

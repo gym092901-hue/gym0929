@@ -24,7 +24,14 @@ type Workspace = {
   assets: Array<{ id: string; kind: string; role: string; url?: string | null; altText?: string | null }>;
   storyboards: Array<{ id: string; durationSec: number; renderVariant: string }>;
   shotRequests: Array<{ id: string; description: string; reason: string; status: string }>;
-  renders: Array<{ id: string; status: string; variant: string; durationSec: number; error?: string | null }>;
+  renders: Array<{
+    id: string;
+    status: string;
+    variant: string;
+    durationSec: number;
+    error?: string | null;
+    thumbnailPath?: string | null;
+  }>;
   promptRuns: Array<{
     id: string;
     task: string;
@@ -289,7 +296,7 @@ export function LocalStudioApp() {
             <span className="step-badge">1</span>
             <div>
               <h2>상품 링크</h2>
-              <p className="muted">먼저 링크만 넣고 시작합니다. 막히면 필요한 자료만 보강합니다.</p>
+              <p className="muted">먼저 링크만 넣고 시작합니다. 막히면 웹검색으로 같은 상품 후보를 보강합니다.</p>
             </div>
           </div>
           <form className="link-first-form" onSubmit={ingestLink}>
@@ -543,6 +550,7 @@ export function LocalStudioApp() {
                 <div>
                   <strong>Variant {render.variant}</strong>
                   <p className="muted">{render.status} · {render.durationSec}초</p>
+                  {render.thumbnailPath ? <p className="muted">바탕화면 복사됨: {render.thumbnailPath}</p> : null}
                   {render.error ? <p className="status-fail">{render.error}</p> : null}
                 </div>
                 {render.status === "complete" ? (

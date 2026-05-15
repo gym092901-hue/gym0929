@@ -1,4 +1,5 @@
 import type { Json } from "@/types/database";
+import { getRequiredSiteUrl } from "@/lib/siteUrl";
 import type {
   ApproveProviderPaymentInput,
   ApproveProviderPaymentResult,
@@ -45,10 +46,10 @@ export class KakaoPayApiError extends Error {
 function getKakaoPayConfig() {
   const cid = process.env.KAKAOPAY_CID;
   const secretKey = process.env.KAKAOPAY_SECRET_KEY;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl = getRequiredSiteUrl();
   const baseUrl = process.env.KAKAOPAY_BASE_URL ?? "https://open-api.kakaopay.com";
 
-  if (!cid || !secretKey || !siteUrl) {
+  if (!cid || !secretKey) {
     throw new Error(
       "KakaoPay server credentials are missing. Set KAKAOPAY_CID, KAKAOPAY_SECRET_KEY, and NEXT_PUBLIC_SITE_URL.",
     );
@@ -57,7 +58,7 @@ function getKakaoPayConfig() {
   return {
     cid,
     secretKey,
-    siteUrl: siteUrl.replace(/\/$/, ""),
+    siteUrl,
     baseUrl: baseUrl.replace(/\/$/, ""),
   };
 }

@@ -63,7 +63,7 @@ DEMO_MODE=false
 
 ## 4. NEXT_PUBLIC_SITE_URL 설정
 
-LocalTunnel 주소를 넣지 않습니다.
+LocalTunnel 주소를 넣지 않습니다. production runtime에서는 `localhost`, `127.0.0.1`, `*.loca.lt`, `*.localtunnel.me` 값을 운영 URL로 인정하지 않습니다.
 
 올바른 예:
 

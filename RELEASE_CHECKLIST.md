@@ -12,6 +12,7 @@
 - [ ] Supabase 운영 프로젝트에 migration이 적용되어 있다.
 - [ ] Supabase `products` seed 데이터가 운영 DB에 들어가 있다.
 - [ ] Vercel Production 환경변수에 `DEMO_MODE=false`가 설정되어 있다.
+- [ ] `NEXT_PUBLIC_SITE_URL`이 LocalTunnel/localhost가 아니라 Vercel Production URL 또는 커스텀 도메인이다.
 - [ ] Vercel Production 환경에서 `VERCEL_ENV=production`이 적용되는지 확인했다.
 - [ ] KakaoPay 운영 콘솔 callback URL이 운영 도메인으로 등록되어 있다.
 - [ ] PayPal 운영 앱 client id/secret과 JS SDK client id가 설정되어 있다.

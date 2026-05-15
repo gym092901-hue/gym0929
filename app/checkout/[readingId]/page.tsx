@@ -15,6 +15,7 @@ import {
   productTypes,
 } from "@/lib/products/catalog";
 import { getReading } from "@/lib/readings";
+import { isSiteUrlConfigured } from "@/lib/siteUrl";
 import type { ProductType } from "@/types/database";
 
 type CheckoutPageProps = {
@@ -37,7 +38,7 @@ function isKakaoPayConfigured() {
       process.env.KAKAOPAY_SECRET_KEY &&
       process.env.KAKAOPAY_CID &&
       process.env.KAKAOPAY_BASE_URL &&
-      process.env.NEXT_PUBLIC_SITE_URL,
+      isSiteUrlConfigured(),
   );
 }
 
@@ -47,7 +48,7 @@ function isPayPalConfigured() {
       process.env.PAYPAL_CLIENT_SECRET &&
       process.env.PAYPAL_BASE_URL &&
       process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID &&
-      process.env.NEXT_PUBLIC_SITE_URL,
+      isSiteUrlConfigured(),
   );
 }
 

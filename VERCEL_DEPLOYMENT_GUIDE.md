@@ -39,6 +39,7 @@ LocalTunnel은 운영용이 아닙니다. 외부 임시 테스트가 끝나면 V
 - Production Environment Variables: `PRODUCTION_ENV.md` 기준으로 입력
 
 배포 후 `NEXT_PUBLIC_SITE_URL`은 반드시 실제 운영 URL로 바꿉니다.
+LocalTunnel URL은 운영 결제 callback으로 사용할 수 없으며, production에서는 `*.loca.lt` 값을 차단합니다.
 
 예:
 

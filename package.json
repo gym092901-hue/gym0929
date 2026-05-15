@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "qa": "node scripts/qa-check.ts"
+    "qa": "node scripts/qa-check.ts",
+    "health:prod": "tsx scripts/production-health-check.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
@@ -27,6 +28,7 @@
     "eslint-config-next": "^15.0.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.22.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.9"
   }

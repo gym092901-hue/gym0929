@@ -3,7 +3,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { DemoPremiumDirectButton } from "@/components/demo/DemoPremiumDirectButton";
 import { FreeReadingExplorer } from "@/components/report/FreeReadingExplorer";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
-import { isDemoModeEnabled, isDemoReadingId } from "@/lib/demo/config";
+import { isDemoModeEnabled } from "@/lib/demo/config";
 import { postposition } from "@/lib/korean/postposition";
 import { getProductCatalogItem } from "@/lib/products/catalog";
 import { getReading, getSpeciesLabel } from "@/lib/readings";
@@ -17,10 +17,6 @@ type FreeResultPageProps = {
 export default async function FreeResultPage({ params }: FreeResultPageProps) {
   const { readingId } = await params;
   const demoModeEnabled = isDemoModeEnabled();
-
-  if (isDemoReadingId(readingId) && !demoModeEnabled) {
-    notFound();
-  }
 
   const reading = await getReading(readingId);
 

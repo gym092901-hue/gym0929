@@ -1,0 +1,244 @@
+export {};
+
+type HealthTarget = {
+  label: string;
+  path: string;
+  validate: (result: FetchResult) => {
+    ok: boolean;
+    detail: string;
+  };
+};
+
+type FetchResult = {
+  path: string;
+  initialStatus: number;
+  finalStatus: number;
+  finalUrl: string;
+  redirected: boolean;
+  statusChain: number[];
+  text: string;
+};
+
+const baseUrl = normalizeBaseUrl(process.env.PRODUCTION_BASE_URL);
+
+const forbiddenPhrases = [
+  "테스트 결제 성공 처리",
+  "심층 리포트 페이지 바로 보기",
+  "데모 PDF 미리보기",
+  "몽이 의",
+  "잘 맞아요.도",
+  "기운은 기운은",
+  "화의 기운은 올해는",
+  "낯선 자극을 만났을 때는 금의 기운은",
+];
+
+const targets: HealthTarget[] = [
+  {
+    label: "홈",
+    path: "/",
+    validate: expectFinalStatus(200),
+  },
+  {
+    label: "입력",
+    path: "/input",
+    validate: expectFinalStatus(200),
+  },
+  {
+    label: "무료 결과",
+    path: "/result/free/demo-mong-2026",
+    validate: expectFinalStatus(200),
+  },
+  {
+    label: "체크아웃",
+    path: "/checkout/demo-mong-2026?productType=premium_report&forceCheckout=1",
+    validate(result) {
+      const ok =
+        result.initialStatus === 200 ||
+        (result.redirected && result.finalStatus >= 200 && result.finalStatus < 400);
+
+      return {
+        ok,
+        detail: ok
+          ? "200 또는 정상 redirect"
+          : "체크아웃은 200 또는 정상 redirect여야 합니다.",
+      };
+    },
+  },
+  {
+    label: "데모 프리미엄 직접 접근",
+    path: "/result/premium/demo-mong-2026",
+    validate(result) {
+      const redirectedToCheckout = result.finalUrl.includes(
+        "/checkout/demo-mong-2026",
+      );
+      const accessBlocked = [401, 403, 404].includes(result.finalStatus);
+      const ok =
+        result.initialStatus !== 200 && (redirectedToCheckout || accessBlocked);
+
+      return {
+        ok,
+        detail: ok
+          ? "프리미엄 직접 접근 차단"
+          : "production에서 demo premium 직접 접근이 200이면 안 됩니다.",
+      };
+    },
+  },
+  {
+    label: "이용약관",
+    path: "/terms",
+    validate: expectFinalStatus(200),
+  },
+  {
+    label: "개인정보처리방침",
+    path: "/privacy",
+    validate: expectFinalStatus(200),
+  },
+  {
+    label: "환불정책",
+    path: "/refund",
+    validate: expectFinalStatus(200),
+  },
+];
+
+function normalizeBaseUrl(value: string | undefined) {
+  if (!value) {
+    console.error("PRODUCTION_BASE_URL 환경변수를 설정해 주세요.");
+    console.error(
+      "예: PRODUCTION_BASE_URL=https://your-domain.vercel.app npm run health:prod",
+    );
+    process.exit(1);
+  }
+
+  try {
+    const url = new URL(value);
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    console.error(`PRODUCTION_BASE_URL 형식이 올바르지 않습니다: ${value}`);
+    process.exit(1);
+  }
+}
+
+function expectFinalStatus(expectedStatus: number) {
+  return (result: FetchResult) => ({
+    ok: result.finalStatus === expectedStatus,
+    detail:
+      result.finalStatus === expectedStatus
+        ? `status ${expectedStatus}`
+        : `expected ${expectedStatus}, got ${result.finalStatus}`,
+  });
+}
+
+function isRedirectStatus(status: number) {
+  return [301, 302, 303, 307, 308].includes(status);
+}
+
+function normalizeHtml(text: string) {
+  return text.replace(/<!--[\s\S]*?-->/g, "");
+}
+
+function findForbiddenPhrases(text: string) {
+  return forbiddenPhrases.filter((phrase) => text.includes(phrase));
+}
+
+async function fetchWithRedirects(path: string): Promise<FetchResult> {
+  const statusChain: number[] = [];
+  let currentUrl = new URL(path, baseUrl).toString();
+  let finalUrl = currentUrl;
+  let text = "";
+  let initialStatus = 0;
+  let finalStatus = 0;
+  let redirected = false;
+
+  for (let index = 0; index < 8; index += 1) {
+    const response = await fetch(currentUrl, {
+      redirect: "manual",
+      headers: {
+        "User-Agent": "meongnyang-production-health-check/1.0",
+      },
+    });
+
+    if (index === 0) {
+      initialStatus = response.status;
+    }
+
+    statusChain.push(response.status);
+    finalStatus = response.status;
+    finalUrl = currentUrl;
+
+    const location = response.headers.get("location");
+
+    if (isRedirectStatus(response.status) && location) {
+      redirected = true;
+      currentUrl = new URL(location, currentUrl).toString();
+      continue;
+    }
+
+    text = normalizeHtml(await response.text());
+    break;
+  }
+
+  return {
+    path,
+    initialStatus,
+    finalStatus,
+    finalUrl,
+    redirected,
+    statusChain,
+    text,
+  };
+}
+
+async function run() {
+  console.log(`멍냥사주 production health check: ${baseUrl}`);
+
+  const rows = [];
+
+  for (const target of targets) {
+    try {
+      const result = await fetchWithRedirects(target.path);
+      const validation = target.validate(result);
+      const forbidden = findForbiddenPhrases(result.text);
+      const ok = validation.ok && forbidden.length === 0;
+
+      rows.push({
+        구간: target.label,
+        URL: target.path,
+        "status chain": result.statusChain.join(" -> "),
+        "final status": result.finalStatus,
+        "final URL": result.finalUrl,
+        "금지 문구": forbidden.length > 0 ? forbidden.join(", ") : "없음",
+        결과: ok ? "PASS" : "FAIL",
+        상세: forbidden.length > 0 ? "금지 문구 발견" : validation.detail,
+      });
+    } catch (error) {
+      rows.push({
+        구간: target.label,
+        URL: target.path,
+        "status chain": "-",
+        "final status": "-",
+        "final URL": "-",
+        "금지 문구": "-",
+        결과: "FAIL",
+        상세:
+          error instanceof Error
+            ? error.message
+            : "알 수 없는 오류가 발생했습니다.",
+      });
+    }
+  }
+
+  console.table(rows);
+
+  const failedRows = rows.filter((row) => row.결과 === "FAIL");
+  console.log(`요약: PASS ${rows.length - failedRows.length}, FAIL ${failedRows.length}`);
+
+  if (failedRows.length > 0) {
+    process.exit(1);
+  }
+}
+
+run().catch((error) => {
+  console.error("production health check 실행 중 오류가 발생했습니다.");
+  console.error(error);
+  process.exit(1);
+});

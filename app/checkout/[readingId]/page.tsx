@@ -64,7 +64,7 @@ export default async function CheckoutPage({
   const forceCheckout = demoModeEnabled && forceCheckoutParam === "1";
 
   if (isDemoReadingId(readingId) && !demoModeEnabled) {
-    notFound();
+    redirect("/sample");
   }
 
   const productType = resolveProductType(productTypeParam);

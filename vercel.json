@@ -1,4 +1,4 @@
 {
-  "installCommand": "npm ci && npm run prisma:generate",
+  "installCommand": "npm ci --include=dev && npm run prisma:generate",
   "buildCommand": "npm run build"
 }

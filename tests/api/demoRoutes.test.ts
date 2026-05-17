@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   createFreeSummaryMock,
@@ -109,13 +109,19 @@ function createApprovePaymentSupabaseMock(
 
 describe("demo API routes", () => {
   beforeEach(() => {
-    process.env.DEMO_MODE = "true";
+    vi.stubEnv("DEMO_MODE", "true");
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("VERCEL_ENV", "");
     isSupabaseConfiguredMock.mockReturnValue(true);
     createFreeSummaryMock.mockReturnValue("몽이 무료 리포트");
     ensureProductPurchaseAllowedMock.mockResolvedValue({
       allowed: true,
       message: null,
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("creates a sample pet and free reading only when demo mode is enabled", async () => {
@@ -182,7 +188,7 @@ describe("demo API routes", () => {
         reading_id: "reading-1",
         provider: "mock",
         product_type: "premium_report",
-        amount: 4900,
+        amount: 2900,
         currency: "KRW",
         status: "approved",
       },
@@ -190,10 +196,28 @@ describe("demo API routes", () => {
   });
 
   it("returns 404 when demo mode is disabled", async () => {
-    process.env.DEMO_MODE = "false";
+    vi.stubEnv("DEMO_MODE", "false");
 
     const { POST } = await import("@/app/api/demo/sample-reading/route");
     const response = await POST();
+
+    expect(response.status).toBe(404);
+  });
+
+  it("returns 404 in production even when DEMO_MODE is true", async () => {
+    vi.stubEnv("DEMO_MODE", "true");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const { POST } = await import("@/app/api/demo/approve-payment/route");
+    const response = await POST(
+      new Request("http://test.local/api/demo/approve-payment", {
+        method: "POST",
+        body: JSON.stringify({
+          readingId: "reading-1",
+          productType: "premium_report",
+        }),
+      }) as never,
+    );
 
     expect(response.status).toBe(404);
   });

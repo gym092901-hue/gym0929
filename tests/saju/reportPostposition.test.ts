@@ -54,8 +54,12 @@ const premiumForbiddenPatterns = [
   "몽이 이",
   "기운은 기운은",
   "잘 맞아요.도",
+  ".도 잘 맞습니다",
   "올해는 올해는",
   "낯선 자극을 만났을 때는 금의 기운은",
+  "금의 기운은 기준을 세우고",
+  "화의 기운은 올해는",
+  "이런 방향을 함께 보여줘요",
 ];
 
 describe("report postposition rendering", () => {
@@ -115,6 +119,7 @@ describe("report postposition rendering", () => {
     expect(premium).not.toContain("화의 결이 더해져 화의 기운은");
     expect(premium).not.toContain("금의 결이 더해져 금의 기운은");
     expect(premium).not.toContain("낯선 자극을 만났을 때는 금의 기운은");
+    expect(premium).not.toContain("금의 기운은 기준을 세우고");
   });
 
   it("removes known premium report template artifacts", () => {
@@ -126,7 +131,12 @@ describe("report postposition rendering", () => {
 
     expect(premium).not.toContain("이런 방향을 함께 보여줘요");
     expect(premium).not.toMatch(/[목화토금수]의 기운은 올해는/);
-    expect(premium).toContain("낯선 자극 앞에서는 금 기운이");
+    expect(premium).toContain(
+      "낯선 자극을 만났을 때 몽이는 먼저 거리와 분위기를 확인하려는 경향이 있어요.",
+    );
+    expect(premium).toContain(
+      "올해는 몽이의 표현력이 조금 더 살아날 수 있는 흐름이에요.",
+    );
     expect(premium).toContain("두 기운을 함께 보면");
   });
 

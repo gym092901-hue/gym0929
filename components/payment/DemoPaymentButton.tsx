@@ -76,6 +76,9 @@ export function DemoPaymentButton({
         disabled={disabled || isLoading}
         className="focus-ring mt-4 flex min-h-14 w-full items-center justify-center rounded-2xl bg-moss px-5 py-4 text-base font-black text-white transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
+        <span aria-hidden className="mr-2 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+          DEMO
+        </span>
         {isLoading ? "테스트 결제 승인 중" : "테스트 결제 성공 처리"}
       </button>
       {error && (

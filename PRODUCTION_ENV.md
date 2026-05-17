@@ -63,7 +63,7 @@ DEMO_MODE=false
 
 ## 4. NEXT_PUBLIC_SITE_URL 설정
 
-LocalTunnel 주소를 넣지 않습니다. production runtime에서는 `localhost`, `127.0.0.1`, `*.loca.lt`, `*.localtunnel.me` 값을 운영 URL로 인정하지 않습니다.
+로컬 터널 주소를 넣지 않습니다. production runtime에서는 `localhost`, `127.0.0.1`, `*.loca.lt`, `*.localtunnel.me` 값을 운영 URL로 인정하지 않습니다.
 
 올바른 예:
 
@@ -145,5 +145,5 @@ Preview 환경에서 결제 sandbox를 쓰고 싶다면 Preview 값은 별도로
 결제 검증:
 
 - premium은 `premium_report` approved 결제만 접근 가능
-- PDF는 `premium_report`와 `pdf_report` approved 결제가 모두 있어야 다운로드 가능
+- PDF는 `premium_report` approved 결제가 있으면 무료 저장 가능
 - client에서 보낸 amount는 사용하지 않고 서버 상품 가격만 사용

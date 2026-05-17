@@ -6,7 +6,10 @@ import {
 } from "@/lib/readings/content";
 import { demoReadingId, isDemoModeEnabled } from "@/lib/demo/config";
 import { generateFreePetSajuReading } from "@/lib/saju/petSajuEngine";
-import { generatePremiumReport } from "@/lib/saju/premiumReportGenerator";
+import {
+  generatePremiumReport,
+  sanitizePremiumReport,
+} from "@/lib/saju/premiumReportGenerator";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 import type { Reading } from "@/types/reading";
@@ -68,12 +71,16 @@ function createSectionInput({
   };
 }
 
-function createPremiumSections(premiumReport: string | null) {
+function createPremiumSections(premiumReport: string | null, petName?: string) {
   if (!premiumReport) {
     return [];
   }
 
-  return premiumReport
+  const safePremiumReport = petName
+    ? sanitizePremiumReport(premiumReport, petName)
+    : premiumReport;
+
+  return safePremiumReport
     .split(/\n(?=\d+\.\s)/)
     .filter(Boolean)
     .map((section, index) => {
@@ -259,7 +266,7 @@ function mapReading(row: ReadingWithPet): Reading {
     freeKeywords: createFreeKeywords(sectionInput),
     freeSections: createFreeInsightSections(sectionInput),
     premiumPreviewSections: createPremiumPreviewSections(sectionInput),
-    premiumSections: createPremiumSections(row.premium_report),
+    premiumSections: createPremiumSections(row.premium_report, petName),
   };
 }
 

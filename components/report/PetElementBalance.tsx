@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PetMascot } from "@/components/mascot/PetMascot";
 import type {
   FiveElement,
   FiveElementScore,
@@ -110,19 +111,29 @@ export function PetElementBalance({
 
   return (
     <section className="warm-panel rounded-[2rem] p-5 sm:p-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-black text-persimmon">오행 밸런스</p>
-          <h2 className="mt-1 break-keep text-2xl font-black text-ink">
-            {petNamePossessive} 기운 흐름
-          </h2>
+      <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
+        <div className="grid h-28 w-28 place-items-center overflow-hidden rounded-[2rem] bg-persimmon/10">
+          <PetMascot
+            type={species}
+            mood="star"
+            size="md"
+            label="별자리 카드를 보는 반려동물 픽셀 캐릭터"
+          />
         </div>
-        <div className="max-w-sm rounded-[1.5rem] border border-berry/10 bg-white/65 px-4 py-3">
-          <p className="text-sm font-semibold leading-6 text-ink/65">
-            내부 계산값은 평가 점수가 아니라 성향을 읽기 위한 참고값입니다.
-            낮음은 나쁜 점수가 아니라, 생활에서 천천히 채워줄 수 있는
-            방향이에요.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-persimmon">오행 밸런스</p>
+            <h2 className="mt-1 break-keep text-2xl font-black text-ink">
+              {petNamePossessive} 기운 흐름
+            </h2>
+          </div>
+          <div className="max-w-sm rounded-[1.5rem] border border-berry/10 bg-white/65 px-4 py-3">
+            <p className="text-sm font-semibold leading-6 text-ink/65">
+              내부 계산값은 평가 점수가 아니라 성향을 읽기 위한 참고값입니다.
+              낮음은 부족하다는 뜻이 아니라, 생활 속에서 천천히 넓혀볼 수
+              있는 방향이에요.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -142,7 +153,16 @@ export function PetElementBalance({
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-cream text-base font-black text-ink">
+                <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-cream">
+                  <PetMascot
+                    type={species}
+                    mood={isStrongest ? "star" : isGentle ? "curious" : "happy"}
+                    size="sm"
+                    label={`${meta.label} 기운을 나타내는 미니 캐릭터`}
+                    className="scale-75"
+                  />
+                </span>
+                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-base font-black text-ink shadow-sm">
                   {meta.label}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -161,7 +181,7 @@ export function PetElementBalance({
                 ) : null}
                 {isGentle ? (
                   <span className="rounded-full bg-moss/10 px-3 py-1 text-xs font-black text-moss">
-                    생활에서 채워주면 좋은 리듬
+                    천천히 채워주면 좋은 리듬
                   </span>
                 ) : null}
               </div>

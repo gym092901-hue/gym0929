@@ -1,4 +1,5 @@
-import Image from "next/image";
+import { PawPattern } from "@/components/mascot/PawPattern";
+import { PetMascot } from "@/components/mascot/PetMascot";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
 import { demoReadingId, isDemoModeEnabled } from "@/lib/demo/config";
 
@@ -9,7 +10,7 @@ const premiumItems = [
   "애착 방식",
   "생활 루틴",
   "올해의 흐름",
-  "PDF 소장본",
+  "PDF 무료 저장",
 ];
 
 const reassuranceItems = [
@@ -17,6 +18,97 @@ const reassuranceItems = [
   "사고를 단정하거나 불안을 키우지 않아요.",
   "반려생활을 더 다정하게 이해하기 위한 콘텐츠예요.",
 ];
+
+function CtaPaw({ tone = "light" }: { tone?: "light" | "berry" }) {
+  const dotClass = tone === "light" ? "bg-white/85" : "bg-berry/55";
+
+  return (
+    <span
+      aria-hidden
+      className="mascot-bob mr-2 grid h-5 w-5 grid-cols-2 gap-0.5"
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      <span className={`col-span-2 mx-auto h-2.5 w-3.5 rounded-full ${dotClass}`} />
+    </span>
+  );
+}
+
+function FourLeafClover({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`grid h-12 w-12 grid-cols-2 gap-0.5 rotate-[-12deg] rounded-full bg-white/55 p-2 shadow-sm ${className}`}
+    >
+      <span className="rounded-br-full rounded-tl-full bg-moss/55" />
+      <span className="rounded-bl-full rounded-tr-full bg-moss/55" />
+      <span className="rounded-bl-full rounded-tr-full bg-moss/55" />
+      <span className="rounded-br-full rounded-tl-full bg-moss/55" />
+    </span>
+  );
+}
+
+function HeroCardDecoration({
+  className = "",
+  tone = "berry",
+}: {
+  className?: string;
+  tone?: "berry" | "moss" | "persimmon";
+}) {
+  const toneClass = {
+    berry: "border-berry/10 bg-white/85",
+    moss: "border-moss/15 bg-white/85",
+    persimmon: "border-persimmon/15 bg-white/85",
+  }[tone];
+  const barClass = {
+    berry: "bg-berry/35",
+    moss: "bg-moss/35",
+    persimmon: "bg-persimmon/35",
+  }[tone];
+
+  return (
+    <span
+      aria-hidden
+      className={`rounded-2xl border px-4 py-3 shadow-soft ${toneClass} ${className}`}
+    >
+      <span className={`block h-2 w-16 rounded-full ${barClass}`} />
+      <span className={`mt-2 block h-2 w-10 rounded-full ${barClass}`} />
+    </span>
+  );
+}
+
+function HeroCalendarDecoration({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`rounded-2xl border border-persimmon/15 bg-white/85 px-4 py-3 shadow-sm ${className}`}
+    >
+      <span className="mb-2 block h-2 rounded-full bg-persimmon/30" />
+      <span className="grid grid-cols-3 gap-1">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <span
+            key={index}
+            className="h-2 w-2 rounded-full bg-persimmon/25"
+          />
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function HeroSparkle({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`grid h-12 w-12 place-items-center rounded-full bg-persimmon/20 ${className}`}
+    >
+      <span className="relative h-6 w-6">
+        <span className="absolute left-2 top-0 h-6 w-2 rounded-full bg-persimmon/45" />
+        <span className="absolute left-0 top-2 h-2 w-6 rounded-full bg-persimmon/45" />
+      </span>
+    </span>
+  );
+}
 
 export default function Home() {
   const sampleHref = isDemoModeEnabled()
@@ -43,50 +135,53 @@ export default function Home() {
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <PrimaryLink href="/input" className="min-h-14 text-base sm:min-w-48">
-                우리 아이 사주 보기
+                <CtaPaw />
+                무료 사주 맛보기 시작
               </PrimaryLink>
               <PrimaryLink
                 href={sampleHref}
                 tone="light"
                 className="min-h-14 text-base sm:min-w-48"
               >
+                <CtaPaw tone="berry" />
                 샘플 리포트 보기
               </PrimaryLink>
             </div>
             <p className="mt-3 text-sm font-semibold leading-6 text-ink/55">
-              결제 전 무료 맛보기로 먼저 확인할 수 있어요.
+              무료 맛보기는 무료로 볼 수 있고, 심층 리포트는 원할 때만
+              2,900원으로 열람해요.
             </p>
           </div>
 
-          <div className="warm-panel overflow-hidden rounded-[2rem]">
-            <div className="grid gap-4 bg-[linear-gradient(135deg,rgba(233,119,77,0.16),rgba(75,123,90,0.1)_52%,rgba(165,61,98,0.1))] p-4 sm:p-5">
-              <figure className="relative h-56 overflow-hidden rounded-[1.5rem] bg-white shadow-soft sm:h-64">
-                <Image
-                  src="https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=900&q=80"
-                  alt="따뜻한 표정의 강아지"
-                  fill
-                  sizes="(min-width: 1024px) 430px, 100vw"
-                  className="object-cover"
-                  priority
-                />
-                <figcaption className="absolute left-4 top-4 rounded-full bg-white/90 px-4 py-2 text-sm font-bold text-berry shadow-soft">
+          <div className="warm-panel relative min-h-[27rem] overflow-hidden rounded-[2rem]">
+            <PawPattern className="absolute inset-0 h-full w-full opacity-55" />
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(233,119,77,0.18),rgba(75,123,90,0.11)_52%,rgba(165,61,98,0.12))]" />
+            <HeroCardDecoration className="mascot-bob absolute left-8 top-12 rotate-[-10deg]" />
+            <HeroCardDecoration
+              tone="moss"
+              className="absolute right-8 top-28 rotate-6"
+            />
+            <HeroCalendarDecoration className="absolute bottom-16 right-10 rotate-[-7deg]" />
+            <HeroSparkle className="absolute right-9 top-16" />
+            <HeroSparkle className="absolute bottom-20 left-12 h-10 w-10 bg-moss/15 [&_span_span]:bg-moss/45" />
+            <FourLeafClover className="absolute bottom-28 right-28 hidden sm:grid" />
+            <div className="relative grid min-h-[27rem] place-items-center p-5 text-center">
+              <PetMascot
+                type="both"
+                mood="reading"
+                size="hero"
+                withBubble
+                bubbleText="우리 아이 마음결을 살짝 읽어볼까요?"
+                label="홈 화면에서 리포트를 함께 보는 강아지와 고양이 캐릭터"
+              />
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm font-black">
+                <span className="rounded-full bg-white/85 px-4 py-2 text-berry shadow-sm">
                   강아지
-                </figcaption>
-              </figure>
-
-              <figure className="relative h-56 overflow-hidden rounded-[1.5rem] bg-white shadow-soft sm:ml-14 sm:h-64">
-                <Image
-                  src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=900&q=80"
-                  alt="편안히 바라보는 고양이"
-                  fill
-                  sizes="(min-width: 1024px) 430px, 100vw"
-                  className="object-cover"
-                  priority
-                />
-                <figcaption className="absolute left-4 top-4 rounded-full bg-white/90 px-4 py-2 text-sm font-bold text-moss shadow-soft">
+                </span>
+                <span className="rounded-full bg-white/85 px-4 py-2 text-moss shadow-sm">
                   고양이
-                </figcaption>
-              </figure>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -107,6 +202,15 @@ export default function Home() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <article className="rounded-[2rem] border border-berry/10 bg-white/80 p-5">
+              <div className="mb-4 grid h-20 w-20 place-items-center overflow-hidden rounded-[1.5rem] bg-berry/10">
+                <PetMascot
+                  type="dog"
+                  mood="happy"
+                  size="sm"
+                  label="무료 사주 맛보기를 안내하는 작은 강아지 캐릭터"
+                  className="scale-90"
+                />
+              </div>
               <p className="text-sm font-black text-berry">무료 사주 맛보기</p>
               <h3 className="mt-2 text-xl font-black text-ink">
                 먼저 확인하는 성향 힌트
@@ -124,6 +228,15 @@ export default function Home() {
             </article>
 
             <article className="rounded-[2rem] border border-moss/20 bg-moss/10 p-5">
+              <div className="mb-4 grid h-20 w-20 place-items-center overflow-hidden rounded-[1.5rem] bg-white/70">
+                <PetMascot
+                  type="cat"
+                  mood="holding-card"
+                  size="sm"
+                  label="유료 심층 리포트를 안내하는 고양이 캐릭터"
+                  className="scale-90"
+                />
+              </div>
               <p className="text-sm font-black text-moss">유료 심층 리포트</p>
               <h3 className="mt-2 text-xl font-black text-ink">
                 보호자를 위한 자세한 해석
@@ -151,6 +264,16 @@ export default function Home() {
               <h2 className="mt-2 break-keep text-2xl font-black text-ink">
                 무섭게 말하지 않고, 다정하게 해석합니다
               </h2>
+              <div className="mt-5 grid max-w-xs place-items-center rounded-[2rem] border border-moss/15 bg-moss/10 p-4">
+                <div className="h-14 w-52 rounded-[50%] bg-persimmon/15" />
+                <PetMascot
+                  type="both"
+                  mood="sleepy"
+                  size="lg"
+                  label="담요 위에 앉아 쉬는 강아지와 고양이 캐릭터"
+                  className="-mt-14"
+                />
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {reassuranceItems.map((item) => (

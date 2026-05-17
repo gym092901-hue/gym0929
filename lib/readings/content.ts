@@ -1,4 +1,5 @@
 import { postposition } from "@/lib/korean/postposition";
+import { sanitizeReportText } from "@/lib/reports/sanitizeReportText";
 import { calculatePetFiveElements, type FiveElement } from "@/lib/saju/petSajuEngine";
 import type { PetType } from "@/types/database";
 import type { ReadingSection } from "@/types/reading";
@@ -39,6 +40,20 @@ function speciesRoutine(type: PetType) {
     : "놀이를 갑자기 시작하기보다 시선 유도, 짧은 사냥놀이, 조용한 휴식 자리로 자연스럽게 이어주면 좋아요.";
 }
 
+function sanitizeReadingSections(
+  sections: ReadingSection[],
+  input: ReadingContentInput,
+  context: string,
+) {
+  return sections.map((section) => ({
+    ...section,
+    body: sanitizeReportText(section.body, {
+      context: `${context}.${section.id}`,
+      petName: input.name,
+    }),
+  }));
+}
+
 export function createFreeInsightSections(
   input: ReadingContentInput,
 ): ReadingSection[] {
@@ -62,7 +77,7 @@ export function createFreeInsightSections(
   const nameTo = postposition.to(input.name);
   const nameWith = postposition.with(input.name);
 
-  return [
+  const sections: ReadingSection[] = [
     {
       id: "one-line",
       title: "한 줄 성향",
@@ -99,6 +114,8 @@ export function createFreeInsightSections(
       body: `심층 리포트에서는 ${namePossessive} 오행 밸런스, 타고난 성격의 장점, 보호자에게 사랑을 표현하는 방식, 예민해지기 쉬운 상황, 잘 맞는 생활 루틴, 올해의 흐름을 더 긴 호흡으로 풀어냅니다. 무료 결과가 “첫인상”이라면, 심층 리포트는 보호자가 ${nameWith} 실제 생활에서 어떻게 교감하면 좋을지 읽는 자세한 안내서에 가깝습니다.`,
     },
   ];
+
+  return sanitizeReadingSections(sections, input, "free_insight_sections");
 }
 
 export function createPremiumPreviewSections(
@@ -111,7 +128,7 @@ export function createPremiumPreviewSections(
   const nameTo = postposition.to(input.name);
   const nameWith = postposition.with(input.name);
 
-  return [
+  const sections: ReadingSection[] = [
     {
       id: "premium-balance",
       title: "오행 밸런스",
@@ -155,6 +172,8 @@ export function createPremiumPreviewSections(
       body: `2026년 동안 ${nameWith} 보호자가 함께 살펴보면 좋은 계절별 생활 포인트를 월별 조언으로 확장합니다.`,
     },
   ];
+
+  return sanitizeReadingSections(sections, input, "premium_preview_sections");
 }
 
 export function createFreeKeywords(input: ReadingContentInput) {

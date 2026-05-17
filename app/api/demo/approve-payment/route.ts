@@ -63,7 +63,10 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          error: `${product.name}는 ${prerequisite.name} 결제 후 구매할 수 있습니다.`,
+          error:
+            product.price === 0
+              ? `${product.name}는 ${prerequisite.name} 결제 후 이용할 수 있습니다.`
+              : `${product.name}는 ${prerequisite.name} 결제 후 구매할 수 있습니다.`,
         },
         { status: 403 },
       );

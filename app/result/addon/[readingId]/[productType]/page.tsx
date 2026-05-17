@@ -56,6 +56,7 @@ export default async function AddonResultPage({ params }: AddonResultPageProps) 
       eyebrow="추가 리포트"
       title={`${petNamePossessive} ${product.name}`}
       description="추가 리포트 엔진이 연결될 자리입니다. 현재는 상품별 결제와 접근 제어 흐름을 확인할 수 있는 placeholder를 보여줍니다."
+      mascotType={reading.species}
     >
       <div className="grid gap-5">
         {sections.map((section, index) => (

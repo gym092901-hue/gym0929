@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isDemoModeEnabled } from "@/lib/demo/config";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type {
   Json,
@@ -30,6 +31,9 @@ export type AdminReadingListItem = {
   ownerEmail: string;
   status: ReadingStatus;
   hasPremiumReport: boolean;
+  premiumPaymentApproved: boolean;
+  legacyPdfPaymentApproved: boolean;
+  pdfDownloadAllowed: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -50,6 +54,17 @@ export type AdminPaymentListItem = {
   updatedAt: string;
   petName: string;
   ownerEmail: string;
+};
+
+export type AdminFeedbackListItem = {
+  id: string;
+  testerName: string;
+  contact: string;
+  petType: PetType | null;
+  page: string;
+  rating: number;
+  message: string;
+  createdAt: string;
 };
 
 type ReadingQueryRow = {
@@ -86,6 +101,24 @@ type PaymentQueryRow = {
       owner_email: string | null;
     } | null;
   } | null;
+};
+
+type PaymentAccessQueryRow = {
+  reading_id: string;
+  provider: PaymentProvider;
+  product_type: ProductType;
+  status: PaymentStatus;
+};
+
+type FeedbackQueryRow = {
+  id: string;
+  tester_name: string | null;
+  contact: string | null;
+  pet_type: PetType | null;
+  page: string;
+  rating: number;
+  message: string;
+  created_at: string;
 };
 
 const uuidPattern =
@@ -129,6 +162,7 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
       readingIdIsSearchable,
       readings: [] as AdminReadingListItem[],
       payments: [] as AdminPaymentListItem[],
+      feedbacks: [] as AdminFeedbackListItem[],
     };
   }
 
@@ -138,6 +172,7 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
       readingIdIsSearchable,
       readings: [] as AdminReadingListItem[],
       payments: [] as AdminPaymentListItem[],
+      feedbacks: [] as AdminFeedbackListItem[],
     };
   }
 
@@ -151,6 +186,7 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
       readingIdIsSearchable,
       readings: [] as AdminReadingListItem[],
       payments: [] as AdminPaymentListItem[],
+      feedbacks: [] as AdminFeedbackListItem[],
     };
   }
 
@@ -166,6 +202,12 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
     .select(
       "id, reading_id, provider, product_type, amount, currency, status, provider_order_id, provider_tid, provider_payment_id, raw_response, created_at, updated_at, readings(id, pets(name, owner_email))",
     );
+  const feedbacksQuery = supabase
+    .from("feedbacks")
+    .select("id, tester_name, contact, pet_type, page, rating, message, created_at")
+    .order("created_at", { ascending: false })
+    .limit(20)
+    .returns<FeedbackQueryRow[]>();
 
   if (readingId) {
     readingsQuery = readingsQuery.eq("id", readingId);
@@ -181,7 +223,7 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
     paymentsQuery = paymentsQuery.eq("status", filters.status);
   }
 
-  const [readingsResult, paymentsResult] = await Promise.all([
+  const [readingsResult, paymentsResult, feedbacksResult] = await Promise.all([
     readingsQuery
       .order("created_at", { ascending: false })
       .limit(25)
@@ -190,10 +232,12 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
       .order("created_at", { ascending: false })
       .limit(25)
       .returns<PaymentQueryRow[]>(),
+    feedbacksQuery,
   ]);
 
   const { data: readingsData, error: readingsError } = readingsResult;
   const { data: paymentsData, error: paymentsError } = paymentsResult;
+  const { data: feedbacksData, error: feedbacksError } = feedbacksResult;
 
   if (readingsError) {
     throw new Error("readings 목록을 불러오지 못했습니다.");
@@ -203,19 +247,84 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
     throw new Error("payments 목록을 불러오지 못했습니다.");
   }
 
+  if (feedbacksError) {
+    throw new Error("feedbacks 목록을 불러오지 못했습니다.");
+  }
+
+  const readingRows = readingsData ?? [];
+  const readingIds = readingRows.map((row) => row.id);
+  const paymentAccessByReadingId = new Map<
+    string,
+    {
+      premiumReportApproved: boolean;
+      legacyPdfReportApproved: boolean;
+    }
+  >();
+
+  if (readingIds.length > 0) {
+    const { data: accessData, error: accessError } = await supabase
+      .from("payments")
+      .select("reading_id, provider, product_type, status")
+      .in("reading_id", readingIds)
+      .in("product_type", ["premium_report", "pdf_report"])
+      .eq("status", "approved")
+      .returns<PaymentAccessQueryRow[]>();
+
+    if (accessError) {
+      throw new Error("PDF 권한 상태를 불러오지 못했습니다.");
+    }
+
+    const demoModeEnabled = isDemoModeEnabled();
+
+    for (const row of accessData ?? []) {
+      const providerIsAllowed = row.provider !== "mock" || demoModeEnabled;
+
+      if (!providerIsAllowed) {
+        continue;
+      }
+
+      const current = paymentAccessByReadingId.get(row.reading_id) ?? {
+        premiumReportApproved: false,
+        legacyPdfReportApproved: false,
+      };
+
+      if (row.product_type === "premium_report") {
+        current.premiumReportApproved = true;
+      }
+
+      if (row.product_type === "pdf_report") {
+        current.legacyPdfReportApproved = true;
+      }
+
+      paymentAccessByReadingId.set(row.reading_id, current);
+    }
+  }
+
   return {
     configured: true,
     readingIdIsSearchable,
-    readings: (readingsData ?? []).map((row) => ({
-      id: row.id,
-      petName: row.pets?.name ?? "-",
-      petType: row.pets?.type ?? null,
-      ownerEmail: row.pets?.owner_email ?? "-",
-      status: row.status,
-      hasPremiumReport: Boolean(row.premium_report),
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    })),
+    readings: readingRows.map((row) => {
+      const paymentAccess = paymentAccessByReadingId.get(row.id);
+      const premiumPaymentApproved = Boolean(
+        paymentAccess?.premiumReportApproved,
+      );
+
+      return {
+        id: row.id,
+        petName: row.pets?.name ?? "-",
+        petType: row.pets?.type ?? null,
+        ownerEmail: row.pets?.owner_email ?? "-",
+        status: row.status,
+        hasPremiumReport: Boolean(row.premium_report),
+        premiumPaymentApproved,
+        legacyPdfPaymentApproved: Boolean(
+          paymentAccess?.legacyPdfReportApproved,
+        ),
+        pdfDownloadAllowed: premiumPaymentApproved,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    }),
     payments: (paymentsData ?? []).map((row) => ({
       id: row.id,
       readingId: row.reading_id,
@@ -232,6 +341,16 @@ export async function getAdminDashboardData(filters: AdminDashboardFilters) {
       updatedAt: row.updated_at,
       petName: row.readings?.pets?.name ?? "-",
       ownerEmail: row.readings?.pets?.owner_email ?? "-",
+    })),
+    feedbacks: (feedbacksData ?? []).map((row) => ({
+      id: row.id,
+      testerName: row.tester_name ?? "-",
+      contact: row.contact ?? "-",
+      petType: row.pet_type,
+      page: row.page,
+      rating: row.rating,
+      message: row.message,
+      createdAt: row.created_at,
     })),
   };
 }

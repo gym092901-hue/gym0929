@@ -1,19 +1,100 @@
 import { notFound, redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
+import { PetMascot } from "@/components/mascot/PetMascot";
+import { MobileStickyCTA } from "@/components/report/MobileStickyCTA";
 import { PetElementBalance } from "@/components/report/PetElementBalance";
+import { PetHookCard } from "@/components/report/PetHookCard";
+import { PremiumTableOfContents } from "@/components/report/PremiumTableOfContents";
 import { PdfDownloadButton } from "@/components/report/PdfDownloadButton";
-import { PrimaryLink } from "@/components/ui/PrimaryLink";
+import { ReportAccordionSection } from "@/components/report/ReportAccordionSection";
+import { ReportFloatingActions } from "@/components/report/ReportFloatingActions";
+import { ReportMobileBar } from "@/components/report/ReportMobileBar";
+import { ReportSceneBanner } from "@/components/report/ReportSceneBanner";
 import { isDemoModeEnabled, isDemoReadingId } from "@/lib/demo/config";
+import { postposition } from "@/lib/korean/postposition";
 import { checkPaymentAccess } from "@/lib/payment/checkPaymentAccess";
-import { getProductCatalogItem } from "@/lib/products/catalog";
 import { getOrCreatePremiumReading } from "@/lib/readings";
-import { calculatePetFiveElements } from "@/lib/saju/petSajuEngine";
+import { generatePetHook } from "@/lib/saju/petHookGenerator";
+import {
+  calculatePetFiveElements,
+  getElementLabel,
+  type FiveElement,
+} from "@/lib/saju/petSajuEngine";
+import { sanitizePremiumReport } from "@/lib/saju/premiumReportGenerator";
 
 type PremiumResultPageProps = {
   params: Promise<{
     readingId: string;
   }>;
 };
+
+const elementKeywords: Record<FiveElement, string[]> = {
+  wood: ["호기심", "탐색", "성장"],
+  fire: ["표현력", "애교", "존재감"],
+  earth: ["안정감", "루틴", "편안함"],
+  metal: ["섬세함", "신중함", "규칙성"],
+  water: ["관찰력", "감수성", "차분함"],
+};
+
+function createSummaryText(body: string) {
+  const cleanBody = body.replace(/\s+/g, " ").trim();
+  const firstSentence =
+    cleanBody.match(/[^.!?]+[.!?]/)?.[0]?.trim() ?? cleanBody;
+
+  return firstSentence.length > 96
+    ? `${firstSentence.slice(0, 95).trim()}...`
+    : firstSentence;
+}
+
+function splitPremiumBody(body: string) {
+  const lines = body
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.flatMap((line) => {
+    if (/^\d{1,2}\.\s/.test(line)) {
+      return [line.replace(/^\d{1,2}\.\s*/, "")];
+    }
+
+    const sentences = line.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [line];
+    const chunks: string[] = [];
+
+    for (let index = 0; index < sentences.length; index += 2) {
+      chunks.push(sentences.slice(index, index + 2).join(" ").trim());
+    }
+
+    return chunks;
+  });
+}
+
+function createTodayAction(title: string, petName: string) {
+  if (title.includes("오행")) {
+    return `${postposition.to(petName)} 잘 맞았던 놀이, 쉬는 자리, 산책 리듬을 한 줄로 기록해보세요.`;
+  }
+
+  if (title.includes("성격") || title.includes("장점")) {
+    return `${postposition.subject(petName)} 스스로 다가오는 순간을 기다렸다가 짧게 칭찬해주세요.`;
+  }
+
+  if (title.includes("예민") || title.includes("낯선")) {
+    return `낯선 자극 앞에서는 바로 다가가기보다 한 걸음 거리와 시간을 먼저 주세요.`;
+  }
+
+  if (title.includes("사랑") || title.includes("보호자")) {
+    return `오늘은 ${postposition.to(petName)} 같은 톤으로 이름을 불러주고 반응을 천천히 기다려보세요.`;
+  }
+
+  if (title.includes("루틴") || title.includes("산책") || title.includes("놀이")) {
+    return `밥, 놀이, 휴식을 같은 순서로 이어주는 작은 약속을 하나 만들어보세요.`;
+  }
+
+  if (title.includes("올해") || title.includes("월별")) {
+    return `이번 달에 잘 맞았던 생활 리듬 하나를 메모하고 다음 달에도 이어가보세요.`;
+  }
+
+  return `${petName}의 작은 신호를 결론 내리기보다 한 번 더 바라봐 주세요.`;
+}
 
 export default async function PremiumResultPage({
   params,
@@ -36,10 +117,6 @@ export default async function PremiumResultPage({
     notFound();
   }
 
-  const pdfAccess = await checkPaymentAccess(reading.id, "pdf_report");
-  const pdfProduct = getProductCatalogItem("pdf_report");
-  const pdfPrice = pdfProduct.price.toLocaleString("ko-KR");
-  const demoModeEnabled = isDemoModeEnabled();
   const elementProfile = calculatePetFiveElements({
     name: reading.petName,
     type: reading.species,
@@ -48,166 +125,277 @@ export default async function PremiumResultPage({
     birthTimeUnknown: !reading.birthTime,
     adoptionDate: reading.metDate || null,
   });
+  const primaryElementLabel = getElementLabel(elementProfile.primaryElement);
+  const petPossessive = postposition.possessive(reading.petName);
+  const petTopic = postposition.topic(reading.petName);
+  const summaryKeywords = elementKeywords[elementProfile.primaryElement];
+  const hook = generatePetHook({
+    petName: reading.petName,
+    species: reading.species,
+    dominantElement: elementProfile.primaryElement,
+    secondaryElement: elementProfile.secondaryElement,
+    scores: elementProfile.scores,
+    birthTimeUnknown: !reading.birthTime,
+    adoptionDate: reading.metDate || null,
+  });
+  const safePremiumSections = reading.premiumSections.map((section, index) => ({
+    ...section,
+    id: `premium-section-${index + 1}`,
+    body: sanitizePremiumReport(section.body, reading.petName),
+  }));
 
   return (
-    <PageShell
-      eyebrow="프리미엄 리포트"
-      title={`${reading.petName}의 심층 사주 리포트`}
-      description="서버에서 approved 결제 내역을 확인한 뒤 열리는 심층 리포트입니다. 모든 내용은 규칙 기반 엔진으로 생성되며, 반려동물을 더 다정하게 이해하기 위한 엔터테인먼트 콘텐츠입니다."
-    >
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <aside className="h-fit rounded-[2rem] border border-berry/10 bg-white/70 p-5 lg:sticky lg:top-6">
-          <div className="grid place-items-center rounded-[1.5rem] bg-berry/10 p-6 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-[1.5rem] bg-white text-2xl font-black text-berry shadow-soft">
-              {reading.species === "dog" ? "멍" : "냥"}
-            </div>
-            <h2 className="mt-4 text-xl font-black text-ink">
-              {reading.petName}
-            </h2>
-            <p className="mt-1 text-sm font-semibold text-ink/55">
-              {reading.metDate || reading.birthDate} 기준 리포트
-            </p>
-          </div>
+    <PageShell mascotType={reading.species}>
+      <ReportMobileBar
+        title="심층 리포트"
+        backHref={`/result/free/${reading.id}`}
+        rightLabel="PDF"
+        rightHref={`/api/pdf/${reading.id}`}
+      />
 
-          <nav className="mt-5" aria-label="프리미엄 리포트 목차">
-            <p className="text-sm font-black uppercase text-persimmon">
-              심층 리포트 목차
-            </p>
-            <ol className="mt-3 grid grid-cols-1 gap-3">
-              {reading.premiumSections.map((section, index) => {
-                const sectionId = `premium-section-${index + 1}`;
+      <div className="grid gap-5">
+        <ReportSceneBanner
+          type={reading.species}
+          title={`${reading.petName}의 심층 리포트 카드`}
+          bubbleText="오행과 생활 리듬을 차분히 읽어볼게요"
+        />
 
-                return (
-                  <li key={`${section.title}-${index}`} className="min-w-0">
-                    <a
-                      href={`#${sectionId}`}
-                      className="focus-ring group flex w-full items-start gap-3 rounded-2xl border border-berry/10 bg-cream/70 px-4 py-3 text-left transition hover:border-berry/35 hover:bg-white"
-                    >
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-xs font-black text-berry shadow-sm transition group-hover:bg-berry group-hover:text-white">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="min-w-0 flex-1 whitespace-normal break-keep text-sm font-black leading-5 text-ink/75 group-hover:text-berry">
-                        {section.title}
-                      </span>
-                    </a>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
+        <PetHookCard
+          species={reading.species}
+          hookSentence={hook.hookSentence}
+          hookKeyword={hook.hookKeyword}
+          hookSubcopy={hook.hookSubcopy}
+          highlightWords={hook.highlightWords}
+          size="large"
+          mascot={
+            <PetMascot
+              type={reading.species}
+              mood="reading"
+              size="lg"
+              label={`${reading.petName} 심층 리포트 훅 캐릭터`}
+            />
+          }
+        />
 
-          <div className="mt-5 rounded-[1.75rem] border border-moss/20 bg-moss/10 p-4">
-            <div className="rounded-[1.25rem] bg-white/85 p-4">
-              <p className="text-sm font-black text-moss">
-                심층 리포트 구매자 전용
+        <section className="warm-panel overflow-hidden rounded-[2rem] p-5 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div>
+              <p className="text-sm font-black text-persimmon">
+                심층 리포트 한 장 요약
               </p>
-              <h3 className="mt-2 break-keep text-xl font-black leading-tight text-ink">
-                PDF 소장본으로 오래 보관하기
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-ink/65">
-                웹에서 보는 심층 리포트를 표지와 요약 카드가 포함된 PDF 파일로
-                정리해 소장할 수 있습니다.
-              </p>
-              <div className="mt-4 rounded-2xl bg-moss/10 px-4 py-3">
-                <p className="text-xs font-black text-moss">추가 상품 가격</p>
-                <p className="mt-1 text-2xl font-black text-ink">
-                  PDF 소장본 추가 {pdfPrice}원
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-sm font-black text-ink">포함 내용</p>
-              <ul className="mt-3 grid gap-2 text-sm font-semibold text-ink/70">
-                {pdfProduct.includedItems.map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-2 rounded-2xl bg-white/70 px-3 py-2"
-                  >
-                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-moss/15 text-xs font-black text-moss">
-                      ✓
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {pdfAccess.hasAccess ? (
-              <div className="mt-4">
-                <PdfDownloadButton
-                  readingId={reading.id}
-                  petName={reading.petName}
-                  label="PDF 다운로드"
-                />
-              </div>
-            ) : (
-              <div className="mt-4 grid gap-3">
-                <PrimaryLink
-                  href={`/checkout/${reading.id}?productType=pdf_report`}
-                  tone="moss"
-                  className="w-full"
-                >
-                  PDF 소장본 추가 {pdfPrice}원
-                </PrimaryLink>
-                {demoModeEnabled ? (
-                  <PdfDownloadButton
-                    readingId={reading.id}
-                    petName={reading.petName}
-                    label="데모 PDF 미리보기"
-                    loadingLabel="데모 PDF 준비 중"
-                    tone="light"
-                    demoPreview
-                  />
-                ) : null}
-              </div>
-            )}
-          </div>
-        </aside>
-
-        <div className="grid gap-5">
-          <PetElementBalance
-            petName={reading.petName}
-            species={reading.species}
-            scores={elementProfile.scores}
-          />
-
-          {reading.premiumSections.map((section, index) => (
-            <article
-              id={`premium-section-${index + 1}`}
-              key={`${section.title}-${index}`}
-              className="warm-panel scroll-mt-28 rounded-[2rem] p-5 sm:scroll-mt-32 sm:p-7"
-            >
-              <div className="flex items-start gap-4">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-persimmon/10 text-sm font-black text-persimmon">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <p className="text-sm font-black uppercase text-persimmon">
-                    심층 해석
+              <h1 className="mt-2 break-keep text-3xl font-black leading-tight text-ink sm:text-5xl">
+                {petPossessive} 마음결을 읽는 안내서
+              </h1>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1.5rem] border border-berry/10 bg-berry/10 px-4 py-4">
+                  <p className="text-xs font-black text-berry">대표 기운</p>
+                  <p className="mt-2 text-3xl font-black text-berry">
+                    {primaryElementLabel}
                   </p>
-                  <h2 className="mt-1 text-2xl font-black leading-tight text-ink">
-                    {section.title}
-                  </h2>
+                </div>
+                <div className="rounded-[1.5rem] border border-moss/15 bg-moss/10 px-4 py-4">
+                  <p className="text-xs font-black text-moss">성향 키워드</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {summaryKeywords.map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="rounded-full bg-white/80 px-3 py-1 text-sm font-black text-moss"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-[1.5rem] border border-persimmon/15 bg-persimmon/10 px-4 py-4 sm:col-span-2">
+                  <p className="text-xs font-black text-persimmon">
+                    보호자에게 보내는 신호
+                  </p>
+                  <p className="mt-2 break-keep text-lg font-black leading-7 text-ink">
+                    {hook.hookKeyword}의 결로 천천히 마음을 표현하는 아이예요.
+                  </p>
+                </div>
+                <div className="rounded-[1.5rem] border border-berry/10 bg-white/75 px-4 py-4 sm:col-span-2">
+                  <p className="text-xs font-black text-berry">오늘의 메시지</p>
+                  <p className="mt-2 break-keep text-base font-bold leading-7 text-ink/75">
+                    {petTopic} 자기 속도를 존중받을 때 가장 편안해져요.
+                  </p>
                 </div>
               </div>
-              <p className="mt-5 whitespace-pre-line text-base leading-8 text-ink/75">
-                {section.body}
-              </p>
-            </article>
-          ))}
-
-          <div className="rounded-[2rem] border border-moss/20 bg-white/60 p-5">
-            <p className="text-sm leading-6 text-ink/70">
-              이 리포트는 반려생활 이해를 위한 엔터테인먼트 콘텐츠입니다. 질병,
-              수명, 사고 예언이나 치료 조언을 제공하지 않습니다.
-            </p>
-            <PrimaryLink href="/input" tone="moss" className="mt-5">
-              다른 아이도 보기
-            </PrimaryLink>
+            </div>
+            <div className="relative min-h-72 rounded-[2rem] border border-berry/10 bg-cream/70 p-5">
+              <div className="grid min-h-64 place-items-center">
+                <PetMascot
+                  type={reading.species}
+                  mood="holding-card"
+                  size="hero"
+                  withBubble
+                  bubbleText={`${reading.petName}의 리포트가 준비됐어요!`}
+                  label={`${reading.petName}의 심층 리포트 카드를 든 캐릭터`}
+                />
+              </div>
+            </div>
           </div>
+        </section>
+
+        <PetElementBalance
+          petName={reading.petName}
+          species={reading.species}
+          scores={elementProfile.scores}
+        />
+
+        <section className="rounded-[2rem] border border-berry/10 bg-white/78 p-5 shadow-soft sm:p-7">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-black text-persimmon">
+                리포트 목차
+              </p>
+              <h2 className="mt-2 break-keep text-2xl font-black text-ink">
+                읽고 싶은 부분부터 열어보세요
+              </h2>
+            </div>
+            <PetMascot
+              type="cat"
+              mood="reading"
+              size="md"
+              label="목차를 읽는 고양이 캐릭터"
+            />
+          </div>
+          <PremiumTableOfContents
+            sections={safePremiumSections.map((section) => ({
+              id: section.id,
+              title: section.title,
+            }))}
+          />
+        </section>
+
+        <div className="grid gap-5">
+          {safePremiumSections.map((section, index) => {
+            const paragraphs = splitPremiumBody(section.body);
+            const summary = createSummaryText(section.body);
+
+            return (
+              <ReportAccordionSection
+                key={`${section.title}-${index}`}
+                id={section.id}
+                index={index}
+                title={section.title}
+                summary={summary}
+                defaultOpen={index === 0}
+              >
+                <div className="flex items-start gap-4">
+                  <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-persimmon/10">
+                    <PetMascot
+                      type={reading.species}
+                      mood={
+                        index % 5 === 0
+                          ? "star"
+                          : index % 5 === 1
+                            ? "happy"
+                            : index % 5 === 2
+                              ? "curious"
+                              : index % 5 === 3
+                                ? "reading"
+                                : "holding-card"
+                      }
+                      size="sm"
+                      label={`${section.title} 섹션 미니 캐릭터`}
+                      className="scale-75"
+                    />
+                  </span>
+                  <div>
+                    <p className="text-sm font-black uppercase text-persimmon">
+                      심층 해석 {String(index + 1).padStart(2, "0")}
+                    </p>
+                    <h2 className="mt-1 break-keep text-2xl font-black leading-tight text-ink">
+                      {section.title}
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-[1.5rem] border border-berry/10 bg-berry/5 px-4 py-3">
+                  <p className="text-xs font-black text-berry">짧은 요약</p>
+                  <p className="mt-2 break-keep text-sm font-bold leading-6 text-ink/70">
+                    {summary}
+                  </p>
+                </div>
+
+                <div className="report-reading mt-5 space-y-4">
+                  {paragraphs.map((paragraph, paragraphIndex) => (
+                    <p key={`${section.id}-${paragraphIndex}`}>{paragraph}</p>
+                  ))}
+                </div>
+
+                <div className="mt-6 rounded-[1.5rem] border border-moss/20 bg-moss/10 px-4 py-3">
+                  <p className="text-xs font-black text-moss">오늘 해볼 것</p>
+                  <p className="mt-2 break-keep text-sm font-black leading-6 text-ink/70">
+                    {createTodayAction(section.title, reading.petName)}
+                  </p>
+                </div>
+              </ReportAccordionSection>
+            );
+          })}
         </div>
+
+        <section className="rounded-[2rem] border border-moss/20 bg-moss/10 p-5 shadow-soft sm:p-7">
+          <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+              <p className="text-sm font-black text-moss">PDF 무료 저장</p>
+              <h2 className="mt-2 break-keep text-2xl font-black leading-tight text-ink">
+                이 리포트를 예쁘게 보관해요
+              </h2>
+              <p className="mt-3 break-keep text-sm font-semibold leading-6 text-ink/65">
+                표지, 반려동물 정보, 한 장 요약, 오행 밸런스, 전체 심층
+                리포트를 PDF로 저장할 수 있어요.
+              </p>
+            </div>
+            <PetMascot
+              type={reading.species}
+              mood="pdf"
+              size="lg"
+              label="PDF 문서를 든 캐릭터"
+            />
+          </div>
+          <div className="mt-5">
+            <PdfDownloadButton
+              readingId={reading.id}
+              petName={reading.petName}
+              label="PDF 무료 저장하기"
+            />
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-berry/10 bg-white/65 p-5 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
+            <PetMascot
+              type="both"
+              mood="happy"
+              size="md"
+              withBubble
+              bubbleText="다른 아이 이야기도 들어볼까요?"
+              label="함께 인사하는 강아지와 고양이 캐릭터"
+            />
+            <div>
+              <p className="text-sm font-black text-persimmon">
+                리포트 읽기 완료
+              </p>
+              <p className="mt-2 break-keep text-base font-bold leading-7 text-ink/70">
+                이 리포트는 결론을 단정하기보다 {postposition.object(reading.petName)}
+                더 다정하게 이해하기 위한 안내서예요.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
+
+      <ReportFloatingActions
+        saveHref={`/api/pdf/${reading.id}`}
+        saveLabel={`${reading.petName} PDF 저장`}
+      />
+      <MobileStickyCTA
+        href={`/api/pdf/${reading.id}`}
+        label="PDF 무료 저장하기"
+        subLabel="심층 리포트 구매자에게 무료 제공"
+      />
     </PageShell>
   );
 }

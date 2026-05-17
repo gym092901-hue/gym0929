@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { DemoStartButton } from "@/components/demo/DemoStartButton";
 import { PageShell } from "@/components/layout/PageShell";
+import { PetMascot } from "@/components/mascot/PetMascot";
 import { isDemoModeEnabled } from "@/lib/demo/config";
 
 export default function DemoPage() {
@@ -17,10 +18,22 @@ export default function DemoPage() {
     >
       <div className="grid gap-6">
         <section className="warm-panel rounded-[2rem] p-5 sm:p-8">
-          <p className="text-sm font-black text-persimmon">
-            샘플 반려동물
-          </p>
-          <h2 className="mt-2 text-2xl font-black text-ink">몽이</h2>
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
+            <div>
+              <p className="text-sm font-black text-persimmon">
+                샘플 반려동물
+              </p>
+              <h2 className="mt-2 text-2xl font-black text-ink">몽이</h2>
+            </div>
+            <PetMascot
+              type="dog"
+              mood="holding-card"
+              size="lg"
+              withBubble
+              bubbleText="몽이 데모를 시작해볼게요"
+              label="데모 리포트 카드를 든 강아지 캐릭터"
+            />
+          </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {[
               ["종류", "강아지"],

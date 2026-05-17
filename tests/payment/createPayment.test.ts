@@ -89,7 +89,7 @@ describe("createPayment", () => {
       provider: "kakaopay",
       readingId: "reading-1",
       productType: "premium_report",
-      amount: 4900,
+      amount: 2900,
       currency: "KRW",
       productName: "우리 아이 심층 사주 리포트",
     });
@@ -98,7 +98,7 @@ describe("createPayment", () => {
       expect.objectContaining({
         readingId: "reading-1",
         productType: "premium_report",
-        amount: 4900,
+        amount: 2900,
         currency: "KRW",
       }),
     );
@@ -108,7 +108,7 @@ describe("createPayment", () => {
         reading_id: "reading-1",
         provider: "kakaopay",
         product_type: "premium_report",
-        amount: 4900,
+        amount: 2900,
         currency: "KRW",
         status: "pending",
         provider_order_id: "order-123",

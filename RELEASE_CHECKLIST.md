@@ -1,6 +1,6 @@
 # 멍냥사주 Release Checklist
 
-정식 운영 배포 전 확인용 체크리스트입니다. LocalTunnel은 외부 임시 검수용으로만 사용하고, 운영 공유 링크는 Vercel Production URL 또는 커스텀 도메인을 사용합니다.
+정식 운영 배포 전 확인용 체크리스트입니다. 운영 공유 링크는 Vercel Production URL 또는 커스텀 도메인만 사용합니다.
 
 ## 1. 배포 전 체크리스트
 
@@ -12,12 +12,12 @@
 - [ ] Supabase 운영 프로젝트에 migration이 적용되어 있다.
 - [ ] Supabase `products` seed 데이터가 운영 DB에 들어가 있다.
 - [ ] Vercel Production 환경변수에 `DEMO_MODE=false`가 설정되어 있다.
-- [ ] `NEXT_PUBLIC_SITE_URL`이 LocalTunnel/localhost가 아니라 Vercel Production URL 또는 커스텀 도메인이다.
+- [ ] `NEXT_PUBLIC_SITE_URL`이 로컬 터널/localhost가 아니라 Vercel Production URL 또는 커스텀 도메인이다.
 - [ ] Vercel Production 환경에서 `VERCEL_ENV=production`이 적용되는지 확인했다.
 - [ ] KakaoPay 운영 콘솔 callback URL이 운영 도메인으로 등록되어 있다.
 - [ ] PayPal 운영 앱 client id/secret과 JS SDK client id가 설정되어 있다.
 - [ ] 실제 결제 전 금액이 서버 product config/DB 기준으로 계산되는지 확인했다.
-- [ ] PDF API가 `premium_report`와 `pdf_report` 승인 결제를 모두 확인하는지 확인했다.
+- [ ] PDF API가 `premium_report` 승인 결제를 확인하고 PDF 무료 저장을 제공하는지 확인했다.
 - [ ] 관리자 비밀번호 `ADMIN_PASSWORD`가 충분히 강한 값으로 설정되어 있다.
 
 ## 2. 환경변수 목록
@@ -101,7 +101,7 @@ production에서는 아래 데모 경로가 직접 열리면 안 됩니다.
 - 카카오페이 실패 화면 보기 링크
 - 카카오페이 취소 화면 보기 링크
 - 페이팔 실패 화면 보기 링크
-- 데모 PDF 미리보기
+- 데모 결제 기능
 - mock payment 승인
 - `demo-mong-2026` 프리미엄 직접 접근
 
@@ -110,4 +110,4 @@ production에서는 아래 데모 경로가 직접 열리면 안 됩니다.
 - `SUPABASE_SERVICE_ROLE_KEY`, `KAKAOPAY_SECRET_KEY`, `PAYPAL_CLIENT_SECRET`가 `NEXT_PUBLIC_` 접두어를 갖지 않는다.
 - 결제 금액은 클라이언트 payload가 아니라 서버의 `products` 테이블과 product config 기준으로 계산한다.
 - premium 접근은 `product_type="premium_report"` + `status="approved"`만 인정한다.
-- PDF 접근은 `premium_report`와 `pdf_report`가 모두 approved일 때만 허용한다.
+- PDF 접근은 `premium_report`가 approved일 때만 무료로 허용한다.

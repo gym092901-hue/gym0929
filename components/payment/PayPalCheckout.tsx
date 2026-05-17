@@ -300,6 +300,7 @@ export function PayPalCheckout({
             disabled={disabled || isSubmittingCard}
             className="focus-ring mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[#003087] px-6 py-3 text-sm font-black text-white transition hover:bg-[#00286f] disabled:cursor-not-allowed disabled:opacity-60"
           >
+            <PawDecoration />
             {isSubmittingCard ? "카드 결제 승인 중" : "카드로 결제하기"}
           </button>
         </div>
@@ -317,5 +318,15 @@ export function PayPalCheckout({
         </p>
       )}
     </div>
+  );
+}
+
+function PawDecoration() {
+  return (
+    <span aria-hidden className="mr-2 grid h-5 w-5 grid-cols-2 gap-0.5">
+      <span className="h-1.5 w-1.5 rounded-full bg-white/85" />
+      <span className="h-1.5 w-1.5 rounded-full bg-white/85" />
+      <span className="col-span-2 mx-auto h-2.5 w-3.5 rounded-full bg-white/85" />
+    </span>
   );
 }

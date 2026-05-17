@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isDemoModeEnabled } from "@/lib/demo/config";
 import { createPayment } from "@/lib/payment/createPayment";
-import { isProductType } from "@/lib/products/catalog";
+import { getProductResultUrl, isProductType } from "@/lib/products/catalog";
 import { ensureProductPurchaseAllowed } from "@/lib/products/purchaseGuards";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -83,6 +83,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "결제 가능한 상품을 찾을 수 없습니다." },
         { status: 404 },
+      );
+    }
+
+    if (product.price <= 0) {
+      return NextResponse.json(
+        {
+          error: "무료 제공 상품은 결제가 필요하지 않습니다.",
+          redirectUrl: getProductResultUrl(body.readingId, product.product_type),
+        },
+        { status: 400 },
       );
     }
 

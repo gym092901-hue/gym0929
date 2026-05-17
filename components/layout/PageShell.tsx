@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { FloatingPets } from "@/components/mascot/FloatingPets";
+import type { MascotType } from "@/components/mascot/types";
 
 type PageShellProps = {
   children: ReactNode;
@@ -6,6 +8,7 @@ type PageShellProps = {
   title?: string;
   description?: string;
   narrow?: boolean;
+  mascotType?: MascotType;
 };
 
 export function PageShell({
@@ -14,10 +17,12 @@ export function PageShell({
   title,
   description,
   narrow = false,
+  mascotType = "both",
 }: PageShellProps) {
   return (
-    <main className="min-h-[calc(100vh-160px)] px-4 py-8 sm:px-6 sm:py-12">
-      <div className={`mx-auto ${narrow ? "max-w-3xl" : "max-w-6xl"}`}>
+    <main className="relative min-h-[calc(100vh-160px)] overflow-hidden px-4 pb-28 pt-8 sm:px-6 sm:py-12">
+      <FloatingPets type={mascotType} />
+      <div className={`relative mx-auto ${narrow ? "max-w-3xl" : "max-w-6xl"}`}>
         {(eyebrow || title || description) && (
           <div className="mb-8">
             {eyebrow && (

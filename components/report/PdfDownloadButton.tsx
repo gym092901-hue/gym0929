@@ -8,7 +8,6 @@ type PdfDownloadButtonProps = {
   label?: string;
   loadingLabel?: string;
   tone?: "berry" | "light";
-  demoPreview?: boolean;
 };
 
 function fallbackFilename(petName: string) {
@@ -42,10 +41,9 @@ const toneClass = {
 export function PdfDownloadButton({
   readingId,
   petName,
-  label = "PDF 다운로드",
+  label = "PDF 무료 저장하기",
   loadingLabel = "PDF 준비 중",
   tone = "berry",
-  demoPreview = false,
 }: PdfDownloadButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -55,28 +53,6 @@ export function PdfDownloadButton({
     setIsLoading(true);
 
     try {
-      if (demoPreview) {
-        const approveResponse = await fetch("/api/demo/approve-payment", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            readingId,
-            productType: "pdf_report",
-          }),
-        });
-        const approveResult = (await approveResponse.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-
-        if (!approveResponse.ok) {
-          throw new Error(
-            approveResult?.error ?? "데모 PDF 권한을 준비하지 못했습니다.",
-          );
-        }
-      }
-
       const response = await fetch(`/api/pdf/${readingId}`);
 
       if (!response.ok) {

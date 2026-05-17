@@ -14,16 +14,16 @@ const policies = [
   {
     title: "보관과 삭제",
     body:
-      "운영 단계에서는 결제 기록 보관 의무와 사용자 삭제 요청을 함께 고려해 보관 기간을 정책화해야 합니다.",
+      "리포트 재열람과 결제 확인을 위해 필요한 기간 동안 보관하며, 관계 법령상 보관이 필요한 결제 기록은 해당 기간 동안 별도로 보관될 수 있습니다. 삭제 요청이 접수되면 법정 보관 대상 정보를 제외하고 확인 후 삭제합니다.",
   },
 ];
 
 export default function PrivacyPage() {
   return (
     <PageShell
-      eyebrow="Privacy"
+      eyebrow="개인정보"
       title="개인정보처리방침"
-      description="Supabase와 결제 연동 전 기준으로 작성한 개인정보 안내 초안입니다."
+      description="리포트 생성과 결제 확인에 필요한 최소한의 정보 이용 기준을 안내합니다."
       narrow
     >
       <div className="grid gap-4">

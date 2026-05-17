@@ -163,4 +163,28 @@ describe("checkPaymentAccess", () => {
       productType: null,
     });
   });
+
+  it("does not accept local mock payments in Vercel production", async () => {
+    vi.stubEnv("DEMO_MODE", "true");
+    vi.stubEnv("VERCEL_ENV", "production");
+    isSupabaseConfiguredMock.mockReturnValue(false);
+
+    const { createLocalApprovedPayment } = await import(
+      "@/lib/payment/localPaymentStore"
+    );
+    const { checkPaymentAccess } = await import(
+      "@/lib/payment/checkPaymentAccess"
+    );
+
+    createLocalApprovedPayment("demo-mong-2026", "premium_report");
+
+    await expect(
+      checkPaymentAccess("demo-mong-2026", "premium_report"),
+    ).resolves.toEqual({
+      hasAccess: false,
+      paymentId: null,
+      provider: null,
+      productType: null,
+    });
+  });
 });

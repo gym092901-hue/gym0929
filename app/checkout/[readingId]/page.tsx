@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
+import { PetMascot } from "@/components/mascot/PetMascot";
 import { CheckoutExperience } from "@/components/payment/CheckoutExperience";
 import { DemoPaymentResetButton } from "@/components/payment/DemoPaymentResetButton";
+import { ReportMobileBar } from "@/components/report/ReportMobileBar";
+import { ReportSceneBanner } from "@/components/report/ReportSceneBanner";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
 import { isDemoModeEnabled, isDemoReadingId } from "@/lib/demo/config";
 import { postposition } from "@/lib/korean/postposition";
@@ -77,6 +80,24 @@ export default async function CheckoutPage({
   }
 
   const petNamePossessive = postposition.possessive(reading.petName);
+  const checkoutDescription = createCheckoutDescription(
+    reading.petName,
+    productType,
+  );
+
+  if (productType === "pdf_report") {
+    const premiumAccess = await checkPaymentAccess(readingId, "premium_report");
+
+    if (premiumAccess.hasAccess) {
+      redirect(getProductResultUrl(readingId, "pdf_report"));
+    }
+
+    redirect(
+      `/checkout/${readingId}?productType=premium_report${
+        forceCheckout ? "&forceCheckout=1" : ""
+      }`,
+    );
+  }
 
   const currentAccess = await checkPaymentAccess(readingId, productType);
   const checkoutStatus = await getCheckoutPaymentStatus(readingId, productType);
@@ -95,6 +116,9 @@ export default async function CheckoutPage({
     : null;
   const isPrerequisiteMissing =
     Boolean(product.prerequisite) && !prerequisiteAccess?.hasAccess;
+  const purchasableProductTypes = productTypes.filter(
+    (type) => type !== "pdf_report",
+  );
 
   if (currentAccess.hasAccess && !forceCheckout && !isPrerequisiteMissing) {
     redirect(resultUrl);
@@ -106,26 +130,66 @@ export default async function CheckoutPage({
       title={`${petNamePossessive} ${product.name} 결제`}
       description="결제 완료 여부는 서버에서 확인하며, 승인된 상품만 열람할 수 있습니다."
       narrow
+      mascotType={reading.species}
     >
+      <ReportMobileBar
+        title="결제하기"
+        backHref={`/result/free/${reading.id}`}
+        rightLabel={formatProductPrice(product.price)}
+        rightHref="#checkout-payment-methods"
+      />
+
+      <ReportSceneBanner
+        type={reading.species}
+        title={`${reading.petName} 결제 안내`}
+        bubbleText="결제 후 바로 리포트를 볼 수 있어요"
+        className="mb-6"
+      />
+
       <div className="grid gap-6">
         <section className="warm-panel rounded-[2rem] p-5 sm:p-8">
-          <div className="flex flex-col gap-5 border-b border-berry/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="grid gap-5 border-b border-berry/10 pb-6 sm:grid-cols-[1fr_auto] sm:items-start">
+            <div className="min-w-0">
               <p className="text-sm font-black uppercase text-persimmon">
                 상품 정보
               </p>
-              <h2 className="mt-2 text-2xl font-black text-ink">
-                {product.name}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-ink/70">
-                {product.description}
-              </p>
+              <div className="mt-2">
+                <h2 className="text-2xl font-black text-ink">
+                  {product.name}
+                </h2>
+                <p className="mt-3 break-keep text-base font-semibold leading-7 text-ink/70">
+                  {checkoutDescription}
+                </p>
+              </div>
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                <span className="rounded-2xl bg-berry/10 px-4 py-3 text-sm font-black text-berry">
+                  심층 리포트 2,900원
+                </span>
+                <span className="rounded-2xl bg-persimmon/10 px-4 py-3 text-sm font-black text-persimmon">
+                  추가 콘텐츠 1,000원
+                </span>
+                <span className="rounded-2xl bg-moss/10 px-4 py-3 text-sm font-black text-moss">
+                  PDF 무료
+                </span>
+              </div>
             </div>
-            <div className="rounded-[1.5rem] bg-berry/10 px-5 py-4 text-left sm:text-right">
-              <p className="text-sm font-bold text-berry">결제 금액</p>
-              <p className="mt-1 text-3xl font-black text-berry">
-                {product.price.toLocaleString("ko-KR")}원
-              </p>
+            <div className="grid gap-3 rounded-[1.75rem] border border-berry/10 bg-white/75 p-4 text-center shadow-sm sm:min-w-52">
+              <PetMascot
+                type={reading.species}
+                mood="payment"
+                size="lg"
+                withBubble
+                bubbleText="영수증은 제가 챙길게요"
+                label={`${reading.petName} 결제를 안내하는 픽셀 캐릭터`}
+              />
+              <div className="rounded-[1.25rem] bg-berry/10 px-5 py-4">
+                <p className="text-sm font-bold text-berry">
+                  {product.price === 0 ? "제공 가격" : "결제 금액"}
+                </p>
+                <p className="mt-1 text-3xl font-black text-berry">
+                  {formatProductPrice(product.price)}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -154,12 +218,12 @@ export default async function CheckoutPage({
                 먼저 필요한 상품이 있어요
               </p>
               <h2 className="mt-2 break-keep text-2xl font-black text-ink">
-                PDF 소장본은 심층 리포트 구매 후 이용할 수 있어요.
+                PDF 저장은 심층 리포트 구매 후 이용할 수 있어요.
               </h2>
               <p className="mt-3 text-sm font-semibold leading-6 text-ink/65">
                 PDF는 심층 리포트 내용을 표지와 요약 카드가 포함된 파일로
-                정리하는 추가 상품입니다. 먼저 {prerequisiteProduct.name}를
-                열람한 뒤 PDF 소장본을 구매할 수 있습니다.
+                정리하는 무료 소장본입니다. 먼저 {prerequisiteProduct.name}를
+                열람한 뒤 PDF를 다운로드할 수 있습니다.
               </p>
               <PrimaryLink
                 href={`/checkout/${readingId}?productType=${prerequisiteProduct.productType}${
@@ -177,7 +241,7 @@ export default async function CheckoutPage({
         <section className="rounded-[2rem] border border-berry/10 bg-white/70 p-5 sm:p-6">
           <h2 className="text-xl font-black text-ink">다른 상품 선택</h2>
           <div className="mt-4 grid gap-3">
-            {productTypes.map((type) => {
+            {purchasableProductTypes.map((type) => {
               const catalogItem = getProductCatalogItem(type);
               const isSelected = type === productType;
               const href = `/checkout/${readingId}?productType=${type}${
@@ -202,7 +266,7 @@ export default async function CheckoutPage({
                       </p>
                     </div>
                     <span className="shrink-0 text-sm font-black">
-                      {catalogItem.price.toLocaleString("ko-KR")}원
+                      {formatProductPrice(catalogItem.price)}
                     </span>
                   </div>
                 </Link>
@@ -228,7 +292,9 @@ export default async function CheckoutPage({
             ) : null}
           </div>
           <div className="mt-4 grid gap-3">
-            {productStatuses.map(({ product: item, status }) => (
+            {productStatuses
+              .filter(({ product: item }) => item.productType !== "pdf_report")
+              .map(({ product: item, status }) => (
               <Link
                 key={item.productType}
                 href={`/checkout/${readingId}?productType=${item.productType}${
@@ -245,7 +311,7 @@ export default async function CheckoutPage({
                     {item.name}
                   </span>
                   <span className="mt-1 block text-xs font-semibold text-ink/50">
-                    {item.price.toLocaleString("ko-KR")}원
+                    {formatProductPrice(item.price)}
                   </span>
                 </span>
                 <span
@@ -258,6 +324,17 @@ export default async function CheckoutPage({
               </Link>
             ))}
           </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-moss/20 bg-moss/10 p-5 sm:p-6">
+          <p className="text-sm font-black text-moss">PDF 무료 저장</p>
+          <h2 className="mt-2 break-keep text-xl font-black text-ink">
+            심층 리포트 구매자에게 무료로 제공됩니다
+          </h2>
+          <p className="mt-3 text-sm font-semibold leading-6 text-ink/65">
+            심층 리포트가 열리면 프리미엄 결과 페이지에서 바로 PDF를 저장할 수
+            있습니다. 별도 PDF 결제는 필요하지 않습니다.
+          </p>
         </section>
 
         <section
@@ -302,6 +379,9 @@ export default async function CheckoutPage({
           <CheckoutExperience
             readingId={reading.id}
             productType={product.productType}
+            productName={product.name}
+            species={reading.species}
+            price={product.price}
             currency={product.currency}
             demoModeEnabled={demoModeEnabled}
             kakaoPayEnabled={isKakaoPayConfigured()}
@@ -322,6 +402,23 @@ export default async function CheckoutPage({
 
         {demoModeEnabled ? (
           <section className="rounded-[2rem] border border-berry/10 bg-white/55 p-5">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <span className="rounded-full bg-ink/5 px-3 py-1 text-xs font-black text-ink/55">
+                개발자용
+              </span>
+              <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-white/70 opacity-70 grayscale">
+                <PetMascot
+                  type={reading.species}
+                  mood="curious"
+                  size="sm"
+                  label="데모 링크를 안내하는 회색 톤 반려동물 픽셀 캐릭터"
+                  className="scale-75"
+                />
+              </div>
+              <p className="text-sm font-black text-ink/55">
+                데모 모드에서만 노출되는 실패 화면 확인 링크입니다.
+              </p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <Link
                 href={`/payment/kakao/fail?readingId=${readingId}`}
@@ -352,6 +449,30 @@ export default async function CheckoutPage({
       </div>
     </PageShell>
   );
+}
+
+function formatProductPrice(price: number) {
+  return price === 0 ? "무료" : `${price.toLocaleString("ko-KR")}원`;
+}
+
+function createCheckoutDescription(petName: string, productType: ProductType) {
+  if (productType === "premium_report") {
+    return `${postposition.possessive(petName)} 오행 밸런스, 애착 방식, 생활 루틴, 올해의 흐름을 한 번에 읽는 심층 리포트예요.`;
+  }
+
+  if (productType === "guardian_match") {
+    return `${petName}와 보호자가 서로 편안해지는 애착 방식과 교감 포인트를 다정하게 읽어드려요.`;
+  }
+
+  if (productType === "two_pet_match") {
+    return `두 아이가 함께 지낼 때 편해지는 거리감, 놀이 리듬, 공간 조율 포인트를 정리해드려요.`;
+  }
+
+  if (productType === "yearly_fortune") {
+    return `${petName}의 2026년 생활 흐름을 계절과 월별 체크리스트로 부드럽게 살펴보는 리포트예요.`;
+  }
+
+  return `심층 리포트를 표지와 요약 카드가 포함된 PDF로 무료 저장할 수 있어요.`;
 }
 
 function statusToneClass(state: string) {

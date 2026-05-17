@@ -9,14 +9,14 @@ const blockedProductionHosts = new Set([
   "::1",
 ]);
 
-function isLocalTunnelHost(hostname: string) {
+function isDisallowedTunnelHost(hostname: string) {
   return hostname === "loca.lt" || hostname.endsWith(".loca.lt");
 }
 
 function isBlockedProductionHost(hostname: string) {
   return (
     blockedProductionHosts.has(hostname) ||
-    isLocalTunnelHost(hostname) ||
+    isDisallowedTunnelHost(hostname) ||
     hostname === "localtunnel.me" ||
     hostname.endsWith(".localtunnel.me")
   );

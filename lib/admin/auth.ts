@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 
 const ADMIN_COOKIE_NAME = "mn_admin_session";
 const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 8;
+const ADMIN_COOKIE_PATH = "/";
 
 function getAdminPassword() {
   const password = process.env.ADMIN_PASSWORD;
@@ -63,11 +64,25 @@ export async function setAdminSessionCookie() {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: ADMIN_COOKIE_MAX_AGE,
-    path: "/admin",
+    path: ADMIN_COOKIE_PATH,
   });
 }
 
 export async function clearAdminSessionCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(ADMIN_COOKIE_NAME);
+  const clearOptions = {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 0,
+  } as const;
+
+  cookieStore.set(ADMIN_COOKIE_NAME, "", {
+    ...clearOptions,
+    path: ADMIN_COOKIE_PATH,
+  });
+  cookieStore.set(ADMIN_COOKIE_NAME, "", {
+    ...clearOptions,
+    path: "/admin",
+  });
 }

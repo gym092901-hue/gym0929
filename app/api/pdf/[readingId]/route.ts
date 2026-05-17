@@ -21,16 +21,7 @@ export async function GET(_request: Request, { params }: PdfRouteProps) {
 
   if (!premiumAccess.hasAccess) {
     return NextResponse.json(
-      { error: "심층 리포트 결제 후 PDF를 구매할 수 있습니다." },
-      { status: 403 },
-    );
-  }
-
-  const pdfAccess = await checkPaymentAccess(readingId, "pdf_report");
-
-  if (!pdfAccess.hasAccess) {
-    return NextResponse.json(
-      { error: "PDF 소장본 결제 후 다운로드할 수 있습니다." },
+      { error: "심층 리포트 결제 후 PDF를 다운로드할 수 있습니다." },
       { status: 403 },
     );
   }

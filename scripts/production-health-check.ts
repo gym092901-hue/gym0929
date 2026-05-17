@@ -27,9 +27,13 @@ const forbiddenPhrases = [
   "데모 PDF 미리보기",
   "몽이 의",
   "잘 맞아요.도",
+  ".도 잘 맞습니다",
   "기운은 기운은",
+  "금의 기운은 기준을 세우고",
   "화의 기운은 올해는",
   "낯선 자극을 만났을 때는 금의 기운은",
+  "GPT 점검용",
+  "검토용 통합 페이지",
 ];
 
 const targets: HealthTarget[] = [
@@ -39,8 +43,43 @@ const targets: HealthTarget[] = [
     validate: expectFinalStatus(200),
   },
   {
+    label: "Health API",
+    path: "/api/health",
+    validate(result) {
+      let body: { status?: string } = {};
+
+      try {
+        body = JSON.parse(result.text) as { status?: string };
+      } catch {
+        return {
+          ok: false,
+          detail: "/api/health JSON 응답을 파싱하지 못했습니다.",
+        };
+      }
+
+      const containsSecret =
+        result.text.includes("SECRET") ||
+        result.text.includes("SERVICE_ROLE") ||
+        result.text.includes("CLIENT_SECRET");
+      const ok =
+        result.finalStatus === 200 && body.status === "ok" && !containsSecret;
+
+      return {
+        ok,
+        detail: ok
+          ? "status ok, secret 미노출"
+          : "/api/health는 200 status ok이고 secret 문구가 없어야 합니다.",
+      };
+    },
+  },
+  {
     label: "입력",
     path: "/input",
+    validate: expectFinalStatus(200),
+  },
+  {
+    label: "테스터 안내",
+    path: "/test",
     validate: expectFinalStatus(200),
   },
   {
@@ -84,6 +123,23 @@ const targets: HealthTarget[] = [
     },
   },
   {
+    label: "관리자 검토",
+    path: "/review",
+    validate(result) {
+      const ok =
+        result.finalStatus === 200 &&
+        result.text.includes("관리자 비밀번호") &&
+        result.text.includes("검토 페이지 열기");
+
+      return {
+        ok,
+        detail: ok
+          ? "/review 관리자 비밀번호 화면"
+          : "production /review는 관리자 비밀번호 입력 화면이어야 합니다.",
+      };
+    },
+  },
+  {
     label: "이용약관",
     path: "/terms",
     validate: expectFinalStatus(200),
@@ -111,11 +167,37 @@ function normalizeBaseUrl(value: string | undefined) {
 
   try {
     const url = new URL(value);
+
+    if (url.protocol !== "https:") {
+      console.error("PRODUCTION_BASE_URL은 https 운영 URL이어야 합니다.");
+      process.exit(1);
+    }
+
+    if (isBlockedProductionHost(url.hostname)) {
+      console.error(
+        "PRODUCTION_BASE_URL에는 localhost나 로컬 터널 주소를 사용할 수 없습니다.",
+      );
+      process.exit(1);
+    }
+
     return url.toString().replace(/\/$/, "");
   } catch {
     console.error(`PRODUCTION_BASE_URL 형식이 올바르지 않습니다: ${value}`);
     process.exit(1);
   }
+}
+
+function isBlockedProductionHost(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::1" ||
+    hostname === "loca.lt" ||
+    hostname.endsWith(".loca.lt") ||
+    hostname === "localtunnel.me" ||
+    hostname.endsWith(".localtunnel.me")
+  );
 }
 
 function expectFinalStatus(expectedStatus: number) {

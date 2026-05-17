@@ -188,6 +188,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      feedbacks: {
+        Row: {
+          id: string;
+          tester_name: string | null;
+          contact: string | null;
+          pet_type: PetType | null;
+          page: string;
+          rating: number;
+          message: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tester_name?: string | null;
+          contact?: string | null;
+          pet_type?: PetType | null;
+          page?: string;
+          rating: number;
+          message: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          tester_name?: string | null;
+          contact?: string | null;
+          pet_type?: PetType | null;
+          page?: string;
+          rating?: number;
+          message?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

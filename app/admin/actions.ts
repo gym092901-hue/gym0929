@@ -19,7 +19,7 @@ function readString(formData: FormData, key: string) {
 function adminReturnTo(formData: FormData) {
   const value = readString(formData, "returnTo");
 
-  if (!value.startsWith("/admin")) {
+  if (!value.startsWith("/admin") && value !== "/review") {
     return "/admin";
   }
 
@@ -40,13 +40,14 @@ async function assertAdminSession() {
 
 export async function loginAdminAction(formData: FormData) {
   const password = readString(formData, "password");
+  const returnTo = adminReturnTo(formData);
 
   if (!verifyAdminPassword(password)) {
-    redirect("/admin?error=invalid_password");
+    redirect(withNotice(returnTo, "error", "invalid_password"));
   }
 
   await setAdminSessionCookie();
-  redirect("/admin");
+  redirect(returnTo);
 }
 
 export async function logoutAdminAction() {

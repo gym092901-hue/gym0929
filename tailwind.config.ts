@@ -11,10 +11,10 @@ const config: Config = {
       colors: {
         cream: "#FFF7EC",
         oat: "#F2DEC7",
-        berry: "#A53D62",
-        persimmon: "#E9774D",
-        moss: "#4B7B5A",
-        ink: "#2B2528",
+        berry: "#E85D8B",
+        persimmon: "#F2935C",
+        moss: "#6FAE7B",
+        ink: "#2B2B31",
       },
       boxShadow: {
         soft: "0 18px 55px rgba(62, 44, 38, 0.12)",

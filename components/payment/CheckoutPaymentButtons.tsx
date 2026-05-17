@@ -78,6 +78,7 @@ export function CheckoutPaymentButtons({
           disabled={disabled || isLoading}
           className="focus-ring mt-4 flex min-h-14 w-full items-center justify-center rounded-2xl bg-[#FEE500] px-5 py-4 text-base font-black text-[#191919] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
+          <PawDecoration tone="dark" />
           {isLoading ? "카카오페이 결제 진행 중" : "카카오페이로 결제하기"}
         </button>
       </div>
@@ -87,5 +88,17 @@ export function CheckoutPaymentButtons({
         </p>
       )}
     </div>
+  );
+}
+
+function PawDecoration({ tone }: { tone: "dark" | "light" }) {
+  const color = tone === "dark" ? "bg-[#191919]/70" : "bg-white/85";
+
+  return (
+    <span aria-hidden className="mr-2 grid h-5 w-5 grid-cols-2 gap-0.5">
+      <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
+      <span className={`col-span-2 mx-auto h-2.5 w-3.5 rounded-full ${color}`} />
+    </span>
   );
 }

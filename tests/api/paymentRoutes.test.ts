@@ -47,7 +47,7 @@ function createRouteSupabaseMock() {
                   data: {
                     product_type: "premium_report",
                     name: "우리 아이 심층 사주 리포트",
-                    price: 4900,
+                    price: 2900,
                     currency: "KRW",
                     active: true,
                   },
@@ -104,7 +104,7 @@ describe("payment API routes", () => {
       provider: "kakaopay",
       readingId: "reading-1",
       productType: "premium_report",
-      amount: 4900,
+      amount: 2900,
       currency: "KRW",
       productName: "우리 아이 심층 사주 리포트",
     });
@@ -142,7 +142,7 @@ describe("payment API routes", () => {
       provider: "paypal",
       readingId: "reading-1",
       productType: "premium_report",
-      amount: 4900,
+      amount: 2900,
       currency: "KRW",
       productName: "우리 아이 심층 사주 리포트",
     });

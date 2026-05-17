@@ -2,7 +2,7 @@
 
 ## 사전 준비
 
-- `.env`에 `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`을 설정한다.
+- `.env`에 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`을 설정한다.
 - 카카오페이 테스트 시 `KAKAOPAY_CLIENT_ID`, `KAKAOPAY_SECRET_KEY`, `KAKAOPAY_CID`, `KAKAOPAY_BASE_URL`을 설정한다.
 - PayPal 테스트 시 `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_BASE_URL`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`를 설정한다.
 - Supabase migration과 product seed가 적용되어 있는지 확인한다.
@@ -97,8 +97,8 @@
 
 1. `guardian_match`, `two_pet_match`, `yearly_fortune`를 각각 결제한다.
 2. 같은 readingId라도 상품별 approved 여부가 따로 적용되는지 확인한다.
-3. `pdf_report`는 `premium_report` approved 결제가 없으면 구매 API가 403을 반환하는지 확인한다.
-4. `premium_report`를 결제한 뒤 `pdf_report` 구매가 가능해지는지 확인한다.
+3. PDF 무료 저장은 `premium_report` approved 결제가 없으면 403을 반환하는지 확인한다.
+4. `premium_report`를 결제한 뒤 PDF 무료 저장이 가능해지는지 확인한다.
 
 ## 11. 무료 데모 모드
 
@@ -111,7 +111,7 @@
 7. “유료 리포트 결제하기”로 checkout에 진입한다.
 8. DEMO_MODE에서는 실제 카카오페이/PayPal 버튼 대신 “테스트 결제 성공 처리” 버튼만 보이는지 확인한다.
 9. 체크박스 3개를 선택하기 전에는 테스트 결제 버튼이 비활성화되는지 확인한다.
-10. “테스트 결제 성공 처리”를 누르면 Supabase `payments`에 `provider = mock`, `status = approved`, `amount = 4900`으로 저장되는지 확인한다.
+10. “테스트 결제 성공 처리”를 누르면 Supabase `payments`에 `provider = mock`, `status = approved`, `amount = 2900`으로 저장되는지 확인한다.
 11. `/result/premium/[readingId]`로 이동하고, `readings.premium_report`가 규칙 기반으로 자동 생성되는지 확인한다.
 12. `DEMO_MODE=false` 또는 production 빌드에서는 `/demo`, `/api/demo/sample-reading`, `/api/demo/approve-payment`가 비활성화되는지 확인한다.
 13. `DEMO_MODE=true`일 때 `/api/payments/kakao/ready`, `/api/payments/paypal/create-order`, `/api/payments/paypal/capture-order`가 실제 외부 API를 호출하지 않고 403을 반환하는지 확인한다.

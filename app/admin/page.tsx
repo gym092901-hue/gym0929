@@ -10,6 +10,7 @@ import {
   adminPaymentStatuses,
   getAdminDashboardData,
   isPaymentStatus,
+  type AdminFeedbackListItem,
   type AdminPaymentListItem,
   type AdminReadingListItem,
 } from "@/lib/admin/dashboard";
@@ -279,6 +280,30 @@ function ReadingCard({
         <p>수정: {formatDate(reading.updatedAt)}</p>
         <p>유료 리포트: {reading.hasPremiumReport ? "생성됨" : "없음"}</p>
       </div>
+      <div className="mt-4 grid gap-2 rounded-2xl border border-moss/15 bg-moss/5 p-3 text-xs font-bold text-ink/70 sm:grid-cols-3">
+        <div>
+          <p className="text-[11px] font-black uppercase text-moss">
+            심층 결제
+          </p>
+          <p className={reading.premiumPaymentApproved ? "text-moss" : "text-berry"}>
+            {reading.premiumPaymentApproved ? "승인됨" : "미승인"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-black uppercase text-moss">
+            PDF 다운로드
+          </p>
+          <p className={reading.pdfDownloadAllowed ? "text-moss" : "text-berry"}>
+            {reading.pdfDownloadAllowed ? "가능" : "심층 결제 필요"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-black uppercase text-moss">
+            구 PDF 결제
+          </p>
+          <p>{reading.legacyPdfPaymentApproved ? "승인 기록 있음" : "별도 결제 없음"}</p>
+        </div>
+      </div>
       <form action={regeneratePremiumReportAction} className="mt-4">
         <input type="hidden" name="readingId" value={reading.id} />
         <input type="hidden" name="returnTo" value={returnTo} />
@@ -362,6 +387,39 @@ function PaymentCard({
           </button>
         </form>
       )}
+    </article>
+  );
+}
+
+function FeedbackCard({ feedback }: { feedback: AdminFeedbackListItem }) {
+  return (
+    <article className="rounded-2xl border border-moss/15 bg-white/70 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase text-moss">
+            익명 피드백 쨌 {feedback.page}
+          </p>
+          <h3 className="mt-1 text-lg font-black text-ink">
+            만족도 {feedback.rating}/5
+          </h3>
+          <p className="mt-1 text-sm font-semibold text-ink/60">
+            {feedback.testerName} 쨌 {feedback.contact}
+          </p>
+        </div>
+        <span className="w-fit rounded-full bg-persimmon/10 px-3 py-1 text-xs font-black text-persimmon">
+          {feedback.petType === "dog"
+            ? "강아지"
+            : feedback.petType === "cat"
+              ? "고양이"
+              : "종 미선택"}
+        </span>
+      </div>
+      <p className="mt-4 whitespace-pre-wrap break-keep rounded-2xl bg-cream/70 px-4 py-3 text-sm font-semibold leading-7 text-ink/72">
+        {feedback.message}
+      </p>
+      <p className="mt-3 text-xs font-bold text-ink/50">
+        접수: {formatDate(feedback.createdAt)}
+      </p>
     </article>
   );
 }
@@ -484,6 +542,30 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           {dashboard?.payments.length === 0 && (
             <div className="rounded-2xl border border-berry/10 bg-white/65 p-5 text-sm font-semibold text-ink/60">
               조회된 결제가 없습니다.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-black uppercase text-moss">
+              최근 피드백
+            </p>
+            <h2 className="text-2xl font-black text-ink">베타 테스트 의견</h2>
+          </div>
+          <span className="text-sm font-bold text-ink/55">
+            {dashboard?.feedbacks.length ?? 0}건
+          </span>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {dashboard?.feedbacks.map((feedback) => (
+            <FeedbackCard key={feedback.id} feedback={feedback} />
+          ))}
+          {dashboard?.feedbacks.length === 0 && (
+            <div className="rounded-2xl border border-moss/10 bg-white/65 p-5 text-sm font-semibold text-ink/60">
+              아직 접수된 피드백이 없습니다.
             </div>
           )}
         </div>

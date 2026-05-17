@@ -1,4 +1,5 @@
 import { postposition } from "@/lib/korean/postposition";
+import { sanitizeReportText } from "@/lib/reports/sanitizeReportText";
 import type { PetType } from "@/types/database";
 
 export type FiveElement = "wood" | "fire" | "earth" | "metal" | "water";
@@ -238,10 +239,15 @@ export function generateFreePetSajuReading(input: PetSajuInput) {
     `심층 리포트 미리보기\n심층 리포트에서는 ${namePossessive} 오행 균형, 보호자와의 관계 흐름, 잘 맞는 놀이와 휴식 방식, 계절별 생활 포인트를 더 자세히 볼 수 있습니다. 이 무료 결과는 한국식 사주와 오행 콘셉트를 반려동물 성향 콘텐츠로 풀어낸 맛보기이며, 단정이 아니라 보호자가 ${nameObject} 더 다정하게 이해하기 위한 참고로 보시면 좋습니다.`,
   ].join("\n\n");
 
-  assertSafeReport(report);
+  const safeReport = sanitizeReportText(report, {
+    context: "free_report",
+    petName: input.name,
+  });
+
+  assertSafeReport(safeReport);
 
   return {
-    report,
+    report: safeReport,
     profile,
   };
 }

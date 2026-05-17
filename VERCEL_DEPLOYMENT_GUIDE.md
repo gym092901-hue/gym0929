@@ -9,7 +9,7 @@
 - Payment: KakaoPay online one-time payment, PayPal Orders API + JavaScript SDK
 - Domain: Vercel production URL 또는 커스텀 도메인
 
-LocalTunnel은 운영용이 아닙니다. 외부 임시 테스트가 끝나면 Vercel Production URL을 공유합니다.
+운영 공유 링크는 Vercel Production URL 또는 커스텀 도메인만 사용합니다. 로컬 터널 주소는 결제 callback, GPT 검토, 사용자 테스트 링크로 사용하지 않습니다.
 
 ## 2. GitHub 준비
 
@@ -25,7 +25,7 @@ LocalTunnel은 운영용이 아닙니다. 외부 임시 테스트가 끝나면 V
   "build": "next build",
   "start": "next start",
   "lint": "eslint .",
-  "qa": "node scripts/qa-check.ts"
+  "qa": "tsx scripts/qa-check.ts"
 }
 ```
 
@@ -39,7 +39,7 @@ LocalTunnel은 운영용이 아닙니다. 외부 임시 테스트가 끝나면 V
 - Production Environment Variables: `PRODUCTION_ENV.md` 기준으로 입력
 
 배포 후 `NEXT_PUBLIC_SITE_URL`은 반드시 실제 운영 URL로 바꿉니다.
-LocalTunnel URL은 운영 결제 callback으로 사용할 수 없으며, production에서는 `*.loca.lt` 값을 차단합니다.
+로컬 터널 URL은 운영 결제 callback으로 사용할 수 없으며, production에서는 `localhost`, `127.0.0.1`, `*.loca.lt`, `*.localtunnel.me` 값을 운영 URL로 인정하지 않습니다.
 
 예:
 
@@ -131,7 +131,7 @@ https://your-domain.example/api/payments/paypal/capture-order
 /result/free/[readingId]
 /checkout/[readingId]?productType=premium_report
 /result/premium/[readingId]
-/checkout/[readingId]?productType=pdf_report
+/result/premium/[readingId]에서 PDF 무료 저장 버튼 확인
 /api/pdf/[readingId]
 ```
 
@@ -150,7 +150,7 @@ https://your-domain.example/api/payments/paypal/capture-order
 - 테스트 결제 성공 처리
 - 데모 결제 상태 초기화
 - 실패/취소 화면 보기 링크
-- 데모 PDF 미리보기
+- 데모 결제 기능
 - mock payment 인정
 
 ## 9. 배포 후 권장 QA
@@ -162,6 +162,6 @@ https://your-domain.example/api/payments/paypal/capture-order
 5. KakaoPay success에서 서버 approve 확인
 6. PayPal create-order/capture-order 확인
 7. 결제 전 premium 직접 접근 시 checkout redirect 확인
-8. PDF 결제 전 `/api/pdf/[readingId]` 403 확인
-9. PDF 결제 후 다운로드 파일명 확인
+8. 심층 리포트 결제 전 `/api/pdf/[readingId]` 403 확인
+9. 심층 리포트 결제 후 PDF 무료 저장 파일명 확인
 10. `/admin` 비밀번호 보호 확인

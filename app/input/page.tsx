@@ -1,8 +1,11 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
+import { PetMascot } from "@/components/mascot/PetMascot";
+import { ReportMobileBar } from "@/components/report/ReportMobileBar";
 
 type FieldKey =
   | "petName"
@@ -41,10 +44,77 @@ function ErrorText({ message, id }: { message?: string; id: string }) {
   );
 }
 
+function MiniScene({
+  type,
+  mood,
+  label,
+  icon,
+  tone = "berry",
+}: {
+  type: "dog" | "cat";
+  mood: "curious" | "holding-card";
+  label: string;
+  icon: "calendar" | "clock";
+  tone?: "berry" | "moss" | "persimmon";
+}) {
+  const toneClass = {
+    berry: "border-berry/15 bg-berry/10 text-berry",
+    moss: "border-moss/15 bg-moss/10 text-moss",
+    persimmon: "border-persimmon/20 bg-persimmon/10 text-persimmon",
+  }[tone];
+
+  return (
+    <span
+      className={`relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border ${toneClass}`}
+    >
+      <span className="sr-only">{label}</span>
+      <PetMascot
+        type={type}
+        mood={mood}
+        size="sm"
+        className="scale-[0.62]"
+      />
+      <span
+        aria-hidden
+        className="absolute bottom-1 right-1 grid h-5 w-5 place-items-center rounded-full bg-white/90 shadow-sm"
+      >
+        {icon === "calendar" ? (
+          <span className="grid h-3.5 w-3.5 grid-cols-2 gap-0.5 rounded-[0.2rem] bg-moss/20 p-0.5">
+            <span className="col-span-2 h-1 rounded-full bg-moss/55" />
+            <span className="rounded-full bg-moss/40" />
+            <span className="rounded-full bg-moss/40" />
+          </span>
+        ) : (
+          <span className="relative h-3.5 w-3.5 rounded-full border-2 border-persimmon/55">
+            <span className="absolute left-1.5 top-1 h-1.5 w-0.5 rounded-full bg-persimmon/60" />
+            <span className="absolute left-1.5 top-1.5 h-0.5 w-1.5 rounded-full bg-persimmon/60" />
+          </span>
+        )}
+      </span>
+    </span>
+  );
+}
+
+function ButtonPaws() {
+  return (
+    <span
+      aria-hidden
+      className="mt-3 flex items-center justify-center gap-1.5 text-berry/45"
+    >
+      <span className="mascot-bob h-2 w-2 rounded-full bg-berry/35" />
+      <span className="h-3 w-4 rounded-full bg-berry/25" />
+      <span className="mascot-bob h-2 w-2 rounded-full bg-persimmon/35 [animation-delay:160ms]" />
+      <span className="h-3 w-4 rounded-full bg-persimmon/25" />
+      <span className="mascot-bob h-2 w-2 rounded-full bg-moss/35 [animation-delay:320ms]" />
+    </span>
+  );
+}
+
 export default function InputPage() {
   const router = useRouter();
   const today = useMemo(() => getTodayDateString(), []);
   const [birthDateUnknown, setBirthDateUnknown] = useState(false);
+  const [birthDate, setBirthDate] = useState("");
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [birthTime, setBirthTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,9 +126,9 @@ export default function InputPage() {
     const nextErrors: FieldErrors = {};
     const name = String(formData.get("petName") ?? "").trim();
     const species = String(formData.get("species") ?? "");
-    const birthDate = birthDateUnknown
+    const submittedBirthDate = birthDateUnknown
       ? ""
-      : String(formData.get("birthDate") ?? "");
+      : birthDate || String(formData.get("birthDate") ?? "");
     const adoptionDate = String(formData.get("adoptionDate") ?? "");
     const guardianEmail = String(formData.get("guardianEmail") ?? "")
       .trim()
@@ -74,7 +144,7 @@ export default function InputPage() {
       nextErrors.species = "강아지인지 고양이인지 알려주세요.";
     }
 
-    if (isFutureDate(birthDate, today)) {
+    if (isFutureDate(submittedBirthDate, today)) {
       nextErrors.birthDate = "미래 날짜는 사용할 수 없어요.";
     }
 
@@ -82,7 +152,7 @@ export default function InputPage() {
       nextErrors.adoptionDate = "미래 날짜는 사용할 수 없어요.";
     }
 
-    if (!birthDate && !adoptionDate) {
+    if (!submittedBirthDate && !adoptionDate) {
       const message = birthDateUnknown
         ? "생일을 모른다면 처음 만난 날을 알려주세요."
         : "생년월일 또는 처음 만난 날 중 하나를 알려주세요.";
@@ -106,7 +176,7 @@ export default function InputPage() {
       values: {
         name,
         species,
-        birthDate,
+        birthDate: submittedBirthDate,
         adoptionDate,
         guardianEmail,
         birthTime: timeUnknown ? "" : birthTime,
@@ -171,10 +241,38 @@ export default function InputPage() {
   return (
     <PageShell
       eyebrow="사주 정보 입력"
-      title="아이의 기본 정보를 알려주세요"
-      description="정확한 생일을 모르는 경우에는 입양일 또는 처음 만난 날을 기준으로 부드럽게 해석합니다."
+      title="우리 아이 이야기를 살짝 들려주세요"
+      description="생일을 몰라도 괜찮아요. 처음 만난 날도 하나의 소중한 기준이 될 수 있어요."
       narrow
     >
+      <ReportMobileBar
+        title="정보 입력"
+        backHref="/"
+        rightLabel="샘플"
+        rightHref="/sample"
+      />
+
+      <div className="mb-6 overflow-hidden rounded-[2rem] border border-berry/10 bg-white/65 p-5 sm:p-6">
+        <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
+          <PetMascot
+            type="both"
+            mood="holding-card"
+            size="lg"
+            withBubble
+            bubbleText="차근차근 같이 적어봐요"
+            label="입력지를 들고 안내하는 강아지와 고양이 캐릭터"
+          />
+          <div>
+            <p className="text-sm font-black text-persimmon">입력 도움말</p>
+            <p className="mt-2 break-keep text-base font-semibold leading-7 text-ink/68">
+              정확한 생일을 몰라도 괜찮아요. 입양일이나 처음 만난 날처럼
+              보호자에게 의미 있는 날짜를 기준으로 우리 아이의 성향을
+              다정하게 읽어드릴게요.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <form
         onSubmit={handleSubmit}
         className="warm-panel rounded-[2rem] p-5 sm:p-8"
@@ -198,7 +296,18 @@ export default function InputPage() {
 
         <div className="grid gap-5">
           <label className="grid gap-2">
-            <span className="text-sm font-bold text-ink">이름</span>
+            <span className="inline-flex items-center gap-2 text-sm font-bold text-ink">
+              <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-berry/10">
+                <PetMascot
+                  type="dog"
+                  mood="happy"
+                  size="sm"
+                  label="이름 입력을 안내하는 강아지 캐릭터"
+                  className="scale-[0.55]"
+                />
+              </span>
+              이름
+            </span>
             <input
               name="petName"
               maxLength={30}
@@ -212,22 +321,50 @@ export default function InputPage() {
 
           <fieldset className="grid gap-3" aria-describedby="species-error">
             <legend className="text-sm font-bold text-ink">강아지/고양이 선택</legend>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="focus-within:ring-2 focus-within:ring-berry/30 rounded-2xl border border-berry/20 bg-white p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="group cursor-pointer rounded-[1.75rem] border border-berry/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-berry/35 focus-within:ring-2 focus-within:ring-berry/30 sm:p-4">
                 <input
                   type="radio"
                   name="species"
                   value="dog"
                   className="sr-only peer"
                 />
-                <span className="block text-center text-sm font-black text-ink peer-checked:text-berry">
-                  강아지
+                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-berry/10 peer-checked:text-berry peer-checked:shadow-soft sm:min-h-36 sm:py-4">
+                  <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-white/80 ring-1 ring-berry/10 transition group-hover:scale-105">
+                    <PetMascot
+                      type="dog"
+                      mood="happy"
+                      size="sm"
+                      label="강아지 얼굴 일러스트"
+                      className="scale-95"
+                    />
+                  </span>
+                  <span className="mt-2 block text-sm font-black">
+                    강아지
+                  </span>
+                  <span className="mt-1 text-xs font-bold text-ink/45">
+                    산책과 반응을 중심으로 읽어요
+                  </span>
                 </span>
               </label>
-              <label className="focus-within:ring-2 focus-within:ring-berry/30 rounded-2xl border border-berry/20 bg-white p-4">
+              <label className="group cursor-pointer rounded-[1.75rem] border border-moss/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-moss/35 focus-within:ring-2 focus-within:ring-moss/30 sm:p-4">
                 <input type="radio" name="species" value="cat" className="sr-only peer" />
-                <span className="block text-center text-sm font-black text-ink peer-checked:text-moss">
-                  고양이
+                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-moss/10 peer-checked:text-moss peer-checked:shadow-soft sm:min-h-36 sm:py-4">
+                  <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-white/80 ring-1 ring-moss/10 transition group-hover:scale-105">
+                    <PetMascot
+                      type="cat"
+                      mood="happy"
+                      size="sm"
+                      label="고양이 얼굴 일러스트"
+                      className="scale-95"
+                    />
+                  </span>
+                  <span className="mt-2 block text-sm font-black">
+                    고양이
+                  </span>
+                  <span className="mt-1 text-xs font-bold text-ink/45">
+                    영역과 거리감을 중심으로 읽어요
+                  </span>
                 </span>
               </label>
             </div>
@@ -238,18 +375,29 @@ export default function InputPage() {
             <div className="grid gap-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm font-bold text-ink">생년월일</span>
-                <label className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-xs font-bold text-ink/65">
+                <label className="flex min-h-14 cursor-pointer items-center gap-2 rounded-2xl bg-white/80 px-3 py-2 text-xs font-bold text-ink/65 shadow-sm sm:min-h-12">
+                  <MiniScene
+                    type="cat"
+                    mood="holding-card"
+                    tone="moss"
+                    label="달력을 든 고양이 미니 그림"
+                    icon="calendar"
+                  />
                   <input
                     type="checkbox"
                     checked={birthDateUnknown}
                     onChange={(event) => {
-                      setBirthDateUnknown(event.target.checked);
+                      const isChecked = event.target.checked;
+                      setBirthDateUnknown(isChecked);
+                      if (isChecked) {
+                        setBirthDate("");
+                      }
                       setErrors((current) => ({
                         ...current,
                         birthDate: undefined,
                       }));
                     }}
-                    className="h-4 w-4 rounded border-berry/30 text-berry"
+                    className="h-5 w-5 rounded border-berry/30 text-berry"
                   />
                   생일을 몰라요
                 </label>
@@ -257,6 +405,8 @@ export default function InputPage() {
               <input
                 name="birthDate"
                 type="date"
+                value={birthDate}
+                onChange={(event) => setBirthDate(event.target.value)}
                 max={today}
                 disabled={birthDateUnknown}
                 aria-invalid={Boolean(errors.birthDate)}
@@ -282,7 +432,14 @@ export default function InputPage() {
             </label>
           </div>
 
-          <label className="flex items-center gap-3 rounded-2xl border border-moss/20 bg-white px-4 py-3">
+          <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-2xl border border-moss/20 bg-white px-4 py-3 shadow-sm">
+            <MiniScene
+              type="dog"
+              mood="curious"
+              tone="persimmon"
+              label="시계를 바라보는 강아지 미니 그림"
+              icon="clock"
+            />
             <input
               type="checkbox"
               checked={timeUnknown}
@@ -316,9 +473,11 @@ export default function InputPage() {
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm font-bold text-ink">
+            <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
               보호자 이메일
-              <span className="ml-2 text-xs font-black text-ink/40">선택</span>
+              <span className="rounded-full bg-moss/10 px-3 py-1 text-xs font-black text-moss">
+                선택이에요
+              </span>
             </span>
             <input
               name="guardianEmail"
@@ -333,11 +492,20 @@ export default function InputPage() {
               id="guardianEmail-help"
               className="rounded-[1.25rem] border border-moss/15 bg-moss/10 px-4 py-3"
             >
-              <ul className="grid gap-1 text-xs font-semibold leading-5 text-ink/60">
-                <li>결과 링크 재확인 목적으로만 사용됩니다.</li>
-                <li>선택 입력이므로 입력하지 않아도 무료 결과를 볼 수 있습니다.</li>
-                <li>보유기간과 삭제 기준은 개인정보처리방침에서 확인할 수 있습니다.</li>
-              </ul>
+              <p className="text-xs font-semibold leading-5 text-ink/60">
+                결과 링크를 다시 확인할 때만 사용돼요. 입력하지 않아도 무료
+                결과를 볼 수 있어요.
+              </p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-ink/45">
+                보유기간과 삭제 기준은{" "}
+                <Link
+                  href="/privacy"
+                  className="font-black text-moss underline decoration-moss/30 underline-offset-4 transition hover:text-moss/80"
+                >
+                  개인정보처리방침
+                </Link>
+                에서 확인할 수 있습니다.
+              </p>
             </div>
             <ErrorText id="guardianEmail-error" message={errors.guardianEmail} />
           </label>
@@ -357,8 +525,21 @@ export default function InputPage() {
           disabled={isSubmitting}
           className="focus-ring mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-berry px-6 py-3 text-sm font-black text-white shadow-soft transition hover:bg-berry/90 disabled:cursor-not-allowed disabled:bg-ink/30"
         >
-          {isSubmitting ? "무료 결과 생성 중" : "무료 사주 결과 보기"}
+          {isSubmitting ? "무료 결과 생성 중" : "무료 사주 맛보기 보기"}
         </button>
+        <ButtonPaws />
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-berry/10 bg-cream/95 px-4 py-3 shadow-[0_-12px_40px_rgba(62,44,38,0.12)] backdrop-blur sm:hidden">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="focus-ring mx-auto flex min-h-14 w-full max-w-md items-center justify-center rounded-full bg-berry px-5 py-3 text-center text-sm font-black text-white shadow-soft transition hover:bg-berry/90 disabled:cursor-not-allowed disabled:bg-ink/25"
+          >
+            {isSubmitting ? "무료 결과 생성 중" : "무료 사주 맛보기 보기"}
+            <span aria-hidden="true" className="ml-2">
+              →
+            </span>
+          </button>
+        </div>
       </form>
     </PageShell>
   );

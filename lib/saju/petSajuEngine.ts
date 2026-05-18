@@ -31,7 +31,7 @@ const elementLabels: Record<FiveElement, string> = {
 };
 
 const elementTraits: Record<FiveElement, string> = {
-  wood: "호기심, 탐험, 산책 욕구, 성장",
+  wood: "호기심, 탐험, 새로운 자극, 성장",
   fire: "애교, 표현력, 흥분도, 존재감",
   earth: "안정감, 루틴, 먹성, 익숙한 공간",
   metal: "예민함, 경계심, 규칙성, 깔끔함",
@@ -230,7 +230,7 @@ function createFreeOneLineText({
   nameTopic: string;
 }) {
   if (input.type === "cat") {
-    return `${nameTopic} ${primaryLabel}의 기운이 앞에 서고 ${secondaryLabel}의 결이 받쳐주는 ${petLabel}입니다. 한마디로 말하면 ${primaryTone}을 자기 자리와 거리감 안에서 천천히 보여주는 아이예요. ${nameTopic} 보호자를 바로 따라오기보다 창밖을 보거나 캣타워에서 분위기를 살핀 뒤, 마음이 편해지면 느린 눈맞춤이나 꼬리 움직임으로 조용한 신호를 보냅니다.`;
+    return `${nameTopic} ${primaryLabel}의 기운이 앞에 서고 ${secondaryLabel}의 결이 받쳐주는 ${petLabel}입니다. 한마디로 말하면 ${primaryTone}을 자기 자리와 거리감 안에서 천천히 보여주는 아이예요. ${nameTopic} 보호자에게 곧장 다가오기보다 창밖을 보거나 캣타워에서 분위기를 살핀 뒤, 마음이 편해지면 느린 눈맞춤이나 꼬리 끝 움직임으로 조용한 신호를 보냅니다.`;
   }
 
   return `${nameTopic} ${primaryLabel}의 기운이 앞에 서고 ${secondaryLabel}의 결이 받쳐주는 ${petLabel}입니다. 한마디로 말하면 ${primaryTone}을 가진 아이예요. ${nameTopic} 보호자의 작은 신호에도 반응하면서, 자기 리듬이 존중될 때 더 밝고 편안한 모습을 보여줍니다.`;
@@ -272,7 +272,7 @@ function createFreeBondText({
   namePossessive: string;
 }) {
   if (input.type === "cat") {
-    return `${namePossessive} 애착은 가까이 오라는 부름보다, 조용히 곁에 머무르거나 같은 공간을 고르는 방식에서 더 잘 보일 수 있어요. ${nameTopic} 보호자의 움직임, 쉬는 시간, 자주 앉는 위치를 기억하고 있다가 자기 속도에 맞을 때 천천히 다가오는 편입니다. 느린 눈맞춤, 꼬리 끝의 작은 움직임, 캣타워에서 내려와 근처에 앉는 행동을 보호자가 알아봐주면 관계가 더 부드러워집니다.`;
+    return `${namePossessive} 애착은 다가오라는 손짓보다, 같은 방에 조용히 머무르거나 자기 자리에서 보호자를 바라보는 방식에서 더 잘 보일 수 있어요. ${nameTopic} 보호자의 움직임, 쉬는 시간, 자주 앉는 위치를 기억하고 있다가 자기 속도에 맞을 때 천천히 다가오는 편입니다. 느린 눈맞춤, 꼬리 끝의 작은 움직임, 캣타워에서 내려와 근처에 앉는 행동을 보호자가 알아봐주면 관계가 더 부드러워집니다.`;
   }
 
   return `${namePossessive} 애착은 ${relationshipStyle(profile.primaryElement, profile.secondaryElement)}. 보호자가 이름을 불러주고 같은 말투로 칭찬해주면 ${nameTopic} 그 패턴을 기억합니다. 과한 요구보다 짧고 따뜻한 반응이 잘 맞고, 기다려주는 태도가 관계를 더 부드럽게 만들어줍니다.`;
@@ -288,7 +288,7 @@ function createFreeRoutineText({
   nameTo: string;
 }) {
   if (input.type === "cat") {
-    return `${nameTo}는 ${catElementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. 하루 안에 창밖 관찰, 짧은 사냥놀이, 식사, 조용한 휴식이 이어지는 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 새로운 장난감이나 박스는 먼저 다가올 때까지 기다려주고, 숨숨집과 캣타워처럼 스스로 조절할 수 있는 자리를 남겨주세요. ${nameTopic} 자기 속도 안에서 안정감을 얻고, 그 안정감 안에서 애정 표현도 더 자연스럽게 보여줍니다.`;
+    return `${nameTo}는 ${catElementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. 하루 안에 창밖 관찰, 짧은 사냥놀이, 식사, 조용한 휴식이 이어지는 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 새로운 장난감이나 박스는 먼저 다가올 때까지 기다려주고, 숨숨집과 캣타워처럼 스스로 조절할 수 있는 자리를 남겨주세요. ${nameTopic} 자기 속도 안에서 안정감을 얻고, 그 안정감 안에서 신뢰 표현도 더 자연스럽게 보여줍니다.`;
   }
 
   return `${nameTo}는 ${elementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. 하루의 시작과 마무리에 비슷한 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 산책, 놀이, 식사, 휴식을 갑자기 많이 바꾸기보다 작은 변화부터 보여주세요. ${nameTopic} 반복 속에서 안정감을 얻고, 그 안정감 안에서 새로운 행동도 더 자연스럽게 받아들입니다.`;

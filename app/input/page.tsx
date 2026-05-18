@@ -317,46 +317,62 @@ export default function InputPage() {
 
           <fieldset className="grid gap-3" aria-describedby="species-error">
             <legend className="text-sm font-bold text-ink">강아지/고양이 선택</legend>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="group cursor-pointer rounded-[1.75rem] border border-berry/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-berry/35 focus-within:ring-2 focus-within:ring-berry/30 has-[:checked]:scale-[1.015] has-[:checked]:border-berry/55 has-[:checked]:bg-berry/10 has-[:checked]:shadow-soft sm:p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="group cursor-pointer rounded-[2rem] border-2 border-berry/15 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-berry/35 hover:shadow-soft focus-within:ring-2 focus-within:ring-berry/30 has-[:checked]:scale-[1.025] has-[:checked]:border-berry/65 has-[:checked]:bg-berry/10 has-[:checked]:shadow-soft sm:p-4">
                 <input
                   type="radio"
                   name="species"
                   value="dog"
                   className="sr-only peer"
                 />
-                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-white/85 peer-checked:text-berry peer-checked:shadow-soft sm:min-h-36 sm:py-4">
-                  <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-white/80 ring-1 ring-berry/10 transition group-hover:scale-105">
+                <span className="relative flex min-h-56 flex-col items-center justify-end overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-berry/10 via-cream/70 to-white px-4 pb-5 pt-6 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.035] peer-checked:bg-white peer-checked:text-berry peer-checked:shadow-soft sm:min-h-64 sm:pb-6 sm:pt-7">
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-5 top-5 h-3 w-3 rounded-full bg-berry/35"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-6 top-7 h-5 w-5 rotate-45 rounded bg-persimmon/30"
+                  />
+                  <span className="relative grid min-h-32 w-full place-items-center transition duration-200 group-hover:scale-105 sm:min-h-36">
                     <PetMascot
-                      type="dog"
-                      mood="happy"
-                      size="sm"
-                      className="scale-95"
+                      species="dog"
+                      mood="holding-card"
+                      size="lg"
+                      className="drop-shadow-sm"
                     />
                   </span>
-                  <span className="mt-2 block text-sm font-black">
+                  <span className="mt-3 inline-flex rounded-full bg-white/90 px-4 py-1.5 text-base font-black shadow-sm">
                     강아지
                   </span>
-                  <span className="mt-1 text-xs font-bold text-ink/45">
+                  <span className="mt-2 text-sm font-bold leading-5 text-ink/55">
                     산책과 반응을 중심으로 읽어요
                   </span>
                 </span>
               </label>
-              <label className="group cursor-pointer rounded-[1.75rem] border border-moss/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-moss/35 focus-within:ring-2 focus-within:ring-moss/30 has-[:checked]:scale-[1.015] has-[:checked]:border-moss/55 has-[:checked]:bg-moss/10 has-[:checked]:shadow-soft sm:p-4">
+              <label className="group cursor-pointer rounded-[2rem] border-2 border-moss/15 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-moss/35 hover:shadow-soft focus-within:ring-2 focus-within:ring-moss/30 has-[:checked]:scale-[1.025] has-[:checked]:border-moss/65 has-[:checked]:bg-moss/10 has-[:checked]:shadow-soft sm:p-4">
                 <input type="radio" name="species" value="cat" className="sr-only peer" />
-                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-white/85 peer-checked:text-moss peer-checked:shadow-soft sm:min-h-36 sm:py-4">
-                  <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-white/80 ring-1 ring-moss/10 transition group-hover:scale-105">
+                <span className="relative flex min-h-56 flex-col items-center justify-end overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-moss/10 via-cream/70 to-white px-4 pb-5 pt-6 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.035] peer-checked:bg-white peer-checked:text-moss peer-checked:shadow-soft sm:min-h-64 sm:pb-6 sm:pt-7">
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-6 top-7 h-4 w-4 rounded-full bg-moss/30"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-5 top-5 h-3 w-8 rounded-full bg-berry/20"
+                  />
+                  <span className="relative grid min-h-32 w-full place-items-center transition duration-200 group-hover:scale-105 sm:min-h-36">
                     <PetMascot
-                      type="cat"
-                      mood="happy"
-                      size="sm"
-                      className="scale-95"
+                      species="cat"
+                      mood="holding-card"
+                      size="lg"
+                      className="drop-shadow-sm"
                     />
                   </span>
-                  <span className="mt-2 block text-sm font-black">
+                  <span className="mt-3 inline-flex rounded-full bg-white/90 px-4 py-1.5 text-base font-black shadow-sm">
                     고양이
                   </span>
-                  <span className="mt-1 text-xs font-bold text-ink/45">
+                  <span className="mt-2 text-sm font-bold leading-5 text-ink/55">
                     영역과 거리감을 중심으로 읽어요
                   </span>
                 </span>

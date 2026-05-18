@@ -2,12 +2,24 @@ import { PageShell } from "@/components/layout/PageShell";
 import { AnonymousFeedbackForm } from "@/components/feedback/AnonymousFeedbackForm";
 import { PetMascot } from "@/components/mascot/PetMascot";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
-import { isDemoModeEnabled } from "@/lib/demo/config";
+import { isDemoModeEnabled, isProductionRuntime } from "@/lib/demo/config";
+
+const productionRuntime = isProductionRuntime();
 
 export const metadata = {
   title: "멍냥사주 베타 테스트 안내",
   description:
     "외부 테스터가 멍냥사주 입력, 무료 결과, 체크아웃, 리포트 화면을 점검할 수 있는 안내 페이지입니다.",
+  robots: productionRuntime
+    ? {
+        index: false,
+        follow: false,
+        googleBot: {
+          index: false,
+          follow: false,
+        },
+      }
+    : undefined,
 };
 
 const testSteps = [

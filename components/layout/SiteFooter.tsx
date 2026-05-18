@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { PawPattern } from "@/components/mascot/PawPattern";
 import { PetMascot } from "@/components/mascot/PetMascot";
+import { isProductionRuntime } from "@/lib/demo/config";
 
 export function SiteFooter() {
+  const showBetaFeedbackLink = isProductionRuntime();
+
   return (
     <footer className="relative overflow-hidden border-t border-berry/10 bg-white/50">
       <PawPattern className="absolute inset-x-0 top-0 h-24 w-full opacity-35" />
@@ -35,6 +38,14 @@ export function SiteFooter() {
           <Link href="/refund" className="transition hover:text-berry">
             환불정책
           </Link>
+          {showBetaFeedbackLink ? (
+            <Link
+              href="/test"
+              className="text-xs text-ink/45 transition hover:text-berry"
+            >
+              베타 피드백
+            </Link>
+          ) : null}
         </div>
       </div>
     </footer>

@@ -327,13 +327,15 @@ export default async function CheckoutPage({
         </section>
 
         <section className="rounded-[2rem] border border-moss/20 bg-moss/10 p-5 sm:p-6">
-          <p className="text-sm font-black text-moss">PDF 무료 저장</p>
+          <p className="text-sm font-black text-moss">PDF로 보관하기</p>
           <h2 className="mt-2 break-keep text-xl font-black text-ink">
-            심층 리포트 구매자에게 무료로 제공됩니다
+            리포트를 PDF로 예쁘게 보관해요
           </h2>
           <p className="mt-3 text-sm font-semibold leading-6 text-ink/65">
-            심층 리포트가 열리면 프리미엄 결과 페이지에서 바로 PDF를 저장할 수
-            있습니다. 별도 PDF 결제는 필요하지 않습니다.
+            심층 리포트를 열람한 보호자에게 PDF 저장 기능을 무료로 제공합니다.
+          </p>
+          <p className="mt-2 text-sm font-black leading-6 text-ink/70">
+            표지, 한 장 요약, 오행 밸런스, 전체 리포트가 함께 담겨요.
           </p>
         </section>
 

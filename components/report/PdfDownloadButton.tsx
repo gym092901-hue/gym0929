@@ -41,7 +41,7 @@ const toneClass = {
 export function PdfDownloadButton({
   readingId,
   petName,
-  label = "PDF 무료 저장하기",
+  label = "PDF로 저장하기",
   loadingLabel = "PDF 준비 중",
   tone = "berry",
 }: PdfDownloadButtonProps) {

@@ -131,7 +131,7 @@ https://your-domain.example/api/payments/paypal/capture-order
 /result/free/[readingId]
 /checkout/[readingId]?productType=premium_report
 /result/premium/[readingId]
-/result/premium/[readingId]에서 PDF 무료 저장 버튼 확인
+/result/premium/[readingId]에서 PDF로 저장하기 버튼 확인
 /api/pdf/[readingId]
 ```
 
@@ -163,5 +163,5 @@ https://your-domain.example/api/payments/paypal/capture-order
 6. PayPal create-order/capture-order 확인
 7. 결제 전 premium 직접 접근 시 checkout redirect 확인
 8. 심층 리포트 결제 전 `/api/pdf/[readingId]` 403 확인
-9. 심층 리포트 결제 후 PDF 무료 저장 파일명 확인
+9. 심층 리포트 결제 후 PDF 저장 파일명 확인
 10. `/admin` 비밀번호 보호 확인

@@ -17,7 +17,7 @@
 - [ ] KakaoPay 운영 콘솔 callback URL이 운영 도메인으로 등록되어 있다.
 - [ ] PayPal 운영 앱 client id/secret과 JS SDK client id가 설정되어 있다.
 - [ ] 실제 결제 전 금액이 서버 product config/DB 기준으로 계산되는지 확인했다.
-- [ ] PDF API가 `premium_report` 승인 결제를 확인하고 PDF 무료 저장을 제공하는지 확인했다.
+- [ ] PDF API가 `premium_report` 승인 결제를 확인하고 PDF로 저장하기 기능을 제공하는지 확인했다.
 - [ ] 관리자 비밀번호 `ADMIN_PASSWORD`가 충분히 강한 값으로 설정되어 있다.
 
 ## 2. 환경변수 목록

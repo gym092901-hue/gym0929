@@ -468,8 +468,8 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
         <SectionCard
           id="review-pdf"
           kicker="PDF 저장 안내"
-          title="심층 리포트 구매자에게 PDF 무료 저장 제공"
-          description="PDF는 별도 결제 상품처럼 보이지 않아야 하며, premium_report 승인 사용자에게만 서버 권한 검사 후 열립니다."
+          title="리포트를 PDF로 예쁘게 보관해요"
+          description="심층 리포트를 열람한 보호자에게 PDF 저장 기능을 무료로 제공하며, 서버에서 premium_report 승인 여부를 확인한 뒤 열립니다."
           mascot={
             <PetMascot
               species={samplePet.type}
@@ -504,7 +504,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
               <h3 className="text-lg font-black text-ink">권한 기준</h3>
               <ul className="mt-4 grid gap-2 text-sm font-bold leading-6 text-ink/66">
                 <li>premium_report 승인 결제가 있어야 PDF 저장 가능</li>
-                <li>pdf_report는 0원 정책이며 심층 리포트 구매자에게 무료 제공</li>
+                <li>pdf_report는 0원 정책이며 심층 리포트 열람자에게 무료 제공</li>
                 <li>권한 없는 PDF API 요청은 403으로 차단</li>
                 <li>production에서는 데모용 PDF 미리보기 숨김</li>
               </ul>

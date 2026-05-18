@@ -36,6 +36,14 @@ const elementKeywords: Record<FiveElement, string[]> = {
   water: ["관찰력", "감수성", "차분함"],
 };
 
+function getElementKeywords(element: FiveElement, species: "dog" | "cat") {
+  if (species === "cat" && element === "fire") {
+    return ["표현력", "눈빛 신호", "존재감"];
+  }
+
+  return elementKeywords[element];
+}
+
 function createSummaryText(body: string) {
   const cleanBody = body.replace(/\s+/g, " ").trim();
   const firstSentence =
@@ -68,7 +76,39 @@ function splitPremiumBody(body: string) {
   });
 }
 
-function createTodayAction(title: string, petName: string) {
+function createTodayAction(
+  title: string,
+  petName: string,
+  species: "dog" | "cat",
+) {
+  if (species === "cat") {
+    if (title.includes("오행")) {
+      return `${postposition.to(petName)} 편안했던 자기 자리, 창밖 관찰 시간, 꼬리 끝 움직임을 한 줄로 기록해보세요.`;
+    }
+
+    if (title.includes("성격") || title.includes("장점")) {
+      return `${postposition.subject(petName)} 먼저 다가올 때까지 기다렸다가 느린 눈맞춤으로 답해주세요.`;
+    }
+
+    if (title.includes("예민") || title.includes("낯선")) {
+      return `낯선 자극 앞에서는 손길보다 거리감을 먼저 주고, 캣타워나 숨숨집 선택지를 열어주세요.`;
+    }
+
+    if (title.includes("사랑") || title.includes("보호자")) {
+      return `오늘은 같은 방에 조용히 머무르며 ${postposition.subject(petName)} 보내는 작은 신뢰 신호를 기다려보세요.`;
+    }
+
+    if (title.includes("루틴") || title.includes("놀이")) {
+      return `짧은 사냥놀이 뒤에는 자기 자리로 돌아가 쉬는 흐름을 자연스럽게 이어주세요.`;
+    }
+
+    if (title.includes("올해") || title.includes("월별")) {
+      return `이번 달에 좋아했던 자리, 놀이, 숨숨집 시간을 짧게 메모해보세요.`;
+    }
+
+    return `${petName}의 거리감을 서두르지 말고, 조용히 곁에 머무는 시간을 살펴봐 주세요.`;
+  }
+
   if (title.includes("오행")) {
     return `${postposition.to(petName)} 잘 맞았던 놀이, 쉬는 자리, 산책 리듬을 한 줄로 기록해보세요.`;
   }
@@ -128,7 +168,10 @@ export default async function PremiumResultPage({
   const primaryElementLabel = getElementLabel(elementProfile.primaryElement);
   const petPossessive = postposition.possessive(reading.petName);
   const petTopic = postposition.topic(reading.petName);
-  const summaryKeywords = elementKeywords[elementProfile.primaryElement];
+  const summaryKeywords = getElementKeywords(
+    elementProfile.primaryElement,
+    reading.species,
+  );
   const hook = generatePetHook({
     petName: reading.petName,
     species: reading.species,
@@ -329,7 +372,11 @@ export default async function PremiumResultPage({
                 <div className="mt-6 rounded-[1.5rem] border border-moss/20 bg-moss/10 px-4 py-3">
                   <p className="text-xs font-black text-moss">오늘 해볼 것</p>
                   <p className="mt-2 break-keep text-sm font-black leading-6 text-ink/70">
-                    {createTodayAction(section.title, reading.petName)}
+                    {createTodayAction(
+                      section.title,
+                      reading.petName,
+                      reading.species,
+                    )}
                   </p>
                 </div>
               </ReportAccordionSection>
@@ -340,13 +387,16 @@ export default async function PremiumResultPage({
         <section className="rounded-[2rem] border border-moss/20 bg-moss/10 p-5 shadow-soft sm:p-7">
           <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
             <div>
-              <p className="text-sm font-black text-moss">PDF 무료 저장</p>
+              <p className="text-sm font-black text-moss">PDF로 보관하기</p>
               <h2 className="mt-2 break-keep text-2xl font-black leading-tight text-ink">
-                이 리포트를 예쁘게 보관해요
+                리포트를 PDF로 예쁘게 보관해요
               </h2>
               <p className="mt-3 break-keep text-sm font-semibold leading-6 text-ink/65">
-                표지, 반려동물 정보, 한 장 요약, 오행 밸런스, 전체 심층
-                리포트를 PDF로 저장할 수 있어요.
+                심층 리포트를 열람한 보호자에게 PDF 저장 기능을 무료로
+                제공합니다.
+              </p>
+              <p className="mt-2 break-keep text-sm font-black leading-6 text-ink/70">
+                표지, 한 장 요약, 오행 밸런스, 전체 리포트가 함께 담겨요.
               </p>
             </div>
             <PetMascot
@@ -360,7 +410,7 @@ export default async function PremiumResultPage({
             <PdfDownloadButton
               readingId={reading.id}
               petName={reading.petName}
-              label="PDF 무료 저장하기"
+              label="PDF로 저장하기"
             />
           </div>
         </section>
@@ -394,8 +444,8 @@ export default async function PremiumResultPage({
       />
       <MobileStickyCTA
         href={`/api/pdf/${reading.id}`}
-        label="PDF 무료 저장하기"
-        subLabel="심층 리포트 구매자에게 무료 제공"
+        label="PDF로 저장하기"
+        subLabel="표지와 전체 리포트까지 함께 담겨요"
       />
     </PageShell>
   );

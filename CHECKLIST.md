@@ -97,8 +97,8 @@
 
 1. `guardian_match`, `two_pet_match`, `yearly_fortune`를 각각 결제한다.
 2. 같은 readingId라도 상품별 approved 여부가 따로 적용되는지 확인한다.
-3. PDF 무료 저장은 `premium_report` approved 결제가 없으면 403을 반환하는지 확인한다.
-4. `premium_report`를 결제한 뒤 PDF 무료 저장이 가능해지는지 확인한다.
+3. PDF 저장은 `premium_report` approved 결제가 없으면 403을 반환하는지 확인한다.
+4. `premium_report`를 결제한 뒤 PDF로 저장하기가 가능해지는지 확인한다.
 
 ## 11. 무료 데모 모드
 

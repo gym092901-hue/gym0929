@@ -10,7 +10,7 @@ const premiumItems = [
   "애착 방식",
   "생활 루틴",
   "올해의 흐름",
-  "PDF 무료 저장",
+  "PDF로 저장하기",
 ];
 
 const reassuranceItems = [

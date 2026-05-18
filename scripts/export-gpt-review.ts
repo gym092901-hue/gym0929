@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { findForbiddenSensitiveTerms } from "../lib/reports/sensitiveTerms";
 
 type Snapshot = {
   label: string;
@@ -89,6 +90,7 @@ function has(text: string, phrase: string) {
 function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId: string) {
   const bundle = snapshots.map((snapshot) => snapshot.text).join("\n\n");
   const htmlBundle = snapshots.map((snapshot) => snapshot.html).join("\n\n");
+  const forbiddenSensitiveTermMatches = findForbiddenSensitiveTerms(bundle);
   const checks = {
     dogReadingId,
     catReadingId,
@@ -136,6 +138,8 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     hasPremiumDirectBypassCopy: has(bundle, "심층 리포트 페이지 바로 보기"),
     hasDemoPaymentCopy: has(bundle, "테스트 결제 성공 처리"),
     hasDemoPdfPreviewCopy: has(bundle, "데모 PDF 미리보기"),
+    hasForbiddenSensitiveTerms: forbiddenSensitiveTermMatches.length > 0,
+    forbiddenSensitiveTermMatches,
   };
 
   return {
@@ -182,7 +186,7 @@ ${snapshot.text.slice(0, 5000)}
 - 프리미엄 리포트와 PDF는 결제 승인 없이 열리지 않는지
 - dog 결과에는 강아지 캐릭터, cat 결과에는 고양이 캐릭터가 자연스럽게 보이는지
 - “멍” 같은 텍스트형 아바타가 실제 캐릭터 대신 노출되지 않는지
-- 가격 정책이 심층 리포트 2,900원, 추가 콘텐츠 1,000원, PDF 무료 저장으로 일관적인지
+- 가격 정책이 심층 리포트 2,900원, 추가 콘텐츠 1,000원, PDF 저장 무료로 일관적인지
 - “4,900원”, “5,900원”, “3,900원”과 예전 유료 PDF 문구가 없는지
 - “몽이 의”, “잘 맞아요.도”, “화의 기운은 올해는”, “낯선 자극을 만났을 때는 금의 기운은” 같은 문장 오류가 없는지
 - 입력폼의 개인정보 안내와 개인정보처리방침 링크가 충분한지

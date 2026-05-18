@@ -24,7 +24,7 @@ export const productCatalog: Record<ProductType, ProductCatalogItem> = {
       "보호자와의 관계 해석",
       "올해의 흐름",
       "생활 루틴 조언",
-      "PDF 무료 저장",
+      "PDF로 저장하기",
     ],
   },
   guardian_match: {
@@ -72,18 +72,16 @@ export const productCatalog: Record<ProductType, ProductCatalogItem> = {
   },
   pdf_report: {
     productType: "pdf_report",
-    name: "PDF 무료 저장",
+    name: "PDF로 저장하기",
     price: 0,
     currency: "KRW",
     description:
-      "심층 리포트 구매자에게 별도 결제 없이 제공되는 PDF 저장 기능",
+      "심층 리포트를 열람한 보호자에게 무료로 제공되는 PDF 저장 기능",
     includedItems: [
       "표지",
-      "반려동물 정보",
       "한 장 요약 카드",
       "오행 밸런스",
       "전체 심층 리포트",
-      "생성일",
     ],
     prerequisite: "premium_report",
   },

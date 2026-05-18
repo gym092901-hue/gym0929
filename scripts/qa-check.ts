@@ -105,6 +105,10 @@ function hasMascotSpecies(html, species) {
   );
 }
 
+function hasMascotSpeciesMarker(html, species) {
+  return html.includes(`data-mascot-species="${species}"`);
+}
+
 function isLocalQaTarget() {
   try {
     const parsed = new URL(baseUrl);
@@ -677,7 +681,7 @@ async function runPdfChecks(isDemoMode) {
   if (!isDemoMode) {
     addSkip(
       "PDF",
-      "PDF 무료 저장 흐름",
+      "PDF로 저장하기 흐름",
       "현재 서버가 DEMO_MODE=true가 아니라서 데모 결제 흐름을 건너뜁니다.",
     );
     return;
@@ -714,15 +718,15 @@ async function runPdfChecks(isDemoMode) {
     "premium_report 있음이면 PDF 체크아웃 대신 프리미엄으로 이동",
     pdfCheckout.status === 200 &&
       pdfCheckout.url.includes(`/result/premium/${readingId}`) &&
-      pdfCheckout.text.includes("PDF 무료 저장"),
+      pdfCheckout.text.includes("PDF로 저장하기"),
     `status ${pdfCheckout.status}, url ${pdfCheckout.url}`,
   );
 
   const premiumAfterPdf = await get(`/result/premium/${readingId}`);
   addResult(
     "PDF",
-    "premium_report approved면 PDF 무료 저장 버튼 표시",
-    premiumAfterPdf.status === 200 && premiumAfterPdf.text.includes("PDF 무료 저장"),
+    "premium_report approved면 PDF로 저장하기 버튼 표시",
+    premiumAfterPdf.status === 200 && premiumAfterPdf.text.includes("PDF로 저장하기"),
     `status ${premiumAfterPdf.status}`,
   );
 
@@ -842,12 +846,12 @@ async function runUiEnhancementChecks(isDemoMode) {
     "입력 페이지에 강아지/고양이 선택 캐릭터 카드 존재",
     input.status === 200 &&
       countOccurrences(input.text, /data-mascot=/g) >= 4 &&
-      hasMascotSpecies(input.text, "dog") &&
-      hasMascotSpecies(input.text, "cat"),
+      hasMascotSpeciesMarker(input.text, "dog") &&
+      hasMascotSpeciesMarker(input.text, "cat"),
     `status ${input.status}`,
     {
       url: inputPath,
-      issue: "DogMascot/CatMascot input card markers",
+      issue: 'data-mascot-species="dog/cat"',
       file: "app/input/page.tsx",
     },
   );
@@ -855,11 +859,11 @@ async function runUiEnhancementChecks(isDemoMode) {
   addResult(
     "캐릭터 검사",
     "input 강아지 선택 카드에 DogMascot 존재",
-    input.status === 200 && hasMascotSpecies(input.text, "dog"),
+    input.status === 200 && hasMascotSpeciesMarker(input.text, "dog"),
     `status ${input.status}`,
     {
       url: inputPath,
-      issue: "DogMascot input card",
+      issue: 'data-mascot-species="dog"',
       file: "app/input/page.tsx, components/mascot/PetMascot.tsx, components/mascot/DogMascot.tsx",
     },
   );
@@ -867,11 +871,11 @@ async function runUiEnhancementChecks(isDemoMode) {
   addResult(
     "캐릭터 검사",
     "input 고양이 선택 카드에 CatMascot 존재",
-    input.status === 200 && hasMascotSpecies(input.text, "cat"),
+    input.status === 200 && hasMascotSpeciesMarker(input.text, "cat"),
     `status ${input.status}`,
     {
       url: inputPath,
-      issue: "CatMascot input card",
+      issue: 'data-mascot-species="cat"',
       file: "app/input/page.tsx, components/mascot/PetMascot.tsx, components/mascot/CatMascot.tsx",
     },
   );
@@ -1651,6 +1655,7 @@ async function runOperationalFeatureChecks() {
 const reportQualityForbiddenPatterns = [
   phrase("몽이", " 의"),
   phrase("몽이", " 이"),
+  phrase("나비", "이"),
   forbiddenCopy.awkwardPlaySuffix,
   ".도 잘 맞습니다",
   phrase("기운은 ", "기운은"),
@@ -1736,11 +1741,20 @@ const requiredCatBehaviorTerms = [
 
 const dogOnlyBehaviorPhrases = [
   "부르면 시선을 맞추",
+  "부르면 돌아보기",
   "산책 전후",
+  "산책 욕구",
   "하네스",
   "산책길",
   "노즈워크",
 ];
+
+const allowedSensitiveSafetyNoticeProbe = [
+  "질병이나 수명을 예측하지 않아요",
+  "사고를 단정하지 않아요",
+  "건강, 수명, 사고를 예측하거나 의학적 판단을 제공하지 않습니다",
+  "치료 조언을 제공하지 않습니다",
+].join("\n");
 
 function hasAnyVariant(text, variants) {
   return variants.some((variant) => text.includes(variant));
@@ -1857,6 +1871,8 @@ async function runReportQualityChecks() {
   );
   const { sanitizeReportText, assertReportTextQuality } =
     await importProjectModule("lib/reports/sanitizeReportText.ts");
+  const { findForbiddenSensitiveTerms, forbiddenSensitivePatterns } =
+    await importProjectModule("lib/reports/sensitiveTerms.ts");
 
   const freeSummary = createFreeSummary(demoInput);
   const premiumReport = generatePremiumReport({
@@ -1905,6 +1921,9 @@ async function runReportQualityChecks() {
   );
   const samplePage = await get("/sample");
   const reviewPage = await get("/review");
+  const homePage = await get("/");
+  const termsPage = await get("/terms");
+  const refundPage = await get("/refund");
 
   addReportQualityPatternChecks({
     label: "freeReportGenerator",
@@ -1948,6 +1967,61 @@ async function runReportQualityChecks() {
     url: "generated:sanitize_probe",
     file: "lib/reports/sanitizeReportText.ts",
   });
+
+  const allowedSensitiveMatches = findForbiddenSensitiveTerms(
+    allowedSensitiveSafetyNoticeProbe,
+  );
+  const forbiddenSensitiveProbe = forbiddenSensitivePatterns.join("\n");
+  const forbiddenSensitiveMatches =
+    findForbiddenSensitiveTerms(forbiddenSensitiveProbe);
+  const publicSafetyBundle = [
+    homePage.text,
+    termsPage.text,
+    refundPage.text,
+    samplePage.text,
+    reviewPage.text,
+    freeSummary,
+    premiumReport,
+    catFreeSummary,
+    catPremiumReport,
+  ].join("\n\n");
+  const publicSensitiveMatches =
+    findForbiddenSensitiveTerms(publicSafetyBundle);
+
+  addResult(
+    "리포트 문장 품질",
+    "안전 고지는 민감어 실패로 보지 않음",
+    allowedSensitiveMatches.length === 0,
+    allowedSensitiveMatches.length > 0
+      ? `matches: ${allowedSensitiveMatches.join(", ")}`
+      : "허용 고지 문구는 통과",
+    {
+      issue: "contextual sensitive safety notices",
+      file: "lib/reports/sensitiveTerms.ts",
+    },
+  );
+  addResult(
+    "리포트 문장 품질",
+    "실제 민감 금지 표현은 감지",
+    forbiddenSensitiveMatches.length === forbiddenSensitivePatterns.length,
+    `detected: ${forbiddenSensitiveMatches.join(", ")}`,
+    {
+      issue: "forbidden sensitive patterns",
+      file: "lib/reports/sensitiveTerms.ts",
+    },
+  );
+  addResult(
+    "리포트 문장 품질",
+    "공개 화면과 생성 리포트에 민감 금지 표현 없음",
+    publicSensitiveMatches.length === 0,
+    publicSensitiveMatches.length > 0
+      ? `matches: ${publicSensitiveMatches.join(", ")}`
+      : "footer/terms/refund/disclaimer 안전 고지는 허용",
+    {
+      issue: "contextual sensitive terms",
+      file: "lib/reports/sensitiveTerms.ts, components/layout/SiteFooter.tsx, app/terms/page.tsx, app/refund/page.tsx",
+    },
+  );
 
   const catGeneratedBundle = [
     catFreeSummary,

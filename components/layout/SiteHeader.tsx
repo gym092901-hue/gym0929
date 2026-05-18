@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { PetMascot } from "@/components/mascot/PetMascot";
+import { shouldShowHeaderTestLink } from "@/lib/demo/config";
 
 const navItems = [
-  { href: "/test", label: "테스트 안내" },
   { href: "/terms", label: "이용약관" },
   { href: "/privacy", label: "개인정보" },
   { href: "/refund", label: "환불정책" },
 ];
 
 export function SiteHeader() {
+  const visibleNavItems = shouldShowHeaderTestLink()
+    ? [{ href: "/test", label: "테스트 안내" }, ...navItems]
+    : navItems;
+
   return (
     <header className="sticky top-0 z-20 border-b border-berry/10 bg-cream/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
@@ -22,7 +26,7 @@ export function SiteHeader() {
           멍냥사주
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-semibold text-ink/70 sm:flex">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}

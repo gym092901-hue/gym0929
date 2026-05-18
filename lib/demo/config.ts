@@ -23,6 +23,13 @@ export function isDemoModeEnabled() {
   return process.env.DEMO_MODE === "true" && !isProductionRuntime();
 }
 
+export function shouldShowHeaderTestLink() {
+  return (
+    !isProductionRuntime() &&
+    (process.env.DEMO_MODE === "true" || process.env.VERCEL_ENV !== "production")
+  );
+}
+
 export function isDemoReadingId(readingId: string) {
   return readingId === demoReadingId;
 }

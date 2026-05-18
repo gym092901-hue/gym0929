@@ -131,7 +131,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
     "보호자에게 사랑을 표현하는 방식",
     "올해의 흐름",
     "월별 생활 체크리스트",
-    "PDF 무료 저장",
+    "PDF로 저장하기",
   ];
 
   return (
@@ -250,7 +250,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
                 {premiumPrice}원
               </p>
               <p className="mt-1 text-xs font-bold text-ink/50">
-                결제 후 바로 열람 · PDF 무료 저장 가능
+                결제 후 바로 열람 · PDF로 저장 가능
               </p>
             </div>
           </div>

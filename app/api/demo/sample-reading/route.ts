@@ -18,6 +18,7 @@ export async function POST() {
     birthTime: demoSamplePet.birthTime,
     birthTimeUnknown: demoSamplePet.birthTimeUnknown,
     adoptionDate: demoSamplePet.adoptionDate,
+    lifestyle: demoSamplePet.lifestyle,
   });
 
   if (!isSupabaseConfigured()) {
@@ -30,6 +31,7 @@ export async function POST() {
       adoptionDate: demoSamplePet.adoptionDate,
       ownerEmail: demoSamplePet.ownerEmail,
       freeSummary,
+      lifestyle: demoSamplePet.lifestyle,
     });
 
     return NextResponse.json({
@@ -53,6 +55,13 @@ export async function POST() {
         birth_time_unknown: demoSamplePet.birthTimeUnknown,
         adoption_date: demoSamplePet.adoptionDate,
         owner_email: demoSamplePet.ownerEmail,
+        living_environment: demoSamplePet.lifestyle.livingEnvironment,
+        daily_activity_frequency: demoSamplePet.lifestyle.dailyActivityFrequency,
+        alone_time: demoSamplePet.lifestyle.aloneTime,
+        stranger_reaction: demoSamplePet.lifestyle.strangerReaction,
+        guardian_distance: demoSamplePet.lifestyle.guardianDistance,
+        favorite_activities: demoSamplePet.lifestyle.favoriteActivities,
+        guardian_questions: demoSamplePet.lifestyle.guardianQuestions,
       })
       .select("id")
       .single();

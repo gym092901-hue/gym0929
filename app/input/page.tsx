@@ -5,7 +5,29 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
+import { PetInputSummaryTags } from "@/components/report/PetInputSummaryTags";
 import { ReportMobileBar } from "@/components/report/ReportMobileBar";
+import {
+  aloneTimeOptions,
+  dailyActivityOptions,
+  favoriteActivityOptions,
+  getLifestyleSummaryTags,
+  guardianDistanceOptions,
+  guardianQuestionOptions,
+  livingEnvironmentOptions,
+  strangerReactionOptions,
+} from "@/lib/readings/lifestyle";
+import type {
+  AloneTime,
+  DailyActivityFrequency,
+  FavoriteActivity,
+  GuardianDistance,
+  GuardianQuestion,
+  LivingEnvironment,
+  PetLifestyleProfile,
+  PetSpecies,
+  StrangerReaction,
+} from "@/types/reading";
 
 type FieldKey =
   | "petName"
@@ -108,26 +130,133 @@ function ButtonPaws() {
   );
 }
 
+function ChipGroup({
+  title,
+  description,
+  options,
+  selectedValues,
+  onToggle,
+  multiple = false,
+}: {
+  title: string;
+  description?: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  selectedValues: string[];
+  onToggle: (value: string) => void;
+  multiple?: boolean;
+}) {
+  return (
+    <fieldset className="grid gap-3 rounded-[1.75rem] border border-berry/10 bg-white/70 p-4">
+      <legend className="px-1 text-sm font-black text-ink">{title}</legend>
+      {description ? (
+        <p className="text-xs font-semibold leading-5 text-ink/50">{description}</p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const selected = selectedValues.includes(option.value);
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onToggle(option.value)}
+              className={`min-h-11 rounded-full border px-4 py-2 text-sm font-black transition ${
+                selected
+                  ? "scale-[1.02] border-berry/55 bg-berry text-white shadow-soft"
+                  : "border-berry/15 bg-white text-ink/65 hover:border-berry/35 hover:bg-berry/10"
+              }`}
+            >
+              {option.label}
+              {multiple && selected ? (
+                <span aria-hidden="true" className="ml-1">
+                  ✓
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function toggleArrayValue<T extends string>(values: T[], value: string) {
+  return values.includes(value as T)
+    ? values.filter((item) => item !== value)
+    : [...values, value as T];
+}
+
 export default function InputPage() {
   const router = useRouter();
   const today = useMemo(() => getTodayDateString(), []);
+  const [petName, setPetName] = useState("");
+  const [species, setSpecies] = useState<PetSpecies | "">("");
   const [birthDateUnknown, setBirthDateUnknown] = useState(false);
   const [birthDate, setBirthDate] = useState("");
+  const [adoptionDate, setAdoptionDate] = useState("");
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [birthTime, setBirthTime] = useState("");
+  const [livingEnvironment, setLivingEnvironment] = useState<
+    LivingEnvironment[]
+  >([]);
+  const [dailyActivityFrequency, setDailyActivityFrequency] =
+    useState<DailyActivityFrequency | null>(null);
+  const [aloneTime, setAloneTime] = useState<AloneTime | null>(null);
+  const [strangerReaction, setStrangerReaction] =
+    useState<StrangerReaction | null>(null);
+  const [guardianDistance, setGuardianDistance] =
+    useState<GuardianDistance | null>(null);
+  const [favoriteActivities, setFavoriteActivities] = useState<
+    FavoriteActivity[]
+  >([]);
+  const [guardianQuestions, setGuardianQuestions] = useState<
+    GuardianQuestion[]
+  >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const summaryErrors = Object.values(errors).filter(Boolean);
+  const lifestyle: PetLifestyleProfile = useMemo(
+    () => ({
+      livingEnvironment,
+      dailyActivityFrequency,
+      aloneTime,
+      strangerReaction,
+      guardianDistance,
+      favoriteActivities,
+      guardianQuestions,
+    }),
+    [
+      aloneTime,
+      dailyActivityFrequency,
+      favoriteActivities,
+      guardianDistance,
+      guardianQuestions,
+      livingEnvironment,
+      strangerReaction,
+    ],
+  );
+  const summaryTags = useMemo(
+    () =>
+      getLifestyleSummaryTags({
+        petName,
+        species,
+        birthTimeUnknown: timeUnknown,
+        lifestyle,
+      }),
+    [lifestyle, petName, species, timeUnknown],
+  );
 
   function validate(formData: FormData) {
     const nextErrors: FieldErrors = {};
-    const name = String(formData.get("petName") ?? "").trim();
-    const species = String(formData.get("species") ?? "");
+    const name = petName.trim() || String(formData.get("petName") ?? "").trim();
+    const submittedSpecies = species || String(formData.get("species") ?? "");
     const submittedBirthDate = birthDateUnknown
       ? ""
       : birthDate || String(formData.get("birthDate") ?? "");
-    const adoptionDate = String(formData.get("adoptionDate") ?? "");
+    const submittedAdoptionDate =
+      adoptionDate || String(formData.get("adoptionDate") ?? "");
     const guardianEmail = String(formData.get("guardianEmail") ?? "")
       .trim()
       .toLowerCase();
@@ -138,7 +267,7 @@ export default function InputPage() {
       nextErrors.petName = "이름은 30자 이내로 입력해 주세요.";
     }
 
-    if (species !== "dog" && species !== "cat") {
+    if (submittedSpecies !== "dog" && submittedSpecies !== "cat") {
       nextErrors.species = "강아지인지 고양이인지 알려주세요.";
     }
 
@@ -146,11 +275,11 @@ export default function InputPage() {
       nextErrors.birthDate = "미래 날짜는 사용할 수 없어요.";
     }
 
-    if (isFutureDate(adoptionDate, today)) {
+    if (isFutureDate(submittedAdoptionDate, today)) {
       nextErrors.adoptionDate = "미래 날짜는 사용할 수 없어요.";
     }
 
-    if (!submittedBirthDate && !adoptionDate) {
+    if (!submittedBirthDate && !submittedAdoptionDate) {
       const message = birthDateUnknown
         ? "생일을 모른다면 처음 만난 날을 알려주세요."
         : "생년월일 또는 처음 만난 날 중 하나를 알려주세요.";
@@ -158,7 +287,7 @@ export default function InputPage() {
       nextErrors.adoptionDate = nextErrors.adoptionDate ?? message;
     }
 
-    if (birthDateUnknown && !adoptionDate) {
+    if (birthDateUnknown && !submittedAdoptionDate) {
       nextErrors.adoptionDate =
         nextErrors.adoptionDate ?? "생일을 모른다면 처음 만난 날을 알려주세요.";
     }
@@ -173,9 +302,9 @@ export default function InputPage() {
       errors: nextErrors,
       values: {
         name,
-        species,
+        species: submittedSpecies,
         birthDate: submittedBirthDate,
-        adoptionDate,
+        adoptionDate: submittedAdoptionDate,
         guardianEmail,
         birthTime: timeUnknown ? "" : birthTime,
       },
@@ -203,6 +332,13 @@ export default function InputPage() {
       birth_time_unknown: timeUnknown,
       adoption_date: values.adoptionDate || null,
       owner_email: values.guardianEmail || null,
+      living_environment: lifestyle.livingEnvironment,
+      daily_activity_frequency: lifestyle.dailyActivityFrequency,
+      alone_time: lifestyle.aloneTime,
+      stranger_reaction: lifestyle.strangerReaction,
+      guardian_distance: lifestyle.guardianDistance,
+      favorite_activities: lifestyle.favoriteActivities,
+      guardian_questions: lifestyle.guardianQuestions,
     };
 
     try {
@@ -291,6 +427,29 @@ export default function InputPage() {
           </section>
         ) : null}
 
+        {summaryTags.length > 0 ? (
+          <section className="mb-6 rounded-[1.5rem] border border-moss/20 bg-moss/10 px-4 py-3">
+            <p className="text-sm font-black text-moss">입력 요약</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {summaryTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-ink/65 shadow-sm"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="mb-6 rounded-[1.5rem] border border-oat/70 bg-white/60 px-4 py-3">
+            <p className="text-xs font-bold leading-5 text-ink/50">
+              선택한 정보는 여기에서 태그로 정리돼요. 생활 패턴은 선택 사항이라
+              비워두어도 무료 결과를 볼 수 있습니다.
+            </p>
+          </section>
+        )}
+
         <div className="grid gap-5">
           <label className="grid gap-2">
             <span className="inline-flex items-center gap-2 text-sm font-bold text-ink">
@@ -306,6 +465,11 @@ export default function InputPage() {
             </span>
             <input
               name="petName"
+              value={petName}
+              onChange={(event) => {
+                setPetName(event.target.value);
+                setErrors((current) => ({ ...current, petName: undefined }));
+              }}
               maxLength={30}
               placeholder="예: 몽이"
               aria-invalid={Boolean(errors.petName)}
@@ -323,6 +487,11 @@ export default function InputPage() {
                   type="radio"
                   name="species"
                   value="dog"
+                  checked={species === "dog"}
+                  onChange={() => {
+                    setSpecies("dog");
+                    setErrors((current) => ({ ...current, species: undefined }));
+                  }}
                   className="sr-only peer"
                 />
                 <span className="relative flex min-h-56 flex-col items-center justify-end overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-berry/10 via-cream/70 to-white px-4 pb-5 pt-6 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.035] peer-checked:bg-white peer-checked:text-berry peer-checked:shadow-soft sm:min-h-64 sm:pb-6 sm:pt-7">
@@ -351,7 +520,17 @@ export default function InputPage() {
                 </span>
               </label>
               <label className="group cursor-pointer rounded-[2rem] border-2 border-moss/15 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-moss/35 hover:shadow-soft focus-within:ring-2 focus-within:ring-moss/30 has-[:checked]:scale-[1.025] has-[:checked]:border-moss/65 has-[:checked]:bg-moss/10 has-[:checked]:shadow-soft sm:p-4">
-                <input type="radio" name="species" value="cat" className="sr-only peer" />
+                <input
+                  type="radio"
+                  name="species"
+                  value="cat"
+                  checked={species === "cat"}
+                  onChange={() => {
+                    setSpecies("cat");
+                    setErrors((current) => ({ ...current, species: undefined }));
+                  }}
+                  className="sr-only peer"
+                />
                 <span className="relative flex min-h-56 flex-col items-center justify-end overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-moss/10 via-cream/70 to-white px-4 pb-5 pt-6 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.035] peer-checked:bg-white peer-checked:text-moss peer-checked:shadow-soft sm:min-h-64 sm:pb-6 sm:pt-7">
                   <span
                     aria-hidden="true"
@@ -472,6 +651,14 @@ export default function InputPage() {
             <input
               name="adoptionDate"
               type="date"
+              value={adoptionDate}
+              onChange={(event) => {
+                setAdoptionDate(event.target.value);
+                setErrors((current) => ({
+                  ...current,
+                  adoptionDate: undefined,
+                }));
+              }}
               max={today}
               aria-invalid={Boolean(errors.adoptionDate)}
               aria-describedby="adoptionDate-error"
@@ -479,6 +666,108 @@ export default function InputPage() {
             />
             <ErrorText id="adoptionDate-error" message={errors.adoptionDate} />
           </label>
+
+          <section className="grid gap-4 rounded-[2rem] border border-moss/15 bg-moss/5 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-moss">생활 패턴</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-ink/50">
+                  선택 사항이에요. 알려주신 내용은 보호자 교감과 루틴 조언을
+                  더 개인화하는 데만 사용됩니다.
+                </p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-moss shadow-sm">
+                선택 입력
+              </span>
+            </div>
+
+            <ChipGroup
+              title="생활 환경"
+              description="여러 개를 골라도 괜찮아요."
+              options={livingEnvironmentOptions}
+              selectedValues={livingEnvironment}
+              multiple
+              onToggle={(value) =>
+                setLivingEnvironment((current) =>
+                  toggleArrayValue<LivingEnvironment>(current, value),
+                )
+              }
+            />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ChipGroup
+                title="하루 산책/놀이 횟수"
+                options={dailyActivityOptions}
+                selectedValues={
+                  dailyActivityFrequency ? [dailyActivityFrequency] : []
+                }
+                onToggle={(value) =>
+                  setDailyActivityFrequency((current) =>
+                    current === value ? null : (value as DailyActivityFrequency),
+                  )
+                }
+              />
+              <ChipGroup
+                title="혼자 있는 시간"
+                options={aloneTimeOptions}
+                selectedValues={aloneTime ? [aloneTime] : []}
+                onToggle={(value) =>
+                  setAloneTime((current) =>
+                    current === value ? null : (value as AloneTime),
+                  )
+                }
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ChipGroup
+                title="낯선 사람 반응"
+                options={strangerReactionOptions}
+                selectedValues={strangerReaction ? [strangerReaction] : []}
+                onToggle={(value) =>
+                  setStrangerReaction((current) =>
+                    current === value ? null : (value as StrangerReaction),
+                  )
+                }
+              />
+              <ChipGroup
+                title="보호자와의 거리감"
+                options={guardianDistanceOptions}
+                selectedValues={guardianDistance ? [guardianDistance] : []}
+                onToggle={(value) =>
+                  setGuardianDistance((current) =>
+                    current === value ? null : (value as GuardianDistance),
+                  )
+                }
+              />
+            </div>
+
+            <ChipGroup
+              title="좋아하는 활동"
+              description="우리 아이가 자주 좋아하는 것을 골라주세요."
+              options={favoriteActivityOptions}
+              selectedValues={favoriteActivities}
+              multiple
+              onToggle={(value) =>
+                setFavoriteActivities((current) =>
+                  toggleArrayValue<FavoriteActivity>(current, value),
+                )
+              }
+            />
+
+            <ChipGroup
+              title="보호자가 궁금한 점"
+              description="심층 리포트에서 더 보고 싶은 방향을 골라주세요."
+              options={guardianQuestionOptions}
+              selectedValues={guardianQuestions}
+              multiple
+              onToggle={(value) =>
+                setGuardianQuestions((current) =>
+                  toggleArrayValue<GuardianQuestion>(current, value),
+                )
+              }
+            />
+          </section>
 
           <label className="grid gap-2">
             <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
@@ -526,6 +815,23 @@ export default function InputPage() {
               <li>생일을 모르는 경우에는 처음 만난 날만으로도 무료 결과를 만들 수 있습니다.</li>
             </ul>
           </section>
+
+          {species === "dog" || species === "cat" ? (
+            <PetInputSummaryTags
+              petName={petName}
+              species={species}
+              birthDate={birthDateUnknown ? null : birthDate}
+              birthTime={timeUnknown ? null : birthTime}
+              birthTimeUnknown={timeUnknown}
+              adoptionDate={adoptionDate || null}
+              livingEnvironment={livingEnvironment}
+              activityLevel={dailyActivityFrequency}
+              aloneTime={aloneTime}
+              strangerReaction={strangerReaction}
+              guardianDistance={guardianDistance}
+              favoriteActivities={favoriteActivities}
+            />
+          ) : null}
         </div>
 
         <button

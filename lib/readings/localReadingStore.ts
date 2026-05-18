@@ -4,8 +4,9 @@ import {
   createFreeKeywords,
   createPremiumPreviewSections,
 } from "@/lib/readings/content";
+import { emptyLifestyleProfile } from "@/lib/readings/lifestyle";
 import type { PetType } from "@/types/database";
-import type { Reading } from "@/types/reading";
+import type { PetLifestyleProfile, Reading } from "@/types/reading";
 
 type LocalReadingInput = {
   name: string;
@@ -16,6 +17,7 @@ type LocalReadingInput = {
   adoptionDate: string | null;
   ownerEmail: string | null;
   freeSummary: string;
+  lifestyle?: PetLifestyleProfile;
 };
 
 type LocalReadingStore = Map<string, Reading>;
@@ -41,6 +43,7 @@ export function createLocalReading(input: LocalReadingInput) {
     birthTimeUnknown: input.birthTimeUnknown,
     adoptionDate: input.adoptionDate,
     freeSummary: input.freeSummary,
+    lifestyle: input.lifestyle ?? emptyLifestyleProfile,
   };
 
   const reading: Reading = {
@@ -49,12 +52,14 @@ export function createLocalReading(input: LocalReadingInput) {
     species: input.type,
     birthDate: input.birthDate ?? "",
     birthTime,
+    adoptionDate: input.adoptionDate ?? "",
     metDate: input.adoptionDate ?? input.birthDate ?? "",
     guardianEmail: input.ownerEmail ?? "",
     freeSummary: input.freeSummary,
     freeKeywords: createFreeKeywords(sectionInput),
     freeSections: createFreeInsightSections(sectionInput),
     premiumPreviewSections: createPremiumPreviewSections(sectionInput),
+    lifestyle: input.lifestyle ?? emptyLifestyleProfile,
     premiumSections: [],
   };
 

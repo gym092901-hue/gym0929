@@ -4,6 +4,8 @@ import { PetMascot } from "@/components/mascot/PetMascot";
 import { MobileStickyCTA } from "@/components/report/MobileStickyCTA";
 import { PetElementBalance } from "@/components/report/PetElementBalance";
 import { PetHookCard } from "@/components/report/PetHookCard";
+import { PetInputSummaryTags } from "@/components/report/PetInputSummaryTags";
+import { PremiumReportTabs } from "@/components/report/PremiumReportTabs";
 import { PremiumTableOfContents } from "@/components/report/PremiumTableOfContents";
 import { PdfDownloadButton } from "@/components/report/PdfDownloadButton";
 import { ReportAccordionSection } from "@/components/report/ReportAccordionSection";
@@ -186,6 +188,11 @@ export default async function PremiumResultPage({
     id: `premium-section-${index + 1}`,
     body: sanitizePremiumReport(section.body, reading.petName),
   }));
+  const generatedAt = new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date());
 
   return (
     <PageShell mascotType={reading.species}>
@@ -218,6 +225,40 @@ export default async function PremiumResultPage({
               label={`${reading.petName} 심층 리포트 훅 캐릭터`}
             />
           }
+        />
+
+        <PetInputSummaryTags
+          petName={reading.petName}
+          species={reading.species}
+          birthDate={reading.birthDate || null}
+          birthTime={reading.birthTime}
+          birthTimeUnknown={!reading.birthTime}
+          adoptionDate={reading.adoptionDate || null}
+          livingEnvironment={reading.lifestyle.livingEnvironment}
+          activityLevel={reading.lifestyle.dailyActivityFrequency}
+          aloneTime={reading.lifestyle.aloneTime}
+          strangerReaction={reading.lifestyle.strangerReaction}
+          guardianDistance={reading.lifestyle.guardianDistance}
+          favoriteActivities={reading.lifestyle.favoriteActivities}
+        />
+
+        <PremiumReportTabs
+          readingId={reading.id}
+          petName={reading.petName}
+          species={reading.species}
+          birthDate={reading.birthDate || null}
+          birthTime={reading.birthTime}
+          birthTimeUnknown={!reading.birthTime}
+          adoptionDate={reading.adoptionDate || null}
+          guardianEmail={reading.guardianEmail || null}
+          generatedAt={generatedAt}
+          hook={hook}
+          primaryElement={elementProfile.primaryElement}
+          secondaryElement={elementProfile.secondaryElement}
+          scores={elementProfile.scores}
+          summaryKeywords={summaryKeywords}
+          lifestyle={reading.lifestyle}
+          sections={safePremiumSections}
         />
 
         <section className="warm-panel overflow-hidden rounded-[2rem] p-5 sm:p-8">

@@ -15,7 +15,6 @@ type Snapshot = {
 const baseUrl = (process.env.GPT_REVIEW_BASE_URL || "http://127.0.0.1:3000")
   .replace(/\/$/, "");
 const outDir = path.join(process.cwd(), "gpt-review");
-const phrase = (...parts: string[]) => parts.join("");
 
 function stripHtml(html: string) {
   return html
@@ -58,18 +57,37 @@ async function fetchSnapshot(
 }
 
 async function createReading(species: "dog" | "cat") {
+  const sampleName = species === "dog" ? "몽이" : "나비";
   const response = await fetch(`${baseUrl}/api/readings`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      name: species === "dog" ? "몽이" : "나비",
+      name: sampleName,
       type: species,
       birth_date: species === "dog" ? "2021-05-14" : "2022-03-04",
       birth_time_unknown: true,
       adoption_date: species === "dog" ? "2021-08-20" : "2022-05-01",
       owner_email: null,
+      living_environment:
+        species === "dog"
+          ? ["with_family", "mostly_indoor"]
+          : ["single_household", "mostly_indoor"],
+      daily_activity_frequency: species === "dog" ? "once" : "twice",
+      alone_time: species === "dog" ? "one_to_three" : "four_to_six",
+      stranger_reaction:
+        species === "dog" ? "observes_carefully" : "hides_or_avoids",
+      guardian_distance:
+        species === "dog" ? "moderately_close" : "depends_on_mood",
+      favorite_activities:
+        species === "dog"
+          ? ["walk", "treat_search"]
+          : ["window_watch", "short_hunt_play", "sleeping"],
+      guardian_questions:
+        species === "dog"
+          ? ["personality", "bond", "routine"]
+          : ["bond", "routine", "sensitive_moments"],
     }),
   });
   const body = (await response.json().catch(() => ({}))) as {
@@ -90,7 +108,63 @@ function has(text: string, phrase: string) {
 function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId: string) {
   const bundle = snapshots.map((snapshot) => snapshot.text).join("\n\n");
   const htmlBundle = snapshots.map((snapshot) => snapshot.html).join("\n\n");
+  const plainBundle = stripHtml(htmlBundle);
   const forbiddenSensitiveTermMatches = findForbiddenSensitiveTerms(bundle);
+  const oldPricePhraseMatches = [
+    "4,900",
+    "4,900원",
+    "5,900",
+    "5,900원",
+    "3,900",
+    "3,900원",
+  ].filter((pattern) => has(bundle, pattern));
+  const pdfPaidPhraseMatches = [
+    "PDF 소장본",
+    "PDF 소장본 추가 1,000원",
+    "PDF 소장본 추가 1,000",
+    "PDF 다운로드 추가 상품",
+    "PDF 추가 결제",
+  ].filter((pattern) => has(bundle, pattern));
+  const duplicatedElementPhraseMatches = [
+    "기운은 기운은",
+    "금의 기운은 금의 기운은",
+    "화의 기운은 화의 기운은",
+    "토의 기운은 토의 기운은",
+  ].filter((pattern) => has(bundle, pattern));
+  const badPostpositionMatches = [
+    "몽이 의",
+    "몽이 이",
+    "나비 의",
+    "나비 이",
+    "나비이",
+  ].filter((pattern) => has(bundle, pattern));
+  const awkwardSentenceMatches = [
+    "잘 맞아요.도",
+    "낯선 자극을 만났을 때는 금의 기운은",
+    "화의 기운은 올해는",
+    "이런 방향을 함께 보여줘요",
+  ].filter((pattern) => has(bundle, pattern));
+  const productionBypassMatches = [
+    "심층 리포트 페이지 바로 보기",
+    "테스트 결제 성공 처리",
+    "카카오페이 실패 화면 보기",
+    "페이팔 실패 화면 보기",
+    "데모 PDF 미리보기",
+  ].filter((pattern) => has(bundle, pattern));
+  const customerFacingAiPhraseMatches = [
+    /\bAI\b/,
+    /인공지능/,
+    /Gemini/,
+  ]
+    .filter((pattern) => pattern.test(bundle))
+    .map((pattern) => pattern.source);
+  const hasHookCopy =
+    has(htmlBundle, 'data-testid="pet-hook-card"') &&
+    /(몽이는|나비는|우리 강아지는|우리 고양이는)\s+.{8,90}야\./.test(
+      plainBundle,
+    );
+  const hasRawElementScore = /[목화토금수]\s*\d+점/.test(bundle);
+  const hasStandaloneMeongAvatar = /(^|\s)멍(?=\s|$)/.test(plainBundle);
   const checks = {
     dogReadingId,
     catReadingId,
@@ -100,46 +174,59 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     hasCatMascot:
       has(htmlBundle, 'data-mascot="cat"') ||
       has(htmlBundle, 'data-mascot-kind="cat"'),
-    hasPetHookCard: has(bundle, "몽이는") || has(bundle, "나비는"),
+    hasPetHookCard: has(htmlBundle, 'data-testid="pet-hook-card"'),
+    hasHookCopy,
+    hasBadPostposition: badPostpositionMatches.length > 0,
+    hasDuplicatedElementPhrase: duplicatedElementPhraseMatches.length > 0,
+    hasRawElementScore,
+    hasForbiddenSensitiveTerms: forbiddenSensitiveTermMatches.length > 0,
+    hasOldPricePhrases: oldPricePhraseMatches.length > 0,
+    hasStandaloneMeongAvatar,
+    hasPdfPaidPhrase: pdfPaidPhraseMatches.length > 0,
+    hasCustomerFacingAiPhrase: customerFacingAiPhraseMatches.length > 0,
     hasOldPrice4900: has(bundle, "4,900") || has(bundle, "4,900원"),
     hasOldPrice5900: has(bundle, "5,900") || has(bundle, "5,900원"),
     hasOldPrice3900: has(bundle, "3,900") || has(bundle, "3,900원"),
-    hasOldPdfKeepsakeCopy: has(bundle, phrase("PDF ", "\uc18c\uc7a5\ubcf8")),
-    hasOldPdfPaidCopy: has(bundle, phrase("PDF ", "\uc18c\uc7a5\ubcf8 추가 ", "1", ",", "000")),
+    hasOldPdfKeepsakeCopy: has(bundle, "PDF 소장본"),
+    hasOldPdfPaidCopy:
+      has(bundle, "PDF 소장본 추가 1,000") ||
+      has(bundle, "PDF 소장본 추가 1,000원"),
     hasOldPdfExtraPaymentCopy:
-      has(bundle, phrase("PDF 추가 ", "결제")) ||
-      has(bundle, phrase("PDF 다운로드 추가 ", "상품")),
-    hasBadPostposition: has(bundle, "몽이 의"),
-    hasAwkwardSentence: has(bundle, "잘 맞아요.도"),
+      has(bundle, "PDF 추가 결제") ||
+      has(bundle, "PDF 다운로드 추가 상품"),
+    hasAwkwardSentence: awkwardSentenceMatches.length > 0,
     hasHookSpacingError:
-      has(bundle, phrase(" ", "야.")) ||
-      has(bundle, phrase("애교쟁이", " 야")) ||
-      has(bundle, phrase("감수성러", " 야")),
-    hasPixelMascotCopy: has(bundle, phrase("픽셀 ", "캐릭터")),
-    hasDogFaceIllustrationCopy: has(bundle, phrase("강아지 얼굴 ", "일러스트")),
-    hasCatFaceIllustrationCopy: has(bundle, phrase("고양이 얼굴 ", "일러스트")),
+      has(bundle, " 야.") ||
+      has(bundle, "애교쟁이 야") ||
+      has(bundle, "감수성러 야"),
+    hasPixelMascotCopy: has(bundle, "픽셀 캐릭터"),
+    hasDogFaceIllustrationCopy: has(bundle, "강아지 얼굴 일러스트"),
+    hasCatFaceIllustrationCopy: has(bundle, "고양이 얼굴 일러스트"),
     hasReportCardTogetherCharacterCopy: has(
       bundle,
-      phrase("리포트 카드를 함께 보는 ", "캐릭터"),
+      "리포트 카드를 함께 보는 캐릭터",
     ),
     hasCatBehaviorVocabulary:
       has(bundle, "자기 자리") &&
       has(bundle, "창밖 관찰") &&
-      (has(bundle, "느린 눈맞춤") || has(bundle, "눈을 느리게")) &&
-      (has(bundle, "짧은 사냥놀이") || has(bundle, "짧은 사냥 놀이")) &&
+      has(bundle, "느린 눈맞춤") &&
       has(bundle, "꼬리") &&
-      has(bundle, "캣타워") &&
-      has(bundle, "숨숨집") &&
-      has(bundle, "먼저 다가올 때까지 기다"),
+      has(bundle, "사냥놀이"),
     reviewProtected:
       has(bundle, "관리자 검토 페이지입니다") &&
-      !has(bundle, "검토용 통합 페이지") &&
+      !has(bundle, "검토용 종합 페이지") &&
       !has(bundle, "GPT 점검용"),
     hasPremiumDirectBypassCopy: has(bundle, "심층 리포트 페이지 바로 보기"),
     hasDemoPaymentCopy: has(bundle, "테스트 결제 성공 처리"),
     hasDemoPdfPreviewCopy: has(bundle, "데모 PDF 미리보기"),
-    hasForbiddenSensitiveTerms: forbiddenSensitiveTermMatches.length > 0,
     forbiddenSensitiveTermMatches,
+    oldPricePhraseMatches,
+    pdfPaidPhraseMatches,
+    duplicatedElementPhraseMatches,
+    badPostpositionMatches,
+    awkwardSentenceMatches,
+    productionBypassMatches,
+    customerFacingAiPhraseMatches,
   };
 
   return {
@@ -182,14 +269,13 @@ ${snapshot.text.slice(0, 5000)}
 ## 중점 검토 항목
 
 - 무료 결과와 유료 결과가 명확히 구분되는지
-- 무료 결과에 결제 없이 프리미엄으로 바로 들어가는 우회 버튼이 없는지
-- 프리미엄 리포트와 PDF는 결제 승인 없이 열리지 않는지
-- dog 결과에는 강아지 캐릭터, cat 결과에는 고양이 캐릭터가 자연스럽게 보이는지
-- “멍” 같은 텍스트형 아바타가 실제 캐릭터 대신 노출되지 않는지
+- DogMascot/CatMascot가 species별로 자연스럽게 노출되는지
+- PetHookCard의 첫 문장 훅이 바로 공감되는지
+- "멍" 같은 텍스트형 아바타가 실제 캐릭터 대신 노출되지 않는지
 - 가격 정책이 심층 리포트 2,900원, 추가 콘텐츠 1,000원, PDF 저장 무료로 일관적인지
-- “4,900원”, “5,900원”, “3,900원”과 예전 유료 PDF 문구가 없는지
-- “몽이 의”, “잘 맞아요.도”, “화의 기운은 올해는”, “낯선 자극을 만났을 때는 금의 기운은” 같은 문장 오류가 없는지
-- 입력폼의 개인정보 안내와 개인정보처리방침 링크가 충분한지
+- "4,900원", "5,900원", "3,900원"과 예전 유료 PDF 문구가 없는지
+- "몽이 의", "잘 맞아요.도", "화의 기운은 올해는", "낯선 자극을 만났을 때는 금의 기운은" 같은 문장 오류가 없는지
+- 고객 화면에 AI, 인공지능, Gemini 같은 내부 구현 표현이 노출되지 않는지
 - 모바일 리포트형 UI로 읽기 좋은지
 
 ## 자동 요약
@@ -205,6 +291,7 @@ ${pages}
 }
 
 async function main() {
+  await fs.rm(outDir, { recursive: true, force: true });
   await fs.mkdir(outDir, { recursive: true });
 
   const dogReadingId = await createReading("dog");
@@ -252,7 +339,7 @@ async function main() {
 
 1. \`GPT_REVIEW_PROMPT.md\` 내용을 GPT에 붙여넣으세요.
 2. 더 정확한 점검을 원하면 이 폴더의 \`.txt\`, \`.html\`, \`summary.json\` 파일을 함께 업로드하세요.
-3. 외부 URL로 검토받으려면 Vercel 배포 후 \`https://배포주소/sample\`, \`https://배포주소/test\`를 공유하세요.
+3. 외부 URL로 검토받으려면 Vercel 배포 후 \`https://배포주소/sample\`을 공유하세요.
 4. 정식 production에서는 프리미엄 직접 접근과 PDF API가 결제 없이 열리면 안 됩니다.
 
 생성 기준 URL: ${baseUrl}

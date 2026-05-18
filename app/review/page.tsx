@@ -18,6 +18,7 @@ import { createFreeInsightSections } from "@/lib/readings/content";
 import { generatePetHookFromSajuInput } from "@/lib/saju/petHookGenerator";
 import { calculatePetFiveElements } from "@/lib/saju/petSajuEngine";
 import { generatePremiumReport } from "@/lib/saju/premiumReportGenerator";
+import type { PetLifestyleProfile } from "@/types/reading";
 
 export const metadata = {
   title: "관리자 검토 페이지",
@@ -31,6 +32,15 @@ const samplePet = {
   birthTime: null,
   birthTimeUnknown: true,
   adoptionDate: "2021-08-20",
+  lifestyle: {
+    livingEnvironment: ["with_family", "mostly_indoor"],
+    dailyActivityFrequency: "once",
+    aloneTime: "one_to_three",
+    strangerReaction: "observes_carefully",
+    guardianDistance: "moderately_close",
+    favoriteActivities: ["walk", "treat_search"],
+    guardianQuestions: ["personality", "bond", "routine"],
+  } satisfies PetLifestyleProfile,
 };
 
 type ReviewPageProps = {

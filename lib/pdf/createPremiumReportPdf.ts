@@ -94,7 +94,7 @@ function addSectionTitle(doc: PDFKit.PDFDocument, title: string) {
       width: page.width - page.margin * 2 - 36,
     });
   doc.y = titleY + 42;
-  doc.moveDown(1.5);
+  doc.moveDown(1.2);
 }
 
 function addBody(doc: PDFKit.PDFDocument, text: string) {
@@ -135,7 +135,7 @@ function addCover(doc: PDFKit.PDFDocument, reading: Reading, createdAt: string) 
       align: "center",
       lineGap: 8,
     })
-    .text("사주 리포트", {
+    .text("사주 심층 리포트", {
       align: "center",
       width: page.width - page.margin * 2 - 72,
     });
@@ -178,6 +178,19 @@ function addCover(doc: PDFKit.PDFDocument, reading: Reading, createdAt: string) 
         lineGap: 4,
       },
     );
+
+  doc
+    .fillColor(colors.muted)
+    .fontSize(9)
+    .text(
+      "포함 내용: 표지 · 반려동물 정보 · 한 장 요약 · 오행 밸런스 · 종합 리포트 · 생성일",
+      page.margin + 48,
+      622,
+      {
+        width: page.width - page.margin * 2 - 96,
+        align: "center",
+      },
+    );
 }
 
 function addSummaryCard(doc: PDFKit.PDFDocument, reading: Reading) {
@@ -199,10 +212,10 @@ function addSummaryCard(doc: PDFKit.PDFDocument, reading: Reading) {
   const firstSection = reading.premiumSections[0]?.body ?? "";
   const secondSection = reading.premiumSections[1]?.body ?? "";
   const cardText = [
-    `${petNameTopic} 자기만의 속도와 리듬이 중요한 아이로 읽힙니다.`,
+    `${petNameTopic} 자기만의 속도와 루틴이 중요한 아이로 읽혀요.`,
     firstSection.slice(0, 220),
     secondSection.slice(0, 220),
-    "보호자는 큰 변화보다 작은 반복과 차분한 신호를 통해 아이의 편안함을 도와줄 수 있습니다.",
+    "보호자는 큰 변화보다 작은 반복과 차분한 신호를 통해 아이의 안정감을 도와줄 수 있습니다.",
   ].join("\n\n");
 
   doc
@@ -223,7 +236,7 @@ export async function createPremiumReportPdf(reading: Reading) {
     bufferPages: true,
     autoFirstPage: false,
     info: {
-      Title: `${petNamePossessive} 사주 리포트`,
+      Title: `${petNamePossessive} 사주 심층 리포트`,
       Author: "멍냥사주",
       Subject: "반려동물 사주 리포트",
     },
@@ -247,7 +260,7 @@ export async function createPremiumReportPdf(reading: Reading) {
   addBody(doc, reading.freeSummary);
 
   doc.addPage();
-  addSectionTitle(doc, "유료 심층 리포트");
+  addSectionTitle(doc, "심층 리포트");
 
   for (const section of reading.premiumSections) {
     addSectionTitle(doc, section.title);

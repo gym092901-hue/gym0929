@@ -38,6 +38,13 @@ export type Database = {
           birth_time_unknown: boolean;
           adoption_date: string | null;
           owner_email: string | null;
+          living_environment: string[];
+          daily_activity_frequency: string | null;
+          alone_time: string | null;
+          stranger_reaction: string | null;
+          guardian_distance: string | null;
+          favorite_activities: string[];
+          guardian_questions: string[];
           created_at: string;
         };
         Insert: {
@@ -49,6 +56,13 @@ export type Database = {
           birth_time_unknown?: boolean;
           adoption_date?: string | null;
           owner_email?: string | null;
+          living_environment?: string[];
+          daily_activity_frequency?: string | null;
+          alone_time?: string | null;
+          stranger_reaction?: string | null;
+          guardian_distance?: string | null;
+          favorite_activities?: string[];
+          guardian_questions?: string[];
           created_at?: string;
         };
         Update: {
@@ -60,6 +74,13 @@ export type Database = {
           birth_time_unknown?: boolean;
           adoption_date?: string | null;
           owner_email?: string | null;
+          living_environment?: string[];
+          daily_activity_frequency?: string | null;
+          alone_time?: string | null;
+          stranger_reaction?: string | null;
+          guardian_distance?: string | null;
+          favorite_activities?: string[];
+          guardian_questions?: string[];
           created_at?: string;
         };
         Relationships: [];

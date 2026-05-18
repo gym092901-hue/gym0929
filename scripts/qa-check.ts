@@ -235,6 +235,15 @@ async function runHomeChecks() {
 async function runInputChecks() {
   const inputPage = await get("/input");
   const inputSource = readProjectFile("app/input/page.tsx");
+  const inputSummaryTagsSource = readProjectFile(
+    "components/report/PetInputSummaryTags.tsx",
+  );
+  const readingsRouteSource = readProjectFile("app/api/readings/route.ts");
+  const databaseTypes = readProjectFile("types/database.ts");
+  const lifestyleSource = readProjectFile("lib/readings/lifestyle.ts");
+  const contentSource = readProjectFile("lib/readings/content.ts");
+  const engineSource = readProjectFile("lib/saju/petSajuEngine.ts");
+  const premiumSource = readProjectFile("lib/saju/premiumReportGenerator.ts");
   const missingName = await postJson("/api/readings", {
     type: "dog",
     birth_time_unknown: true,
@@ -313,6 +322,82 @@ async function runInputChecks() {
     inputPage.text.includes("개인정보처리방침") &&
       inputSource.includes('href="/privacy"'),
     "이메일 안내 영역 링크 확인",
+  );
+  addResult(
+    "입력",
+    "생활 패턴 선택 UI 노출",
+    hasAll(inputPage.text, [
+      "생활 패턴",
+      "생활 환경",
+      "하루 산책/놀이 횟수",
+      "혼자 있는 시간",
+      "낯선 사람 반응",
+      "보호자와의 거리감",
+      "좋아하는 활동",
+      "보호자가 궁금한 점",
+    ]),
+    "선택 항목은 필수가 아니며 칩 버튼으로 노출",
+    {
+      url: "/input",
+      issue: "lifestyle personalization fields",
+      file: "app/input/page.tsx",
+    },
+  );
+  addResult(
+    "입력",
+    "선택 요약 태그 UI 존재",
+    inputSource.includes("getLifestyleSummaryTags") &&
+      inputSource.includes("입력 요약") &&
+      inputSource.includes("flex flex-wrap"),
+    "모바일에서 태그가 줄바꿈되도록 flex-wrap 확인",
+    {
+      url: "/input",
+      issue: "lifestyle summary tags",
+      file: "app/input/page.tsx, lib/readings/lifestyle.ts",
+    },
+  );
+  addResult(
+    "입력",
+    "입력 폼 하단 공통 요약 태그 컴포넌트 연결",
+    inputSource.includes("<PetInputSummaryTags") &&
+      inputSummaryTagsSource.includes('data-testid="pet-input-summary-tags"') &&
+      inputSummaryTagsSource.includes('trimmed === "null"') &&
+      inputSummaryTagsSource.includes('trimmed === "undefined"'),
+    "하단 태그 컴포넌트와 null/undefined 방지 로직 확인",
+    {
+      url: "/input",
+      issue: "PetInputSummaryTags input integration",
+      file: "app/input/page.tsx, components/report/PetInputSummaryTags.tsx",
+    },
+  );
+  addResult(
+    "입력",
+    "생활 패턴 저장 필드 API 연결",
+    readingsRouteSource.includes("normalizeLifestyleProfile") &&
+      readingsRouteSource.includes("living_environment") &&
+      readingsRouteSource.includes("daily_activity_frequency") &&
+      readingsRouteSource.includes("stranger_reaction") &&
+      databaseTypes.includes("living_environment") &&
+      databaseTypes.includes("favorite_activities"),
+    "API payload -> pets table insert/type 정의 확인",
+    {
+      url: "/api/readings",
+      issue: "lifestyle persistence",
+      file: "app/api/readings/route.ts, types/database.ts",
+    },
+  );
+  addResult(
+    "입력",
+    "생활 패턴 리포트 문장 반영",
+    lifestyleSource.includes("createLifestyleContextCopy") &&
+      contentSource.includes("lifestyleCopy") &&
+      engineSource.includes("createLifestyleContextCopy") &&
+      premiumSource.includes("createLifestyleContextCopy"),
+    "무료 섹션, 무료 요약, 프리미엄 리포트 생성기에 생활 패턴 컨텍스트 반영",
+    {
+      issue: "lifestyle report personalization",
+      file: "lib/readings/lifestyle.ts, lib/readings/content.ts, lib/saju/petSajuEngine.ts, lib/saju/premiumReportGenerator.ts",
+    },
   );
 }
 
@@ -782,6 +867,9 @@ async function runUiEnhancementChecks(isDemoMode) {
   const premiumResultSource = readProjectFile(
     "app/result/premium/[readingId]/page.tsx",
   );
+  const inputSummaryTagsSource = readProjectFile(
+    "components/report/PetInputSummaryTags.tsx",
+  );
   const petMascotSource = readProjectFile("components/mascot/PetMascot.tsx");
 
   const testLocation = test.headers.get("location") || "";
@@ -838,6 +926,37 @@ async function runUiEnhancementChecks(isDemoMode) {
       url: samplePath,
       issue: "premium direct, mock payment, demo PDF",
       file: "app/sample/page.tsx",
+    },
+  );
+
+  addResult(
+    "UI 고도화",
+    "입력 정보 요약 태그가 주요 결과 상단에 연결",
+    inputSummaryTagsSource.includes('data-testid="pet-input-summary-tags"') &&
+      freeResultSource.includes("<PetInputSummaryTags") &&
+      premiumResultSource.includes("<PetInputSummaryTags") &&
+      sampleSource.includes("<PetInputSummaryTags") &&
+      sample.text.includes('data-testid="pet-input-summary-tags"'),
+    "무료/프리미엄은 소스 연결, 샘플은 렌더링까지 확인",
+    {
+      url: "/result/free/[readingId], /result/premium/[readingId], /sample",
+      issue: "PetInputSummaryTags",
+      file: "components/report/PetInputSummaryTags.tsx, app/result/free/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx, app/sample/page.tsx",
+    },
+  );
+
+  addResult(
+    "UI 고도화",
+    "입력 정보 태그에 null/undefined 미노출",
+    !stripHtml(sample.text).includes("null") &&
+      !stripHtml(sample.text).includes("undefined") &&
+      inputSummaryTagsSource.includes('trimmed === "null"') &&
+      inputSummaryTagsSource.includes('trimmed === "undefined"'),
+    "샘플 렌더링과 컴포넌트 필터 로직 확인",
+    {
+      url: "/sample",
+      issue: "null/undefined summary tag",
+      file: "components/report/PetInputSummaryTags.tsx",
     },
   );
 
@@ -1244,6 +1363,113 @@ async function runUiEnhancementChecks(isDemoMode) {
     },
   );
 
+  const premiumTabsSource = readProjectFile(
+    "components/report/PremiumReportTabs.tsx",
+  );
+  const expectedPremiumTabHashes = [
+    "overview",
+    "elements",
+    "attachment",
+    "routine",
+    "yearly",
+    "guardian",
+    "input",
+    "report",
+  ];
+  const hasPremiumTabs =
+    premiumResultSource.includes("<PremiumReportTabs") &&
+    premiumTabsSource.includes('data-testid="premium-report-tabs"') &&
+    expectedPremiumTabHashes.every((tabId) =>
+      premiumTabsSource.includes(`id: "${tabId}"`),
+    );
+
+  addResult(
+    "UI 고도화",
+    "프리미엄 결과 8개 탭 구조",
+    hasPremiumTabs,
+    hasPremiumTabs
+      ? "PremiumReportTabs has 8 hash-addressable tabs"
+      : "PremiumReportTabs integration or tab ids missing",
+    {
+      url: "/result/premium/[readingId]",
+      issue: "premium report tabs",
+      file: "app/result/premium/[readingId]/page.tsx, components/report/PremiumReportTabs.tsx",
+    },
+  );
+
+  addResult(
+    "UI 고도화",
+    "프리미엄 탭 권한 체크 우회 없음",
+    premiumResultSource.indexOf("checkPaymentAccess") <
+      premiumResultSource.indexOf("<PremiumReportTabs") &&
+      premiumResultSource.includes('checkPaymentAccess(readingId, "premium_report")'),
+    "payment access check appears before tab rendering",
+    {
+      url: "/result/premium/[readingId]",
+      issue: "premium tab authorization",
+      file: "app/result/premium/[readingId]/page.tsx, lib/payment/checkPaymentAccess.ts",
+    },
+  );
+
+  const tabInsightCardSource = readProjectFile(
+    "components/report/TabInsightCard.tsx",
+  );
+  const tabInsightGeneratorSource = readProjectFile(
+    "lib/report/tabInsightGenerator.ts",
+  );
+  const expectedTabInsightIds = expectedPremiumTabHashes;
+  const hasTabInsightCards =
+    premiumTabsSource.includes("<TabInsightCard") &&
+    premiumTabsSource.includes("createTabInsights") &&
+    tabInsightCardSource.includes('data-testid="tab-insight-card"') &&
+    expectedTabInsightIds.every((tabId) =>
+      tabInsightGeneratorSource.includes(`tabId: "${tabId}"`),
+    );
+
+  addResult(
+    "UI 고도화",
+    "각 프리미엄 탭 보조 해석 카드",
+    hasTabInsightCards,
+    hasTabInsightCards
+      ? "TabInsightCard is connected to all 8 tab insights"
+      : "TabInsightCard or tab insight generator missing",
+    {
+      url: "/result/premium/[readingId]",
+      issue: "tab insight cards",
+      file: "components/report/TabInsightCard.tsx, components/report/PremiumReportTabs.tsx, lib/report/tabInsightGenerator.ts",
+    },
+  );
+
+  const customerAiForbiddenTerms = [
+    "AI 코멘트",
+    "AI 분석",
+    "AI 생성",
+    "인공지능이 분석",
+    "Gemini",
+    "프롬프트",
+    "자동 생성",
+    "모델 응답",
+    "API 호출",
+  ];
+  const customerAiForbiddenFound = customerAiForbiddenTerms.filter((term) =>
+    operationalTextBundle.includes(term),
+  );
+
+  addResult(
+    "UI 고도화",
+    "고객 화면 AI/모델성 문구 미노출",
+    customerAiForbiddenFound.length === 0 &&
+      !premiumTabsSource.includes("TabAiComment"),
+    customerAiForbiddenFound.length > 0
+      ? `found: ${customerAiForbiddenFound.join(", ")}`
+      : "customer-facing pages do not expose AI/model wording",
+    {
+      url: "/, /input, /result/free, /checkout, /result/premium",
+      issue: "customer-facing AI wording",
+      file: "components/report/PremiumReportTabs.tsx, components/report/TabInsightCard.tsx, lib/report/tabInsightGenerator.ts",
+    },
+  );
+
   const uiSourceBundle = [
     "app/page.tsx",
     "app/input/page.tsx",
@@ -1358,6 +1584,128 @@ async function runUiEnhancementChecks(isDemoMode) {
         url: "주요 UI 경로 전체",
         issue: displayPattern,
         file: "lib/products/catalog.ts, app/result/free/[readingId]/page.tsx, app/checkout/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx",
+      },
+    );
+  });
+
+  const customerRenderedPlainText = stripHtml(renderedTextBundle);
+  const launchRiskChecks = [
+    {
+      label: "standalone 멍",
+      found: hasStandaloneTextToken(renderedTextBundle, "멍"),
+      file: "components/mascot/*, app/result/free/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx",
+    },
+    {
+      label: "PDF 소장본",
+      found: renderedTextBundle.includes("PDF 소장본") || uiSourceBundle.includes("PDF 소장본"),
+      file: "app/page.tsx, app/result/premium/[readingId]/page.tsx, components/report/*",
+    },
+    {
+      label: "PDF 소장본 추가 1,000원",
+      found:
+        renderedTextBundle.includes("PDF 소장본 추가 1,000원") ||
+        uiSourceBundle.includes("PDF 소장본 추가 1,000원"),
+      file: "app/result/premium/[readingId]/page.tsx, components/report/*",
+    },
+    {
+      label: "PDF 다운로드 추가 상품",
+      found:
+        renderedTextBundle.includes("PDF 다운로드 추가 상품") ||
+        uiSourceBundle.includes("PDF 다운로드 추가 상품"),
+      file: "app/result/premium/[readingId]/page.tsx, components/report/*",
+    },
+    {
+      label: "4,900원",
+      found: renderedTextBundle.includes("4,900원") || uiSourceBundle.includes("4,900원"),
+      file: "lib/products/catalog.ts, app/**/*.tsx",
+    },
+    {
+      label: "5,900원",
+      found: renderedTextBundle.includes("5,900원") || uiSourceBundle.includes("5,900원"),
+      file: "lib/products/catalog.ts, app/**/*.tsx",
+    },
+    {
+      label: "3,900원",
+      found: renderedTextBundle.includes("3,900원") || uiSourceBundle.includes("3,900원"),
+      file: "lib/products/catalog.ts, app/**/*.tsx",
+    },
+    {
+      label: "심층 리포트 페이지 바로 보기",
+      found: renderedTextBundle.includes("심층 리포트 페이지 바로 보기"),
+      file: "app/result/free/[readingId]/page.tsx",
+    },
+    {
+      label: "테스트 결제 성공 처리",
+      found: renderedTextBundle.includes("테스트 결제 성공 처리"),
+      file: "components/payment/CheckoutExperience.tsx, app/checkout/[readingId]/page.tsx",
+    },
+    {
+      label: "카카오페이 실패 화면 보기",
+      found: renderedTextBundle.includes("카카오페이 실패 화면 보기"),
+      file: "app/checkout/[readingId]/page.tsx",
+    },
+    {
+      label: "페이팔 실패 화면 보기",
+      found: renderedTextBundle.includes("페이팔 실패 화면 보기"),
+      file: "app/checkout/[readingId]/page.tsx",
+    },
+    {
+      label: "데모 PDF 미리보기",
+      found: renderedTextBundle.includes("데모 PDF 미리보기"),
+      file: "components/report/PdfDownloadButton.tsx, app/result/premium/[readingId]/page.tsx",
+    },
+    {
+      label: "몽이 의",
+      found: renderedTextBundle.includes("몽이 의"),
+      file: "lib/korean/postposition.ts, lib/reports/sanitizeReportText.ts",
+    },
+    {
+      label: "잘 맞아요.도",
+      found: renderedTextBundle.includes("잘 맞아요.도"),
+      file: "lib/reports/sanitizeReportText.ts, lib/saju/premiumReportGenerator.ts",
+    },
+    {
+      label: "낯선 자극을 만났을 때는 금의 기운은",
+      found: renderedTextBundle.includes("낯선 자극을 만났을 때는 금의 기운은"),
+      file: "lib/reports/sanitizeReportText.ts, lib/saju/premiumReportGenerator.ts",
+    },
+    {
+      label: "화의 기운은 올해는",
+      found: renderedTextBundle.includes("화의 기운은 올해는"),
+      file: "lib/reports/sanitizeReportText.ts, lib/saju/premiumReportGenerator.ts",
+    },
+    {
+      label: "이런 방향을 함께 보여줘요",
+      found: renderedTextBundle.includes("이런 방향을 함께 보여줘요"),
+      file: "lib/reports/sanitizeReportText.ts, lib/saju/premiumReportGenerator.ts",
+    },
+    {
+      label: "고객 화면 AI",
+      found: /(^|[^A-Za-z])AI([^A-Za-z]|$)/.test(customerRenderedPlainText),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 인공지능",
+      found: customerRenderedPlainText.includes("인공지능"),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 Gemini",
+      found: customerRenderedPlainText.includes("Gemini"),
+      file: "components/report/*, app/**/*.tsx",
+    },
+  ];
+
+  launchRiskChecks.forEach(({ label, found, file }) => {
+    addResult(
+      "출시 리스크",
+      `"${label}" 고객 화면 미노출`,
+      !found,
+      found ? `launch risk phrase found: ${label}` : "",
+      {
+        url: "주요 고객 화면 렌더링 번들",
+        issue: label,
+        file,
       },
     );
   });
@@ -1838,6 +2186,15 @@ async function runReportQualityChecks() {
     birthTime: null,
     birthTimeUnknown: true,
     adoptionDate: "2021-08-20",
+    lifestyle: {
+      livingEnvironment: ["with_family", "mostly_indoor"],
+      dailyActivityFrequency: "once",
+      aloneTime: "one_to_three",
+      strangerReaction: "observes_carefully",
+      guardianDistance: "moderately_close",
+      favoriteActivities: ["walk", "treat_search"],
+      guardianQuestions: ["personality", "bond", "routine"],
+    },
   };
   const catInput = {
     name: "나비",
@@ -1846,6 +2203,15 @@ async function runReportQualityChecks() {
     birthTime: null,
     birthTimeUnknown: true,
     adoptionDate: "2022-05-01",
+    lifestyle: {
+      livingEnvironment: ["single_household", "mostly_indoor"],
+      dailyActivityFrequency: "twice",
+      aloneTime: "four_to_six",
+      strangerReaction: "hides_or_avoids",
+      guardianDistance: "depends_on_mood",
+      favoriteActivities: ["window_watch", "short_hunt_play", "sleeping"],
+      guardianQuestions: ["bond", "routine", "sensitive_moments"],
+    },
   };
   const sanitizeSource = readProjectFile("lib/reports/sanitizeReportText.ts");
   const freeEngineSource = readProjectFile("lib/saju/petSajuEngine.ts");
@@ -2163,6 +2529,136 @@ async function runReportQualityChecks() {
   }
 }
 
+function runReportActionChecks() {
+  const actionButtonsSource = readProjectFile(
+    "components/report/ReportActionButtons.tsx",
+  );
+  const copySource = readProjectFile("lib/report/copyReportText.ts");
+  const printSource = readProjectFile("lib/report/openPrintableReport.ts");
+  const pdfRouteSource = readProjectFile("app/api/pdf/[readingId]/route.ts");
+  const pdfSource = readProjectFile("lib/pdf/createPremiumReportPdf.ts");
+  const sourceBundle = [
+    actionButtonsSource,
+    copySource,
+    printSource,
+    pdfRouteSource,
+    pdfSource,
+  ].join("\n");
+  const forbiddenReportActionLabels = [
+    "AI 결과 복사",
+    "AI 보고서 인쇄",
+    "AI 리포트 저장",
+    "자동 생성 리포트 저장",
+    "AI 종합 보고서",
+    "AI 심층 리포트 생성하기",
+    "AI 분석 결과 보기",
+    "인공지능 리포트 생성",
+  ];
+
+  addResult(
+    "보고서 액션",
+    "복사/인쇄/PDF/다시 입력 버튼 문구 존재",
+    ["텍스트 복사", "인쇄하기", "PDF로 저장하기", "다시 입력하기"].every(
+      (label) => actionButtonsSource.includes(label),
+    ),
+    "",
+    {
+      issue: "report action labels",
+      file: "components/report/ReportActionButtons.tsx",
+    },
+  );
+
+  addResult(
+    "보고서 액션",
+    "복사 기능 Clipboard API + textarea fallback 적용",
+    copySource.includes("navigator.clipboard") &&
+      copySource.includes("document.createElement(\"textarea\")") &&
+      copySource.includes("document.execCommand(\"copy\")"),
+    "",
+    {
+      issue: "copy fallback",
+      file: "lib/report/copyReportText.ts",
+    },
+  );
+
+  addResult(
+    "보고서 액션",
+    "복사 성공/실패 토스트 문구 적용",
+    actionButtonsSource.includes("리포트 내용이 복사되었어요.") &&
+      actionButtonsSource.includes("복사에 실패했어요. 다시 시도해 주세요."),
+    "",
+    {
+      issue: "copy toast",
+      file: "components/report/ReportActionButtons.tsx",
+    },
+  );
+
+  addResult(
+    "보고서 액션",
+    "인쇄 기능 Blob 새 탭과 인쇄용 CSS 적용",
+    printSource.includes("new Blob") &&
+      printSource.includes("window.open") &&
+      printSource.includes("@page") &&
+      printSource.includes("size: A4") &&
+      printSource.includes("onclick=\"window.print()\""),
+    "",
+    {
+      issue: "printable report",
+      file: "lib/report/openPrintableReport.ts",
+    },
+  );
+
+  addResult(
+    "보고서 액션",
+    "PDF API premium_report 권한 검사 유지",
+    pdfRouteSource.includes("checkPaymentAccess(readingId, \"premium_report\")") &&
+      pdfRouteSource.includes("status: 403"),
+    "",
+    {
+      issue: "pdf authorization",
+      file: "app/api/pdf/[readingId]/route.ts",
+    },
+  );
+
+  addResult(
+    "보고서 액션",
+    "PDF 파일명 정책 적용",
+    pdfSource.includes("_사주리포트.pdf") &&
+      pdfRouteSource.includes("filename*=UTF-8"),
+    "",
+    {
+      issue: "pdf filename",
+      file: "lib/pdf/createPremiumReportPdf.ts, app/api/pdf/[readingId]/route.ts",
+    },
+  );
+
+  addResult(
+    "보고서 액션",
+    "PDF 포함 내용 문구 확인",
+    ["표지", "반려동물", "한 장 요약", "오행 밸런스", "종합 리포트", "생성일"].every(
+      (label) => pdfSource.includes(label),
+    ),
+    "",
+    {
+      issue: "pdf content sections",
+      file: "lib/pdf/createPremiumReportPdf.ts",
+    },
+  );
+
+  forbiddenReportActionLabels.forEach((label) => {
+    addResult(
+      "보고서 액션",
+      `고객 화면 금지 문구 "${label}" 없음`,
+      !sourceBundle.includes(label),
+      sourceBundle.includes(label) ? "forbidden label found" : "",
+      {
+        issue: label,
+        file: "components/report/ReportActionButtons.tsx, lib/report/openPrintableReport.ts, lib/pdf/createPremiumReportPdf.ts",
+      },
+    );
+  });
+}
+
 async function main() {
   console.log(`멍냥사주 QA 자동 점검 시작: ${baseUrl}`);
 
@@ -2203,6 +2699,7 @@ async function main() {
   await runPremiumChecks(isDemoMode);
   await runPdfChecks(isDemoMode);
   await runUiEnhancementChecks(isDemoMode);
+  runReportActionChecks();
   await runReportQualityChecks();
 
   console.table(results);

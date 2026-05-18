@@ -1,5 +1,6 @@
 import "server-only";
 
+import { normalizeLifestyleProfile } from "@/lib/readings/lifestyle";
 import { generatePremiumReport } from "@/lib/saju/premiumReportGenerator";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -8,7 +9,7 @@ export async function regeneratePremiumReport(readingId: string) {
   const { data: reading, error: readingError } = await supabase
     .from("readings")
     .select(
-      "id, free_summary, pets(name, type, birth_date, birth_time, birth_time_unknown, adoption_date)",
+      "id, free_summary, pets(name, type, birth_date, birth_time, birth_time_unknown, adoption_date, living_environment, daily_activity_frequency, alone_time, stranger_reaction, guardian_distance, favorite_activities, guardian_questions)",
     )
     .eq("id", readingId)
     .maybeSingle();
@@ -25,6 +26,7 @@ export async function regeneratePremiumReport(readingId: string) {
     birthTimeUnknown: reading.pets.birth_time_unknown,
     adoptionDate: reading.pets.adoption_date,
     freeSummary: reading.free_summary,
+    lifestyle: normalizeLifestyleProfile(reading.pets),
   }).report;
 
   const { error: updateError } = await supabase

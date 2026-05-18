@@ -1,4 +1,5 @@
 import "server-only";
+import type { PetLifestyleProfile } from "@/types/reading";
 
 export const demoReadingId = "demo-mong-2026";
 
@@ -10,6 +11,15 @@ export const demoSamplePet = {
   birthTimeUnknown: true,
   adoptionDate: "2021-08-20",
   ownerEmail: "test@example.com",
+  lifestyle: {
+    livingEnvironment: ["with_family", "mostly_indoor"],
+    dailyActivityFrequency: "once",
+    aloneTime: "one_to_three",
+    strangerReaction: "observes_carefully",
+    guardianDistance: "moderately_close",
+    favoriteActivities: ["walk", "treat_search"],
+    guardianQuestions: ["personality", "bond", "routine"],
+  } satisfies PetLifestyleProfile,
 };
 
 export function isProductionRuntime() {

@@ -43,7 +43,7 @@ export function ReportAccordionSection({
             aria-hidden="true"
             className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-lg font-black text-berry shadow-sm transition group-open:rotate-180"
           >
-            ˅
+            ↓
           </span>
         </div>
       </summary>

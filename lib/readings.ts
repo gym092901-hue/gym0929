@@ -4,6 +4,10 @@ import {
   createFreeKeywords,
   createPremiumPreviewSections,
 } from "@/lib/readings/content";
+import {
+  emptyLifestyleProfile,
+  normalizeLifestyleProfile,
+} from "@/lib/readings/lifestyle";
 import { demoReadingId, isDemoModeEnabled } from "@/lib/demo/config";
 import { generateFreePetSajuReading } from "@/lib/saju/petSajuEngine";
 import {
@@ -12,7 +16,7 @@ import {
 } from "@/lib/saju/premiumReportGenerator";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
-import type { Reading } from "@/types/reading";
+import type { PetLifestyleProfile, Reading } from "@/types/reading";
 
 export { demoReadingId };
 
@@ -24,6 +28,15 @@ const demoPet = {
   birthTimeUnknown: true,
   adoptionDate: "2021-08-20",
   ownerEmail: "test@example.com",
+  lifestyle: {
+    livingEnvironment: ["with_family", "mostly_indoor"],
+    dailyActivityFrequency: "once",
+    aloneTime: "one_to_three",
+    strangerReaction: "observes_carefully",
+    guardianDistance: "moderately_close",
+    favoriteActivities: ["walk", "treat_search"],
+    guardianQuestions: ["personality", "bond", "routine"],
+  } satisfies PetLifestyleProfile,
 };
 
 const demoFreeReading = generateFreePetSajuReading({
@@ -33,6 +46,7 @@ const demoFreeReading = generateFreePetSajuReading({
   birthTime: demoPet.birthTime,
   birthTimeUnknown: demoPet.birthTimeUnknown,
   adoptionDate: demoPet.adoptionDate,
+  lifestyle: demoPet.lifestyle,
 });
 
 let cachedDemoPremiumSections: Reading["premiumSections"] | null = null;
@@ -51,6 +65,7 @@ function createSectionInput({
   birthTimeUnknown,
   adoptionDate,
   freeSummary,
+  lifestyle,
 }: {
   name: string;
   type: PetRow["type"];
@@ -59,6 +74,7 @@ function createSectionInput({
   birthTimeUnknown: boolean;
   adoptionDate: string | null;
   freeSummary?: string;
+  lifestyle?: Reading["lifestyle"];
 }) {
   return {
     name,
@@ -68,6 +84,7 @@ function createSectionInput({
     birthTimeUnknown,
     adoptionDate,
     freeSummary,
+    lifestyle: lifestyle ?? emptyLifestyleProfile,
   };
 }
 
@@ -106,6 +123,7 @@ function generatePremiumSectionsForReading(reading: Reading) {
     birthTimeUnknown: !reading.birthTime,
     adoptionDate: reading.metDate || null,
     freeSummary: reading.freeSummary,
+    lifestyle: reading.lifestyle,
   }).report;
 
   return createPremiumSections(report);
@@ -120,6 +138,7 @@ function createDemoReading(premiumSections: Reading["premiumSections"] = []): Re
     birthTimeUnknown: demoPet.birthTimeUnknown,
     adoptionDate: demoPet.adoptionDate,
     freeSummary: demoFreeReading.report,
+    lifestyle: demoPet.lifestyle,
   });
 
   return {
@@ -128,12 +147,14 @@ function createDemoReading(premiumSections: Reading["premiumSections"] = []): Re
     species: demoPet.type,
     birthDate: demoPet.birthDate,
     birthTime: demoPet.birthTime,
+    adoptionDate: demoPet.adoptionDate,
     metDate: demoPet.adoptionDate,
     guardianEmail: demoPet.ownerEmail,
     freeSummary: demoFreeReading.report,
     freeKeywords: createFreeKeywords(sectionInput),
     freeSections: createFreeInsightSections(sectionInput),
     premiumPreviewSections: createPremiumPreviewSections(sectionInput),
+    lifestyle: demoPet.lifestyle,
     premiumSections,
   };
 }
@@ -161,7 +182,7 @@ export async function getReadingRecord(readingId: string) {
   const { data, error } = await supabase
     .from("readings")
     .select(
-      "id, pet_id, free_summary, premium_report, status, created_at, updated_at, pets(id, name, type, birth_date, birth_time, birth_time_unknown, adoption_date, owner_email, created_at)",
+      "id, pet_id, free_summary, premium_report, status, created_at, updated_at, pets(id, name, type, birth_date, birth_time, birth_time_unknown, adoption_date, owner_email, living_environment, daily_activity_frequency, alone_time, stranger_reaction, guardian_distance, favorite_activities, guardian_questions, created_at)",
     )
     .eq("id", readingId)
     .returns<ReadingWithPet[]>()
@@ -227,6 +248,7 @@ export async function getOrCreatePremiumReading(readingId: string) {
     birthTimeUnknown: row.pets.birth_time_unknown,
     adoptionDate: row.pets.adoption_date,
     freeSummary: row.free_summary,
+    lifestyle: normalizeLifestyleProfile(row.pets),
   }).report;
 
   await savePremiumReport(readingId, premiumReport);
@@ -244,6 +266,7 @@ function mapReading(row: ReadingWithPet): Reading {
   const species = pet?.type ?? "dog";
   const birthTimeUnknown = pet?.birth_time_unknown ?? true;
   const birthTime = birthTimeUnknown ? null : pet?.birth_time ?? null;
+  const lifestyle = pet ? normalizeLifestyleProfile(pet) : emptyLifestyleProfile;
   const sectionInput = createSectionInput({
     name: petName,
     type: species,
@@ -252,6 +275,7 @@ function mapReading(row: ReadingWithPet): Reading {
     birthTimeUnknown,
     adoptionDate: pet?.adoption_date ?? null,
     freeSummary: row.free_summary,
+    lifestyle,
   });
 
   return {
@@ -260,12 +284,14 @@ function mapReading(row: ReadingWithPet): Reading {
     species,
     birthDate: pet?.birth_date ?? "",
     birthTime,
+    adoptionDate: pet?.adoption_date ?? "",
     metDate: pet?.adoption_date ?? pet?.birth_date ?? "",
     guardianEmail: pet?.owner_email ?? "",
     freeSummary: row.free_summary,
     freeKeywords: createFreeKeywords(sectionInput),
     freeSections: createFreeInsightSections(sectionInput),
     premiumPreviewSections: createPremiumPreviewSections(sectionInput),
+    lifestyle,
     premiumSections: createPremiumSections(row.premium_report, petName),
   };
 }

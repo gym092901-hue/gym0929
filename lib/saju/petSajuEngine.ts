@@ -1,6 +1,11 @@
 import { postposition } from "@/lib/korean/postposition";
+import {
+  createLifestyleContextCopy,
+  emptyLifestyleProfile,
+} from "@/lib/readings/lifestyle";
 import { sanitizeReportText } from "@/lib/reports/sanitizeReportText";
 import type { PetType } from "@/types/database";
+import type { PetLifestyleProfile } from "@/types/reading";
 
 export type FiveElement = "wood" | "fire" | "earth" | "metal" | "water";
 
@@ -11,6 +16,7 @@ export type PetSajuInput = {
   birthTime: string | null;
   birthTimeUnknown: boolean;
   adoptionDate: string | null;
+  lifestyle?: PetLifestyleProfile;
 };
 
 export type FiveElementScore = Record<FiveElement, number>;
@@ -253,11 +259,23 @@ function createFreeEnergyText({
   secondaryTraits: string;
   nameTopic: string;
 }) {
+  const lifestyleCopy = createLifestyleContextCopy(
+    input.lifestyle ?? emptyLifestyleProfile,
+    input.type,
+  );
+  const strangerLine = lifestyleCopy.strangerCopy
+    ? ` 입력해 준 생활 모습에서도 ${lifestyleCopy.strangerCopy}이라는 단서가 보여, ${
+        input.type === "cat"
+          ? "거리와 자리 선택"
+          : "보호자 반응과 접근 속도"
+      }를 함께 읽으면 더 자연스럽습니다.`
+    : "";
+
   if (input.type === "cat") {
-    return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황에서 바로 움직이기보다 자기 자리, 창가, 캣타워, 숨숨집 같은 익숙한 기준점을 먼저 확인하는 흐름이 강합니다. ${timeNote(input)}`;
+    return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황에서 바로 움직이기보다 자기 자리, 창가, 캣타워, 숨숨집 같은 익숙한 기준점을 먼저 확인하는 흐름이 강합니다.${strangerLine} ${timeNote(input)}`;
   }
 
-  return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황을 무작정 밀어붙이기보다 먼저 살피고, 익숙해지면 자기 방식으로 즐거움을 표현하는 흐름이 강합니다. ${timeNote(input)}`;
+  return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황을 무작정 밀어붙이기보다 먼저 살피고, 익숙해지면 자기 방식으로 즐거움을 표현하는 흐름이 강합니다.${strangerLine} ${timeNote(input)}`;
 }
 
 function createFreeBondText({
@@ -271,11 +289,24 @@ function createFreeBondText({
   nameTopic: string;
   namePossessive: string;
 }) {
+  const lifestyleCopy = createLifestyleContextCopy(
+    input.lifestyle ?? emptyLifestyleProfile,
+    input.type,
+  );
+  const distanceLine = lifestyleCopy.distanceLabel
+    ? input.type === "cat"
+      ? ` 보호자와의 거리가 “${lifestyleCopy.distanceLabel}”에 가깝다면 손길을 늘리기보다 같은 방에 조용히 머무는 시간을 먼저 쌓아주세요.`
+      : ` 보호자와의 거리가 “${lifestyleCopy.distanceLabel}”에 가깝다면 부름, 칭찬, 기다림의 톤을 일정하게 유지할수록 더 편안하게 다가올 수 있어요.`
+    : "";
+  const aloneLine = lifestyleCopy.aloneLabel
+    ? ` 혼자 있는 시간이 ${lifestyleCopy.aloneLabel} 정도라면 귀가 후 반복 인사 루틴과 짧은 교감 시간을 붙여주면 안정적인 전환이 될 수 있어요.`
+    : "";
+
   if (input.type === "cat") {
-    return `${namePossessive} 애착은 다가오라는 손짓보다, 같은 방에 조용히 머무르거나 자기 자리에서 보호자를 바라보는 방식에서 더 잘 보일 수 있어요. ${nameTopic} 보호자의 움직임, 쉬는 시간, 자주 앉는 위치를 기억하고 있다가 자기 속도에 맞을 때 천천히 다가오는 편입니다. 느린 눈맞춤, 꼬리 끝의 작은 움직임, 캣타워에서 내려와 근처에 앉는 행동을 보호자가 알아봐주면 관계가 더 부드러워집니다.`;
+    return `${namePossessive} 애착은 다가오라는 손짓보다, 같은 방에 조용히 머무르거나 자기 자리에서 보호자를 바라보는 방식에서 더 잘 보일 수 있어요. ${nameTopic} 보호자의 움직임, 쉬는 시간, 자주 앉는 위치를 기억하고 있다가 자기 속도에 맞을 때 천천히 다가오는 편입니다. 느린 눈맞춤, 꼬리 끝의 작은 움직임, 캣타워에서 내려와 근처에 앉는 행동을 보호자가 알아봐주면 관계가 더 부드러워집니다.${distanceLine}${aloneLine}`;
   }
 
-  return `${namePossessive} 애착은 ${relationshipStyle(profile.primaryElement, profile.secondaryElement)}. 보호자가 이름을 불러주고 같은 말투로 칭찬해주면 ${nameTopic} 그 패턴을 기억합니다. 과한 요구보다 짧고 따뜻한 반응이 잘 맞고, 기다려주는 태도가 관계를 더 부드럽게 만들어줍니다.`;
+  return `${namePossessive} 애착은 ${relationshipStyle(profile.primaryElement, profile.secondaryElement)}. 보호자가 이름을 불러주고 같은 말투로 칭찬해주면 ${nameTopic} 그 패턴을 기억합니다. 과한 요구보다 짧고 따뜻한 반응이 잘 맞고, 기다려주는 태도가 관계를 더 부드럽게 만들어줍니다.${distanceLine}${aloneLine}`;
 }
 
 function createFreeRoutineText({
@@ -287,11 +318,22 @@ function createFreeRoutineText({
   nameTopic: string;
   nameTo: string;
 }) {
+  const lifestyleCopy = createLifestyleContextCopy(
+    input.lifestyle ?? emptyLifestyleProfile,
+    input.type,
+  );
+  const favoriteLine = lifestyleCopy.favoriteLabels.length
+    ? ` 좋아하는 활동으로 적어준 ${lifestyleCopy.favoriteLabels.join(", ")}은 하루 루틴을 개인화하는 좋은 단서예요.`
+    : "";
+  const questionLine = lifestyleCopy.questionLabels.length
+    ? ` 보호자가 궁금해한 ${lifestyleCopy.questionLabels.join(", ")}도 심층 리포트에서 더 길게 풀어볼 수 있습니다.`
+    : "";
+
   if (input.type === "cat") {
-    return `${nameTo}는 ${catElementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. 하루 안에 창밖 관찰, 짧은 사냥놀이, 식사, 조용한 휴식이 이어지는 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 새로운 장난감이나 박스는 먼저 다가올 때까지 기다려주고, 숨숨집과 캣타워처럼 스스로 조절할 수 있는 자리를 남겨주세요. ${nameTopic} 자기 속도 안에서 안정감을 얻고, 그 안정감 안에서 신뢰 표현도 더 자연스럽게 보여줍니다.`;
+    return `${nameTo}는 ${catElementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. ${lifestyleCopy.activityCopy} 하루 안에 창밖 관찰, 짧은 사냥놀이, 식사, 조용한 휴식이 이어지는 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 새로운 장난감이나 박스는 먼저 다가올 때까지 기다려주고, 숨숨집과 캣타워처럼 스스로 조절할 수 있는 자리를 남겨주세요.${favoriteLine}${questionLine} ${nameTopic} 자기 속도 안에서 안정감을 얻고, 그 안정감 안에서 신뢰 표현도 더 자연스럽게 보여줍니다.`;
   }
 
-  return `${nameTo}는 ${elementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. 하루의 시작과 마무리에 비슷한 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 산책, 놀이, 식사, 휴식을 갑자기 많이 바꾸기보다 작은 변화부터 보여주세요. ${nameTopic} 반복 속에서 안정감을 얻고, 그 안정감 안에서 새로운 행동도 더 자연스럽게 받아들입니다.`;
+  return `${nameTo}는 ${elementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. ${lifestyleCopy.activityCopy} 하루의 시작과 마무리에 비슷한 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 산책, 놀이, 식사, 휴식을 갑자기 많이 바꾸기보다 작은 변화부터 보여주세요.${favoriteLine}${questionLine} ${nameTopic} 반복 속에서 안정감을 얻고, 그 안정감 안에서 새로운 행동도 더 자연스럽게 받아들입니다.`;
 }
 
 function assertSafeReport(report: string) {

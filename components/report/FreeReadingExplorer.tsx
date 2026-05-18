@@ -51,6 +51,22 @@ function cleanFreeBody(body: string) {
     .trim();
 }
 
+function teaserFreeBody(body: string, maxSentences = 2, maxLength = 240) {
+  const cleanBody = cleanFreeBody(body).replace(/\s+/g, " ");
+  const sentences = cleanBody.match(/[^.!?。！？]+[.!?。！？]?/g) ?? [cleanBody];
+  const teaser = sentences
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, maxSentences)
+    .join(" ");
+
+  if (teaser.length <= maxLength) {
+    return teaser;
+  }
+
+  return `${teaser.slice(0, maxLength).trim()}...`;
+}
+
 function MascotAccent({
   accent,
 }: {
@@ -163,7 +179,7 @@ export function FreeReadingExplorer({
               </div>
             </div>
             <p className="mt-4 whitespace-pre-line text-base leading-8 text-ink/75">
-              {cleanFreeBody(section.body)}
+              {teaserFreeBody(section.body)}
             </p>
           </article>
         );

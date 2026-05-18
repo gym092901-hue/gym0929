@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeLifestyleProfile } from "@/lib/readings/lifestyle";
 import { createFreeSummary } from "@/lib/reports/free-summary";
 import { createLocalReading } from "@/lib/readings/localReadingStore";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/admin";
@@ -15,6 +16,13 @@ type CreateReadingBody = {
   birth_time_unknown?: unknown;
   adoption_date?: unknown;
   owner_email?: unknown;
+  living_environment?: unknown;
+  daily_activity_frequency?: unknown;
+  alone_time?: unknown;
+  stranger_reaction?: unknown;
+  guardian_distance?: unknown;
+  favorite_activities?: unknown;
+  guardian_questions?: unknown;
 };
 
 function asOptionalDate(value: unknown) {
@@ -72,6 +80,7 @@ export async function POST(request: NextRequest) {
   const birthTimeUnknown = body.birth_time_unknown === true;
   const birthTime = birthTimeUnknown ? null : asOptionalTime(body.birth_time);
   const adoptionDate = asOptionalDate(body.adoption_date);
+  const lifestyle = normalizeLifestyleProfile(body);
 
   if (!name) {
     return NextResponse.json(
@@ -136,6 +145,7 @@ export async function POST(request: NextRequest) {
     birthTime,
     birthTimeUnknown,
     adoptionDate,
+    lifestyle,
   });
 
   if (!isSupabaseConfigured()) {
@@ -148,6 +158,7 @@ export async function POST(request: NextRequest) {
       adoptionDate,
       ownerEmail,
       freeSummary,
+      lifestyle,
     });
 
     return NextResponse.json({
@@ -170,6 +181,13 @@ export async function POST(request: NextRequest) {
         birth_time_unknown: birthTimeUnknown,
         adoption_date: adoptionDate,
         owner_email: ownerEmail,
+        living_environment: lifestyle.livingEnvironment,
+        daily_activity_frequency: lifestyle.dailyActivityFrequency,
+        alone_time: lifestyle.aloneTime,
+        stranger_reaction: lifestyle.strangerReaction,
+        guardian_distance: lifestyle.guardianDistance,
+        favorite_activities: lifestyle.favoriteActivities,
+        guardian_questions: lifestyle.guardianQuestions,
       })
       .select("id")
       .single();

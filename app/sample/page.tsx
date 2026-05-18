@@ -2,6 +2,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
 import { FreeReadingExplorer } from "@/components/report/FreeReadingExplorer";
 import { PetHookCard } from "@/components/report/PetHookCard";
+import { PetInputSummaryTags } from "@/components/report/PetInputSummaryTags";
 import { ReportFloatingActions } from "@/components/report/ReportFloatingActions";
 import { ReportMobileBar } from "@/components/report/ReportMobileBar";
 import { ReportSceneBanner } from "@/components/report/ReportSceneBanner";
@@ -11,6 +12,22 @@ import { postposition } from "@/lib/korean/postposition";
 import { createFreeInsightSections } from "@/lib/readings/content";
 import { generatePetHookFromSajuInput } from "@/lib/saju/petHookGenerator";
 
+function teaserText(body = "", maxSentences = 2, maxLength = 240) {
+  const cleanBody = body.replace(/\s+/g, " ").trim();
+  const sentences = cleanBody.match(/[^.!?。！？]+[.!?。！？]?/g) ?? [cleanBody];
+  const teaser = sentences
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, maxSentences)
+    .join(" ");
+
+  if (teaser.length <= maxLength) {
+    return teaser;
+  }
+
+  return `${teaser.slice(0, maxLength).trim()}...`;
+}
+
 export default function SampleReportPage() {
   const sections = createFreeInsightSections({
     name: demoSamplePet.name,
@@ -19,6 +36,7 @@ export default function SampleReportPage() {
     birthTime: demoSamplePet.birthTime,
     birthTimeUnknown: demoSamplePet.birthTimeUnknown,
     adoptionDate: demoSamplePet.adoptionDate,
+    lifestyle: demoSamplePet.lifestyle,
   });
   const headlineSection = sections[0];
   const petPossessive = postposition.possessive(demoSamplePet.name);
@@ -53,6 +71,20 @@ export default function SampleReportPage() {
             />
           }
         />
+        <PetInputSummaryTags
+          petName={demoSamplePet.name}
+          species={demoSamplePet.type}
+          birthDate={demoSamplePet.birthDate}
+          birthTime={demoSamplePet.birthTime}
+          birthTimeUnknown={demoSamplePet.birthTimeUnknown}
+          adoptionDate={demoSamplePet.adoptionDate}
+          livingEnvironment={demoSamplePet.lifestyle.livingEnvironment}
+          activityLevel={demoSamplePet.lifestyle.dailyActivityFrequency}
+          aloneTime={demoSamplePet.lifestyle.aloneTime}
+          strangerReaction={demoSamplePet.lifestyle.strangerReaction}
+          guardianDistance={demoSamplePet.lifestyle.guardianDistance}
+          favoriteActivities={demoSamplePet.lifestyle.favoriteActivities}
+        />
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <section className="warm-panel rounded-[2rem] p-5 sm:p-8">
@@ -85,7 +117,7 @@ export default function SampleReportPage() {
                 {petPossessive} 한 줄 성향
               </h2>
               <p className="mt-3 text-base leading-8 text-ink/75">
-                {headlineSection.body}
+                {teaserText(headlineSection.body)}
               </p>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import type { PetType } from "@/types/database";
+import type { PetLifestyleProfile } from "@/types/reading";
 import { generatePetHookFromSajuInput } from "@/lib/saju/petHookGenerator";
 import { generateFreePetSajuReading } from "@/lib/saju/petSajuEngine";
 import { sanitizeReportText } from "@/lib/reports/sanitizeReportText";
@@ -10,6 +11,7 @@ type FreeSummaryInput = {
   birthTime: string | null;
   birthTimeUnknown: boolean;
   adoptionDate: string | null;
+  lifestyle?: PetLifestyleProfile;
 };
 
 export function createFreeSummary(input: FreeSummaryInput) {
@@ -20,6 +22,7 @@ export function createFreeSummary(input: FreeSummaryInput) {
     birthTime: input.birthTime,
     birthTimeUnknown: input.birthTimeUnknown,
     adoptionDate: input.adoptionDate,
+    lifestyle: input.lifestyle,
   };
   const hook = generatePetHookFromSajuInput(sajuInput);
   const report = [

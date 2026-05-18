@@ -47,13 +47,11 @@ function ErrorText({ message, id }: { message?: string; id: string }) {
 function MiniScene({
   type,
   mood,
-  label,
   icon,
   tone = "berry",
 }: {
   type: "dog" | "cat";
   mood: "curious" | "holding-card";
-  label: string;
   icon: "calendar" | "clock";
   tone?: "berry" | "moss" | "persimmon";
 }) {
@@ -66,8 +64,8 @@ function MiniScene({
   return (
     <span
       className={`relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border ${toneClass}`}
+      aria-hidden="true"
     >
-      <span className="sr-only">{label}</span>
       <PetMascot
         type={type}
         mood={mood}
@@ -260,7 +258,6 @@ export default function InputPage() {
             size="lg"
             withBubble
             bubbleText="차근차근 같이 적어봐요"
-            label="입력지를 들고 안내하는 강아지와 고양이 캐릭터"
           />
           <div>
             <p className="text-sm font-black text-persimmon">입력 도움말</p>
@@ -302,7 +299,6 @@ export default function InputPage() {
                   type="dog"
                   mood="happy"
                   size="sm"
-                  label="이름 입력을 안내하는 강아지 캐릭터"
                   className="scale-[0.55]"
                 />
               </span>
@@ -322,20 +318,19 @@ export default function InputPage() {
           <fieldset className="grid gap-3" aria-describedby="species-error">
             <legend className="text-sm font-bold text-ink">강아지/고양이 선택</legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="group cursor-pointer rounded-[1.75rem] border border-berry/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-berry/35 focus-within:ring-2 focus-within:ring-berry/30 sm:p-4">
+              <label className="group cursor-pointer rounded-[1.75rem] border border-berry/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-berry/35 focus-within:ring-2 focus-within:ring-berry/30 has-[:checked]:scale-[1.015] has-[:checked]:border-berry/55 has-[:checked]:bg-berry/10 has-[:checked]:shadow-soft sm:p-4">
                 <input
                   type="radio"
                   name="species"
                   value="dog"
                   className="sr-only peer"
                 />
-                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-berry/10 peer-checked:text-berry peer-checked:shadow-soft sm:min-h-36 sm:py-4">
+                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-white/85 peer-checked:text-berry peer-checked:shadow-soft sm:min-h-36 sm:py-4">
                   <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-white/80 ring-1 ring-berry/10 transition group-hover:scale-105">
                     <PetMascot
                       type="dog"
                       mood="happy"
                       size="sm"
-                      label="강아지 얼굴 일러스트"
                       className="scale-95"
                     />
                   </span>
@@ -347,15 +342,14 @@ export default function InputPage() {
                   </span>
                 </span>
               </label>
-              <label className="group cursor-pointer rounded-[1.75rem] border border-moss/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-moss/35 focus-within:ring-2 focus-within:ring-moss/30 sm:p-4">
+              <label className="group cursor-pointer rounded-[1.75rem] border border-moss/20 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-moss/35 focus-within:ring-2 focus-within:ring-moss/30 has-[:checked]:scale-[1.015] has-[:checked]:border-moss/55 has-[:checked]:bg-moss/10 has-[:checked]:shadow-soft sm:p-4">
                 <input type="radio" name="species" value="cat" className="sr-only peer" />
-                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-moss/10 peer-checked:text-moss peer-checked:shadow-soft sm:min-h-36 sm:py-4">
+                <span className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] bg-cream/60 px-3 py-5 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.03] peer-checked:bg-white/85 peer-checked:text-moss peer-checked:shadow-soft sm:min-h-36 sm:py-4">
                   <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-white/80 ring-1 ring-moss/10 transition group-hover:scale-105">
                     <PetMascot
                       type="cat"
                       mood="happy"
                       size="sm"
-                      label="고양이 얼굴 일러스트"
                       className="scale-95"
                     />
                   </span>
@@ -380,7 +374,6 @@ export default function InputPage() {
                     type="cat"
                     mood="holding-card"
                     tone="moss"
-                    label="달력을 든 고양이 미니 그림"
                     icon="calendar"
                   />
                   <input
@@ -437,7 +430,6 @@ export default function InputPage() {
               type="dog"
               mood="curious"
               tone="persimmon"
-              label="시계를 바라보는 강아지 미니 그림"
               icon="clock"
             />
             <input

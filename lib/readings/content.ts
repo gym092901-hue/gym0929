@@ -37,7 +37,7 @@ function speciesLabel(type: PetType) {
 function speciesRoutine(type: PetType) {
   return type === "dog"
     ? "산책 전후의 같은 말, 같은 준비 순서, 돌아온 뒤 물 마시기와 쉬는 시간을 하나의 의식처럼 이어주면 좋아요."
-    : "놀이를 갑자기 시작하기보다 시선 유도, 짧은 사냥놀이, 조용한 휴식 자리로 자연스럽게 이어주면 좋아요.";
+    : "창밖 관찰 시간, 캣타워 오르내림, 짧은 사냥놀이, 숨숨집에서 쉬는 흐름을 자연스럽게 이어주면 좋아요.";
 }
 
 function sanitizeReadingSections(
@@ -76,6 +76,26 @@ export function createFreeInsightSections(
   const namePossessive = postposition.possessive(input.name);
   const nameTo = postposition.to(input.name);
   const nameWith = postposition.with(input.name);
+  const oneLineBody =
+    input.type === "cat"
+      ? `${nameTopic} ${primary} 기운이 앞에서 조용히 드러나고, ${secondary} 기운이 옆에서 균형을 잡아주는 고양이로 보여요. 한마디로 말하면 자기 자리에서 충분히 관찰한 뒤, 마음이 편해질 때만 짧고 또렷하게 신호를 보내는 타입입니다. 이 해석은 ${basis}을 기준으로 한 규칙 기반 엔터테인먼트 리포트이며, 보호자가 ${namePossessive} 느린 눈맞춤, 꼬리 움직임, 머무는 자리 같은 생활 신호를 더 다정하게 읽도록 돕는 참고 콘텐츠입니다.`
+      : `${nameTopic} ${primary} 기운이 앞에서 밝게 드러나고, ${secondary} 기운이 옆에서 균형을 잡아주는 아이로 보여요. 한마디로 말하면 자기만의 속도로 세상을 살피다가, 마음이 편해지면 표현이 훨씬 부드럽게 열리는 타입입니다. 이 해석은 ${basis}을 기준으로 한 규칙 기반 엔터테인먼트 리포트이며, 보호자가 ${namePossessive} 생활 신호를 더 다정하게 읽도록 돕는 참고 콘텐츠입니다.`;
+  const energyBody =
+    input.type === "cat"
+      ? `${primaryMood}이 기본 바탕에 깔려 있고, ${secondaryMood}이 ${input.name}만의 거리 조절 방식을 만들어줍니다. ${nameTopic} 처음부터 다가가기보다 창밖 관찰, 집 안 동선 확인, 캣타워나 자기 자리에서 분위기를 먼저 살피는 면이 있어요. 편안한 사람 곁에서는 조용히 머무르고, 낯선 변화 앞에서는 숨숨집이나 익숙한 자리에서 한 박자 쉬며 반응하는 경향이 보입니다. ${timeText}`
+      : `${primaryMood}이 기본 바탕에 깔려 있고, ${secondaryMood}이 ${input.name}만의 반응 속도를 만들어줍니다. ${nameTopic} 처음부터 크게 밀어붙이기보다 자기만의 속도로 분위기를 확인하는 면이 있어요. 좋아하는 사람과 익숙한 공간에서는 안정적으로 마음을 열고, 낯선 변화 앞에서는 잠깐 멈춰서 살피는 경향이 보입니다. ${timeText}`;
+  const bondBody =
+    input.type === "cat"
+      ? `${nameTopic} 보호자의 생활 리듬, 문이 열리는 소리, 자주 머무는 자리의 분위기를 조용히 기억하는 타입으로 보여요. 바로 크게 표현하지 않더라도 자기 자리에서 보호자를 바라보거나, 느린 눈맞춤을 보내거나, 꼬리 끝을 작게 움직이며 조용히 곁에 머무르는 식으로 애착을 표현할 수 있습니다. 고양이에게 중요한 것은 먼저 다가올 때까지 기다려주는 여유예요. 보호자가 손길을 서두르지 않고 ${input.name}의 거리감을 존중해주면, ${input.name}도 자기 방식으로 더 편안하게 마음을 열 가능성이 큽니다.`
+      : `${nameTopic} 보호자의 목소리, 손길, 움직이는 순서를 꽤 섬세하게 기억하는 타입으로 보여요. 바로 크게 표현하지 않더라도 곁에 머물거나, 보호자가 부르면 시선을 맞추거나, 같은 자리를 반복해서 찾는 식으로 애착을 표현할 수 있습니다. 강아지에게 중요한 것은 거창한 이벤트보다 “늘 비슷하게 다정한 반응”이에요. 보호자가 차분히 기다려주면 ${input.name}도 자기 방식으로 더 편안하게 다가올 가능성이 큽니다.`;
+  const routineBody =
+    input.type === "cat"
+      ? `${nameTo}는 예측 가능한 실내 리듬이 마음을 안정시키는 데 도움이 됩니다. ${speciesRoutine(input.type)} 식사 시간, 화장실 주변 동선, 캣타워 위치, 조용한 휴식 자리가 자주 바뀌지 않으면 ${nameSubject} 더 쉽게 안심할 수 있어요. 새로운 장난감이나 박스도 한 번에 가까이 두기보다 냄새 맡고 지나갈 시간을 주며 천천히 소개하는 편이 잘 맞습니다.`
+      : `${nameTo}는 예측 가능한 하루의 흐름이 마음을 안정시키는 데 도움이 됩니다. ${speciesRoutine(input.type)} 밥, 놀이, 휴식의 순서가 자주 바뀌기보다 작은 규칙을 유지하면 ${nameSubject} 더 쉽게 안심할 수 있어요. 새로운 장난감이나 공간도 한 번에 많이 보여주기보다 하나씩 천천히 소개하는 편이 잘 맞습니다.`;
+  const premiumPreviewBody =
+    input.type === "cat"
+      ? `심층 리포트에서는 ${namePossessive} 오행 밸런스, 타고난 성격의 장점, 보호자에게 사랑을 표현하는 방식, 예민해지기 쉬운 상황, 잘 맞는 실내 루틴, 올해의 흐름을 더 긴 호흡으로 풀어냅니다. 무료 결과가 “첫인상”이라면, 심층 리포트는 보호자가 ${nameWith} 창밖 관찰, 짧은 사냥놀이, 자기 자리, 숨숨집처럼 실제 생활에서 보이는 신호를 어떻게 읽으면 좋을지 정리한 자세한 안내서에 가깝습니다.`
+      : `심층 리포트에서는 ${namePossessive} 오행 밸런스, 타고난 성격의 장점, 보호자에게 사랑을 표현하는 방식, 예민해지기 쉬운 상황, 잘 맞는 생활 루틴, 올해의 흐름을 더 긴 호흡으로 풀어냅니다. 무료 결과가 “첫인상”이라면, 심층 리포트는 보호자가 ${nameWith} 실제 생활에서 어떻게 교감하면 좋을지 읽는 자세한 안내서에 가깝습니다.`;
 
   const sections: ReadingSection[] = [
     {
@@ -83,35 +103,35 @@ export function createFreeInsightSections(
       title: "한 줄 성향",
       kicker: `${primary} 기운 중심`,
       icon: "✦",
-      body: `${nameTopic} ${primary} 기운이 앞에서 밝게 드러나고, ${secondary} 기운이 옆에서 균형을 잡아주는 아이로 보여요. 한마디로 말하면 자기만의 속도로 세상을 살피다가, 마음이 편해지면 표현이 훨씬 부드럽게 열리는 타입입니다. 이 해석은 ${basis}을 기준으로 한 규칙 기반 엔터테인먼트 리포트이며, 보호자가 ${namePossessive} 생활 신호를 더 다정하게 읽도록 돕는 참고 콘텐츠입니다.`,
+      body: oneLineBody,
     },
     {
       id: "basic-energy",
       title: "대표 기운",
       kicker: "성향의 첫인상",
       icon: "☀",
-      body: `${primaryMood}이 기본 바탕에 깔려 있고, ${secondaryMood}이 ${input.name}만의 반응 속도를 만들어줍니다. ${nameTopic} 처음부터 크게 밀어붙이기보다 자기만의 속도로 분위기를 확인하는 면이 있어요. 좋아하는 사람과 익숙한 공간에서는 안정적으로 마음을 열고, 낯선 변화 앞에서는 잠깐 멈춰서 살피는 경향이 보입니다. ${timeText}`,
+      body: energyBody,
     },
     {
       id: "guardian-bond",
       title: "보호자와의 교감",
       kicker: "사랑을 주고받는 방식",
       icon: "♡",
-      body: `${nameTopic} 보호자의 목소리, 손길, 움직이는 순서를 꽤 섬세하게 기억하는 타입으로 보여요. 바로 크게 표현하지 않더라도 곁에 머물거나, 보호자가 부르면 시선을 맞추거나, 같은 자리를 반복해서 찾는 식으로 애착을 표현할 수 있습니다. ${speciesLabel(input.type)}에게 중요한 것은 거창한 이벤트보다 “늘 비슷하게 다정한 반응”이에요. 보호자가 차분히 기다려주면 ${input.name}도 자기 방식으로 더 편안하게 다가올 가능성이 큽니다.`,
+      body: bondBody,
     },
     {
       id: "routine",
       title: "생활 루틴 조언",
       kicker: "오늘부터 해볼 수 있는 것",
       icon: "⌂",
-      body: `${nameTo}는 예측 가능한 하루의 흐름이 마음을 안정시키는 데 도움이 됩니다. ${speciesRoutine(input.type)} 밥, 놀이, 휴식의 순서가 자주 바뀌기보다 작은 규칙을 유지하면 ${nameSubject} 더 쉽게 안심할 수 있어요. 새로운 장난감이나 공간도 한 번에 많이 보여주기보다 하나씩 천천히 소개하는 편이 잘 맞습니다.`,
+      body: routineBody,
     },
     {
       id: "premium-preview",
       title: "심층 리포트 미리보기",
       kicker: "유료 리포트에서 확장되는 내용",
       icon: "◆",
-      body: `심층 리포트에서는 ${namePossessive} 오행 밸런스, 타고난 성격의 장점, 보호자에게 사랑을 표현하는 방식, 예민해지기 쉬운 상황, 잘 맞는 생활 루틴, 올해의 흐름을 더 긴 호흡으로 풀어냅니다. 무료 결과가 “첫인상”이라면, 심층 리포트는 보호자가 ${nameWith} 실제 생활에서 어떻게 교감하면 좋을지 읽는 자세한 안내서에 가깝습니다.`,
+      body: premiumPreviewBody,
     },
   ];
 
@@ -127,6 +147,30 @@ export function createPremiumPreviewSections(
   const nameSubject = postposition.subject(input.name);
   const nameTo = postposition.to(input.name);
   const nameWith = postposition.with(input.name);
+  const balanceBody =
+    input.type === "cat"
+      ? `${nameTo} 또렷하게 드러나는 ${primary} 기운과 보조로 흐르는 ${secondary} 기운을 비교해, 자기 자리에서 편안해지는 순간과 창밖 관찰처럼 호기심이 살아나는 순간을 자세히 풀어냅니다.`
+      : `${nameTo} 강하게 드러나는 ${primary} 기운과 보조로 흐르는 ${secondary} 기운을 비교해, 어떤 순간에 활발해지고 어떤 순간에 조심스러워지는지 자세히 풀어냅니다.`;
+  const personalityBody =
+    input.type === "cat"
+      ? `${nameSubject} 가진 성격의 좋은 점, 느린 눈맞춤이나 꼬리 움직임처럼 보호자가 알아주면 더 선명해지는 신호, 자기 속도 안에서 드러나는 귀여운 습관을 정리합니다.`
+      : `${nameSubject} 가진 성격의 좋은 점, 보호자가 알아주면 더 빛나는 습관, 평소 행동 속에서 보이는 작은 신호를 따뜻하게 정리합니다.`;
+  const loveBody =
+    input.type === "cat"
+      ? `${nameSubject} 조용히 곁에 머무르기, 같은 방 고르기, 먼저 다가왔다가 물러나는 거리감처럼 고양이다운 방식으로 애정을 보내는 흐름을 구체적으로 읽어줍니다.`
+      : `${nameSubject} 보호자에게 애정을 보내는 방식이 몸짓, 시선, 기다림, 놀이 반응 중 어디에 가까운지 구체적으로 읽어줍니다.`;
+  const sensitiveBody =
+    input.type === "cat"
+      ? `불안을 자극하는 표현 없이, ${nameSubject} 낯선 소리나 갑작스러운 변화 앞에서 캣타워, 숨숨집, 자기 자리 같은 선택지를 두고 어떤 속도로 적응하면 좋은지 부드럽게 안내합니다.`
+      : `불안을 자극하는 표현 없이, ${nameSubject} 낯선 소리나 갑작스러운 변화 앞에서 어떤 속도로 적응하면 좋은지 부드럽게 안내합니다.`;
+  const routineBody =
+    input.type === "cat"
+      ? `${speciesLabel(input.type)}인 ${nameTo} 맞는 창밖 관찰, 짧은 사냥놀이, 캣타워와 숨숨집 휴식 흐름을 하루 루틴 관점에서 제안합니다.`
+      : `${speciesLabel(input.type)}인 ${nameTo} 맞는 산책, 놀이, 휴식 흐름을 하루 루틴 관점에서 제안합니다.`;
+  const yearBody =
+    input.type === "cat"
+      ? `2026년 동안 ${nameWith} 보호자가 함께 살펴보면 좋은 계절별 실내 환경, 짧은 사냥놀이, 자기 자리 안정 포인트를 월별 조언으로 확장합니다.`
+      : `2026년 동안 ${nameWith} 보호자가 함께 살펴보면 좋은 계절별 생활 포인트를 월별 조언으로 확장합니다.`;
 
   const sections: ReadingSection[] = [
     {
@@ -134,42 +178,42 @@ export function createPremiumPreviewSections(
       title: "오행 밸런스",
       kicker: `${primary} + ${secondary}`,
       icon: "☯",
-      body: `${nameTo} 강하게 드러나는 ${primary} 기운과 보조로 흐르는 ${secondary} 기운을 비교해, 어떤 순간에 활발해지고 어떤 순간에 조심스러워지는지 자세히 풀어냅니다.`,
+      body: balanceBody,
     },
     {
       id: "premium-personality",
       title: "타고난 성격",
       kicker: "장점과 귀여운 습관",
       icon: "★",
-      body: `${nameSubject} 가진 성격의 좋은 점, 보호자가 알아주면 더 빛나는 습관, 평소 행동 속에서 보이는 작은 신호를 따뜻하게 정리합니다.`,
+      body: personalityBody,
     },
     {
       id: "premium-love",
       title: "사랑 표현 방식",
       kicker: "곁에 머무는 마음",
       icon: "♥",
-      body: `${nameSubject} 보호자에게 애정을 보내는 방식이 몸짓, 시선, 기다림, 놀이 반응 중 어디에 가까운지 구체적으로 읽어줍니다.`,
+      body: loveBody,
     },
     {
       id: "premium-sensitive",
       title: "예민해지기 쉬운 순간",
       kicker: "무섭게 말하지 않는 안내",
       icon: "☁",
-      body: `불안을 자극하는 표현 없이, ${nameSubject} 낯선 소리나 갑작스러운 변화 앞에서 어떤 속도로 적응하면 좋은지 부드럽게 안내합니다.`,
+      body: sensitiveBody,
     },
     {
       id: "premium-routine",
       title: "잘 맞는 생활 루틴",
       kicker: "놀이와 휴식의 균형",
       icon: "☘",
-      body: `${speciesLabel(input.type)}인 ${nameTo} 맞는 놀이, 산책 또는 사냥놀이, 휴식 흐름을 하루 루틴 관점에서 제안합니다.`,
+      body: routineBody,
     },
     {
       id: "premium-year",
       title: "올해의 흐름",
       kicker: "2026년 생활 리듬",
       icon: "☽",
-      body: `2026년 동안 ${nameWith} 보호자가 함께 살펴보면 좋은 계절별 생활 포인트를 월별 조언으로 확장합니다.`,
+      body: yearBody,
     },
   ];
 

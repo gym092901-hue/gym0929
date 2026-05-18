@@ -54,6 +54,14 @@ const elementCare: Record<FiveElement, string> = {
   water: "조용한 휴식 자리, 부드러운 목소리, 충분히 관찰할 시간을 주는 방식",
 };
 
+const catElementCare: Record<FiveElement, string> = {
+  wood: "창밖 관찰 시간, 새 장난감을 멀리서 먼저 살피게 하는 방식",
+  fire: "짧은 사냥놀이, 가벼운 말 걸기, 스스로 다가온 순간을 알아주는 방식",
+  earth: "자기 자리, 일정한 식사 시간, 캣타워와 숨숨집 위치를 안정적으로 유지하는 방식",
+  metal: "손길을 서두르지 않는 접근, 조용한 공간, 고양이가 정한 거리감을 존중하는 방식",
+  water: "느린 눈맞춤, 조용히 곁에 머무르기, 충분히 혼자 쉬는 시간을 보장하는 방식",
+};
+
 const orderedElements: FiveElement[] = ["wood", "fire", "earth", "metal", "water"];
 
 function createEmptyScores(): FiveElementScore {
@@ -206,6 +214,86 @@ function timeNote(input: PetSajuInput) {
   return "태어난 시간이 비어 있어 날짜 흐름을 중심으로 읽었습니다.";
 }
 
+function createFreeOneLineText({
+  input,
+  primaryLabel,
+  secondaryLabel,
+  petLabel,
+  primaryTone,
+  nameTopic,
+}: {
+  input: PetSajuInput;
+  primaryLabel: string;
+  secondaryLabel: string;
+  petLabel: string;
+  primaryTone: string;
+  nameTopic: string;
+}) {
+  if (input.type === "cat") {
+    return `${nameTopic} ${primaryLabel}의 기운이 앞에 서고 ${secondaryLabel}의 결이 받쳐주는 ${petLabel}입니다. 한마디로 말하면 ${primaryTone}을 자기 자리와 거리감 안에서 천천히 보여주는 아이예요. ${nameTopic} 보호자를 바로 따라오기보다 창밖을 보거나 캣타워에서 분위기를 살핀 뒤, 마음이 편해지면 느린 눈맞춤이나 꼬리 움직임으로 조용한 신호를 보냅니다.`;
+  }
+
+  return `${nameTopic} ${primaryLabel}의 기운이 앞에 서고 ${secondaryLabel}의 결이 받쳐주는 ${petLabel}입니다. 한마디로 말하면 ${primaryTone}을 가진 아이예요. ${nameTopic} 보호자의 작은 신호에도 반응하면서, 자기 리듬이 존중될 때 더 밝고 편안한 모습을 보여줍니다.`;
+}
+
+function createFreeEnergyText({
+  input,
+  basisLabel,
+  primaryLabel,
+  secondaryLabel,
+  primaryTraits,
+  secondaryTraits,
+  nameTopic,
+}: {
+  input: PetSajuInput;
+  basisLabel: string;
+  primaryLabel: string;
+  secondaryLabel: string;
+  primaryTraits: string;
+  secondaryTraits: string;
+  nameTopic: string;
+}) {
+  if (input.type === "cat") {
+    return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황에서 바로 움직이기보다 자기 자리, 창가, 캣타워, 숨숨집 같은 익숙한 기준점을 먼저 확인하는 흐름이 강합니다. ${timeNote(input)}`;
+  }
+
+  return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황을 무작정 밀어붙이기보다 먼저 살피고, 익숙해지면 자기 방식으로 즐거움을 표현하는 흐름이 강합니다. ${timeNote(input)}`;
+}
+
+function createFreeBondText({
+  input,
+  profile,
+  nameTopic,
+  namePossessive,
+}: {
+  input: PetSajuInput;
+  profile: PetSajuProfile;
+  nameTopic: string;
+  namePossessive: string;
+}) {
+  if (input.type === "cat") {
+    return `${namePossessive} 애착은 가까이 오라는 부름보다, 조용히 곁에 머무르거나 같은 공간을 고르는 방식에서 더 잘 보일 수 있어요. ${nameTopic} 보호자의 움직임, 쉬는 시간, 자주 앉는 위치를 기억하고 있다가 자기 속도에 맞을 때 천천히 다가오는 편입니다. 느린 눈맞춤, 꼬리 끝의 작은 움직임, 캣타워에서 내려와 근처에 앉는 행동을 보호자가 알아봐주면 관계가 더 부드러워집니다.`;
+  }
+
+  return `${namePossessive} 애착은 ${relationshipStyle(profile.primaryElement, profile.secondaryElement)}. 보호자가 이름을 불러주고 같은 말투로 칭찬해주면 ${nameTopic} 그 패턴을 기억합니다. 과한 요구보다 짧고 따뜻한 반응이 잘 맞고, 기다려주는 태도가 관계를 더 부드럽게 만들어줍니다.`;
+}
+
+function createFreeRoutineText({
+  input,
+  nameTopic,
+  nameTo,
+}: {
+  input: PetSajuInput;
+  nameTopic: string;
+  nameTo: string;
+}) {
+  if (input.type === "cat") {
+    return `${nameTo}는 ${catElementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. 하루 안에 창밖 관찰, 짧은 사냥놀이, 식사, 조용한 휴식이 이어지는 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 새로운 장난감이나 박스는 먼저 다가올 때까지 기다려주고, 숨숨집과 캣타워처럼 스스로 조절할 수 있는 자리를 남겨주세요. ${nameTopic} 자기 속도 안에서 안정감을 얻고, 그 안정감 안에서 애정 표현도 더 자연스럽게 보여줍니다.`;
+  }
+
+  return `${nameTo}는 ${elementCare[calculatePetFiveElements(input).primaryElement]}이 잘 어울립니다. 하루의 시작과 마무리에 비슷한 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 산책, 놀이, 식사, 휴식을 갑자기 많이 바꾸기보다 작은 변화부터 보여주세요. ${nameTopic} 반복 속에서 안정감을 얻고, 그 안정감 안에서 새로운 행동도 더 자연스럽게 받아들입니다.`;
+}
+
 function assertSafeReport(report: string) {
   const forbiddenTerms = ["질병", "죽음", "사고", "수명"];
   const matchedTerm = forbiddenTerms.find((term) => report.includes(term));
@@ -225,18 +313,45 @@ export function generateFreePetSajuReading(input: PetSajuInput) {
   const primaryTraits = elementTraits[profile.primaryElement];
   const secondaryTraits = elementTraits[profile.secondaryElement];
   const primaryTone = elementTone[profile.primaryElement];
-  const primaryCare = elementCare[profile.primaryElement];
   const nameTopic = postposition.topic(input.name);
   const namePossessive = postposition.possessive(input.name);
   const nameTo = postposition.to(input.name);
   const nameObject = postposition.object(input.name);
+  const freePreview =
+    input.type === "cat"
+      ? `심층 리포트에서는 ${namePossessive} 오행 균형, 보호자와의 관계 흐름, 잘 맞는 짧은 사냥놀이와 휴식 방식, 계절별 실내 생활 포인트를 더 자세히 볼 수 있습니다. 이 무료 결과는 한국식 사주와 오행 콘셉트를 고양이의 거리감, 자기 자리, 창밖 관찰 같은 반려생활 언어로 풀어낸 맛보기이며, 단정이 아니라 보호자가 ${nameObject} 더 다정하게 이해하기 위한 참고로 보시면 좋습니다.`
+      : `심층 리포트에서는 ${namePossessive} 오행 균형, 보호자와의 관계 흐름, 잘 맞는 놀이와 휴식 방식, 계절별 생활 포인트를 더 자세히 볼 수 있습니다. 이 무료 결과는 한국식 사주와 오행 콘셉트를 반려동물 성향 콘텐츠로 풀어낸 맛보기이며, 단정이 아니라 보호자가 ${nameObject} 더 다정하게 이해하기 위한 참고로 보시면 좋습니다.`;
 
   const report = [
-    `한 줄 성향\n${nameTopic} ${primaryLabel}의 기운이 앞에 서고 ${secondaryLabel}의 결이 받쳐주는 ${petLabel}입니다. 한마디로 말하면 ${primaryTone}을 가진 아이예요. ${nameTopic} 보호자의 작은 신호에도 반응하면서, 자기 리듬이 존중될 때 더 밝고 편안한 모습을 보여줍니다.`,
-    `대표 기운\n이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황을 무작정 밀어붙이기보다 먼저 살피고, 익숙해지면 자기 방식으로 즐거움을 표현하는 흐름이 강합니다. ${timeNote(input)}`,
-    `보호자와의 교감\n${namePossessive} 애착은 ${relationshipStyle(profile.primaryElement, profile.secondaryElement)}. 보호자가 이름을 불러주고 같은 말투로 칭찬해주면 ${nameTopic} 그 패턴을 기억합니다. 과한 요구보다 짧고 따뜻한 반응이 잘 맞고, 기다려주는 태도가 관계를 더 부드럽게 만들어줍니다.`,
-    `생활 루틴 조언\n${nameTo}는 ${primaryCare}이 잘 어울립니다. 하루의 시작과 마무리에 비슷한 순서를 만들어주면 마음의 예측 가능성이 높아집니다. 산책, 놀이, 식사, 휴식을 갑자기 많이 바꾸기보다 작은 변화부터 보여주세요. ${nameTopic} 반복 속에서 안정감을 얻고, 그 안정감 안에서 새로운 행동도 더 자연스럽게 받아들입니다.`,
-    `심층 리포트 미리보기\n심층 리포트에서는 ${namePossessive} 오행 균형, 보호자와의 관계 흐름, 잘 맞는 놀이와 휴식 방식, 계절별 생활 포인트를 더 자세히 볼 수 있습니다. 이 무료 결과는 한국식 사주와 오행 콘셉트를 반려동물 성향 콘텐츠로 풀어낸 맛보기이며, 단정이 아니라 보호자가 ${nameObject} 더 다정하게 이해하기 위한 참고로 보시면 좋습니다.`,
+    `한 줄 성향\n${createFreeOneLineText({
+      input,
+      primaryLabel,
+      secondaryLabel,
+      petLabel,
+      primaryTone,
+      nameTopic,
+    })}`,
+    `대표 기운\n${createFreeEnergyText({
+      input,
+      basisLabel,
+      primaryLabel,
+      secondaryLabel,
+      primaryTraits,
+      secondaryTraits,
+      nameTopic,
+    })}`,
+    `보호자와의 교감\n${createFreeBondText({
+      input,
+      profile,
+      nameTopic,
+      namePossessive,
+    })}`,
+    `생활 루틴 조언\n${createFreeRoutineText({
+      input,
+      nameTopic,
+      nameTo,
+    })}`,
+    `심층 리포트 미리보기\n${freePreview}`,
   ].join("\n\n");
 
   const safeReport = sanitizeReportText(report, {

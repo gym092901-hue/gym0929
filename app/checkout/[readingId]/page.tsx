@@ -140,7 +140,7 @@ export default async function CheckoutPage({
       />
 
       <ReportSceneBanner
-        type={reading.species}
+        species={reading.species}
         title={`${reading.petName} 결제 안내`}
         bubbleText="결제 후 바로 리포트를 볼 수 있어요"
         className="mb-6"
@@ -175,12 +175,12 @@ export default async function CheckoutPage({
             </div>
             <div className="grid gap-3 rounded-[1.75rem] border border-berry/10 bg-white/75 p-4 text-center shadow-sm sm:min-w-52">
               <PetMascot
-                type={reading.species}
+                species={reading.species}
                 mood="payment"
                 size="lg"
                 withBubble
                 bubbleText="영수증은 제가 챙길게요"
-                label={`${reading.petName} 결제를 안내하는 픽셀 캐릭터`}
+                decorative
               />
               <div className="rounded-[1.25rem] bg-berry/10 px-5 py-4">
                 <p className="text-sm font-bold text-berry">
@@ -408,11 +408,11 @@ export default async function CheckoutPage({
               </span>
               <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-white/70 opacity-70 grayscale">
                 <PetMascot
-                  type={reading.species}
+                  species={reading.species}
                   mood="curious"
                   size="sm"
-                  label="데모 링크를 안내하는 회색 톤 반려동물 픽셀 캐릭터"
                   className="scale-75"
+                  decorative
                 />
               </div>
               <p className="text-sm font-black text-ink/55">

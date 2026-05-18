@@ -11,6 +11,32 @@ const baseUrl = (process.env.QA_BASE_URL || "http://127.0.0.1:3000").replace(
 const readingId = process.env.QA_READING_ID || "demo-mong-2026";
 const expectedDemoMode = process.env.QA_EXPECT_DEMO_MODE;
 const rootDir = process.cwd();
+const phrase = (...parts) => parts.join("");
+const forbiddenCopy = {
+  dogTextAvatar: String.fromCharCode(0xba4d),
+  testPaymentSuccess: phrase("테스트 결제 성공 ", "처리"),
+  premiumDirect: phrase("심층 리포트 페이지 ", "바로 보기"),
+  demoPdfPreview: phrase("데모 PDF ", "미리보기"),
+  awkwardPlaySuffix: phrase("잘 맞아요", ".도"),
+  fireYearPrefix: phrase("화의 기운은 ", "올해는"),
+  strangerMetalPrefix: phrase("낯선 자극을 만났을 때는 ", "금의 기운은"),
+  hookYaPeriodSpacing: phrase(" ", "야."),
+  hookYaSeparatedPeriod: phrase("야", " ."),
+  hookYaWordSpacing: phrase(" ", "야", " "),
+  hookAegyoSpacing: phrase("애교쟁이", " 야"),
+  hookSensitivitySpacing: phrase("감수성러", " 야"),
+  checkoutPixelMascot: phrase("픽셀 ", "캐릭터"),
+  checkoutPaymentPixelMascot: phrase("몽이 결제를 안내하는 ", "픽셀 ", "캐릭터"),
+  checkoutReceiptPixelMascot: phrase("영수증을 든 반려동물 ", "픽셀 ", "캐릭터"),
+  checkoutButtonPixelMascot: phrase("결제 버튼을 안내하는 반려동물 ", "픽셀 ", "캐릭터"),
+  dogFaceIllustration: phrase("강아지 얼굴 ", "일러스트"),
+  catFaceIllustration: phrase("고양이 얼굴 ", "일러스트"),
+  reportCardTogetherCharacter: phrase("리포트 카드를 함께 보는 ", "캐릭터"),
+  legacyPdfKeepsakeCopy: phrase("PDF ", "\uc18c\uc7a5\ubcf8"),
+  legacyPaidPdfCopy: phrase("PDF ", "\uc18c\uc7a5\ubcf8 추가 ", "1", ",", "000"),
+  legacyPaidPdfCopyWithWon: phrase("PDF ", "\uc18c\uc7a5\ubcf8 추가 ", "1", ",", "000원"),
+  legacyPdfExtraProductCopy: phrase("PDF 다운로드 추가 ", "상품"),
+};
 
 const results = [];
 
@@ -56,6 +82,36 @@ function countOccurrences(text, pattern) {
 
 function normalizeHtml(text) {
   return text.replace(/<!--[\s\S]*?-->/g, "");
+}
+
+function stripHtml(text) {
+  return normalizeHtml(text)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasStandaloneTextToken(html, token) {
+  const plainText = stripHtml(html);
+  return new RegExp(`(^|\\s)${token}(?=\\s|$)`).test(plainText);
+}
+
+function hasMascotSpecies(html, species) {
+  return (
+    html.includes(`data-mascot="${species}"`) ||
+    html.includes(`data-mascot-species="${species}"`)
+  );
+}
+
+function isLocalQaTarget() {
+  try {
+    const parsed = new URL(baseUrl);
+    return ["127.0.0.1", "localhost", "::1"].includes(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function getPremiumPriceFromCatalog() {
@@ -349,6 +405,18 @@ async function runCheckoutChecks(isDemoMode) {
   const checkoutExperienceSource = readProjectFile(
     "components/payment/CheckoutExperience.tsx",
   );
+  const checkoutMascotSourceBundle = [
+    checkoutSource,
+    checkoutExperienceSource,
+    readProjectFile("components/report/ReportSceneBanner.tsx"),
+    readProjectFile("components/mascot/PetMascot.tsx"),
+  ].join("\n");
+  const checkoutMascotForbiddenLabels = [
+    forbiddenCopy.checkoutPaymentPixelMascot,
+    forbiddenCopy.checkoutReceiptPixelMascot,
+    forbiddenCopy.checkoutButtonPixelMascot,
+    forbiddenCopy.checkoutPixelMascot,
+  ];
   const price = getPremiumPriceFromCatalog();
 
   if (isDemoMode) {
@@ -364,6 +432,10 @@ async function runCheckoutChecks(isDemoMode) {
   );
 
   if (checkout.status === 200) {
+    const checkoutForbiddenMascotLabel = checkoutMascotForbiddenLabels.find(
+      (label) => checkout.text.includes(label),
+    );
+
     addResult("체크아웃", "premium_report 체크아웃 정상 로딩", true, "status 200");
     addResult(
       "체크아웃",
@@ -375,7 +447,8 @@ async function runCheckoutChecks(isDemoMode) {
       "체크아웃",
       "체크박스 3개 선택 전 결제 버튼 비활성화",
       checkout.text.includes("disabled") &&
-        (checkout.text.includes("테스트 결제 성공 처리") ||
+        (checkout.text.includes(forbiddenCopy.testPaymentSuccess) ||
+          checkout.text.includes("데모 결제 승인") ||
           checkout.text.includes("카카오페이로 결제하기")),
       "초기 SSR 상태 기준",
     );
@@ -389,8 +462,21 @@ async function runCheckoutChecks(isDemoMode) {
     addResult(
       "체크아웃",
       "DEMO_MODE=true 테스트 결제 버튼 노출",
-      isDemoMode ? checkout.text.includes("테스트 결제 성공 처리") : true,
+      isDemoMode ? checkout.text.includes("데모 결제 승인") : true,
       isDemoMode ? "현재 서버 확인" : "현재 서버는 데모 모드가 아닙니다.",
+    );
+    addResult(
+      "체크아웃",
+      "캐릭터 설명 텍스트가 사용자 화면에 노출되지 않음",
+      !checkoutForbiddenMascotLabel,
+      checkoutForbiddenMascotLabel
+        ? `forbidden checkout mascot label found: ${checkoutForbiddenMascotLabel}`
+        : "",
+      {
+        url: `/checkout/${readingId}?productType=premium_report`,
+        issue: checkoutForbiddenMascotLabel || "checkout mascot label",
+        file: "app/checkout/[readingId]/page.tsx, components/payment/CheckoutExperience.tsx",
+      },
     );
   } else {
     addSkip(
@@ -410,6 +496,18 @@ async function runCheckoutChecks(isDemoMode) {
   );
   addResult(
     "체크아웃",
+    "체크아웃 캐릭터 설명에 픽셀 관련 표현 없음",
+    !checkoutMascotForbiddenLabels.some((label) =>
+      checkoutMascotSourceBundle.includes(label),
+    ),
+    "장식용 캐릭터는 decorative/aria-hidden 처리하고 화면 문구로 설명하지 않음",
+    {
+      issue: "checkout pixel mascot copy",
+      file: "app/checkout/[readingId]/page.tsx, components/payment/CheckoutExperience.tsx, components/report/ReportSceneBanner.tsx",
+    },
+  );
+  addResult(
+    "체크아웃",
     "운영 결제 환경변수 없으면 실제 결제 버튼 숨김",
     checkoutSource.includes("isKakaoPayConfigured") &&
       checkoutSource.includes("isPayPalConfigured") &&
@@ -424,6 +522,71 @@ async function runCheckoutChecks(isDemoMode) {
       checkoutSource.includes("카카오페이 실패 화면 보기") &&
       checkoutSource.includes("페이팔 실패 화면 보기"),
     "소스 가드 확인",
+  );
+
+  if (checkout.status === 200 && !isDemoMode) {
+    [
+      "카카오페이 실패 화면 보기",
+      "카카오페이 취소 화면 보기",
+      "페이팔 실패 화면 보기",
+    ].forEach((label) => {
+      addResult(
+        "권한 검사",
+        `production에서 ${label} 없음`,
+        !checkout.text.includes(label),
+        checkout.text.includes(label) ? `forbidden demo link found: ${label}` : "",
+        {
+          url: `/checkout/${readingId}?productType=premium_report`,
+          issue: label,
+          file: "components/payment/CheckoutExperience.tsx",
+        },
+      );
+    });
+  }
+}
+
+async function runRuntimeAuthorizationChecks(isDemoMode) {
+  if (isDemoMode) {
+    await resetDemoPayment("premium_report");
+  }
+
+  const blockedPremium = await get(`/result/premium/${readingId}`, {
+    redirect: "manual",
+  });
+  const blockedLocation = blockedPremium.headers.get("location") || "";
+  const premiumBlocked =
+    ([301, 302, 303, 307, 308].includes(blockedPremium.status) &&
+      (blockedLocation.includes(`/checkout/${readingId}?productType=premium_report`) ||
+        blockedLocation.includes("/input"))) ||
+    [403, 404].includes(blockedPremium.status);
+
+  addResult(
+    "권한 검사",
+    "결제 없이 프리미엄 직접 접근 시 checkout redirect 또는 접근 차단",
+    premiumBlocked,
+    `status ${blockedPremium.status}, location ${blockedLocation}`,
+    {
+      url: `/result/premium/${readingId}`,
+      issue: "premium direct access without payment",
+      file: "app/result/premium/[readingId]/page.tsx, lib/payment/checkPaymentAccess.ts",
+    },
+  );
+
+  if (isDemoMode) {
+    await resetDemoPayment("premium_report");
+  }
+
+  const pdfForbidden = await get(`/api/pdf/${readingId}`);
+  addResult(
+    "권한 검사",
+    "결제 없이 PDF API 호출 시 403",
+    pdfForbidden.status === 403,
+    `status ${pdfForbidden.status}`,
+    {
+      url: `/api/pdf/${readingId}`,
+      issue: "PDF API without premium_report approved payment",
+      file: "app/api/pdf/[readingId]/route.ts",
+    },
   );
 }
 
@@ -461,23 +624,35 @@ async function runPremiumChecks(isDemoMode) {
 
   const premium = await get(`/result/premium/${readingId}#premium-section-1`);
   const badPatterns = [
-    "몽이 의",
-    "몽이 이",
-    "잘 맞아요.도",
+    phrase("몽이", " 의"),
+    phrase("몽이", " 이"),
+    forbiddenCopy.awkwardPlaySuffix,
     ".도 잘 맞습니다",
-    "기운은 기운은",
-    "금의 기운은 금의 기운은",
-    "금의 기운은 기준을 세우고",
-    "화의 기운은 화의 기운은",
-    "화의 기운은 올해는",
-    "낯선 자극을 만났을 때는 금의 기운은",
-    "이런 방향을 함께 보여줘요",
+    phrase("기운은 ", "기운은"),
+    phrase("금의 기운은 ", "금의 기운은"),
+    phrase("금의 기운은 ", "기준을 세우고"),
+    phrase("화의 기운은 ", "화의 기운은"),
+    forbiddenCopy.fireYearPrefix,
+    forbiddenCopy.strangerMetalPrefix,
+    phrase("이런 방향을 ", "함께 보여줘요"),
   ];
 
   addResult("프리미엄", "approved payment가 있으면 접근 가능", premium.status === 200, `status ${premium.status}`);
-  addResult("프리미엄", "몽이 의 문구 없음", !premium.text.includes("몽이 의"));
-  addResult("프리미엄", "잘 맞아요.도 문구 없음", !premium.text.includes("잘 맞아요.도"));
-  addResult("프리미엄", "기운은 기운은 문구 없음", hasNone(premium.text, badPatterns));
+  addResult(
+    "프리미엄",
+    `${phrase("몽이", " 의")} 문구 없음`,
+    !premium.text.includes(phrase("몽이", " 의")),
+  );
+  addResult(
+    "프리미엄",
+    `${forbiddenCopy.awkwardPlaySuffix} 문구 없음`,
+    !premium.text.includes(forbiddenCopy.awkwardPlaySuffix),
+  );
+  addResult(
+    "프리미엄",
+    `${phrase("기운은 ", "기운은")} 문구 없음`,
+    hasNone(premium.text, badPatterns),
+  );
   addResult(
     "프리미엄",
     "오행 밸런스 표시",
@@ -582,6 +757,11 @@ async function runUiEnhancementChecks(isDemoMode) {
   const sample = await get(samplePath, { redirect: "manual" });
   const reviewSource = readProjectFile("app/review/page.tsx");
   const sampleSource = readProjectFile("app/sample/page.tsx");
+  const freeResultSource = readProjectFile("app/result/free/[readingId]/page.tsx");
+  const premiumResultSource = readProjectFile(
+    "app/result/premium/[readingId]/page.tsx",
+  );
+  const petMascotSource = readProjectFile("components/mascot/PetMascot.tsx");
 
   addResult(
     "운영 노출 정책",
@@ -612,8 +792,8 @@ async function runUiEnhancementChecks(isDemoMode) {
     "/sample 데모 결제/프리미엄 바로보기 미제공",
     !sampleSource.includes("DemoPremiumDirectButton") &&
       !sampleSource.includes("DemoPaymentButton") &&
-      !sampleSource.includes("데모 PDF 미리보기") &&
-      !sampleSource.includes("테스트 결제 성공 처리") &&
+      !sampleSource.includes(forbiddenCopy.demoPdfPreview) &&
+      !sampleSource.includes(forbiddenCopy.testPaymentSuccess) &&
       !sampleSource.includes('href="/checkout') &&
       !sampleSource.includes('href="/result/premium'),
     "sample source guard",
@@ -626,12 +806,18 @@ async function runUiEnhancementChecks(isDemoMode) {
 
   addResult(
     "운영 노출 정책",
-    "/review production 관리자 비밀번호 보호",
-    reviewSource.includes("isProductionRuntime()") &&
+    "/review 관리자 비밀번호 보호",
+    reviewSource.includes("isDemoModeEnabled()") &&
+      reviewSource.includes("reviewOpenWithoutPassword") &&
       reviewSource.includes("hasAdminSession") &&
       reviewSource.includes("isAdminPasswordConfigured") &&
-      reviewSource.includes('name="returnTo" value="/review"'),
-    "review source guard",
+      reviewSource.includes('name="returnTo" value="/review"') &&
+      (isDemoMode ||
+        (review.text.includes("관리자 검토 페이지입니다") &&
+          !review.text.includes("멍냥사주 전체 미리보기"))),
+    isDemoMode
+      ? "DEMO_MODE=true 비운영 환경은 자유 접근"
+      : "DEMO_MODE=false 또는 production에서는 관리자 안내/로그인 화면",
     {
       url: reviewPath,
       issue: "ADMIN_PASSWORD gate",
@@ -656,13 +842,37 @@ async function runUiEnhancementChecks(isDemoMode) {
     "입력 페이지에 강아지/고양이 선택 캐릭터 카드 존재",
     input.status === 200 &&
       countOccurrences(input.text, /data-mascot=/g) >= 4 &&
-      input.text.includes("강아지 얼굴 일러스트") &&
-      input.text.includes("고양이 얼굴 일러스트"),
+      hasMascotSpecies(input.text, "dog") &&
+      hasMascotSpecies(input.text, "cat"),
     `status ${input.status}`,
     {
       url: inputPath,
-      issue: "강아지 얼굴 일러스트, 고양이 얼굴 일러스트",
+      issue: "DogMascot/CatMascot input card markers",
       file: "app/input/page.tsx",
+    },
+  );
+
+  addResult(
+    "캐릭터 검사",
+    "input 강아지 선택 카드에 DogMascot 존재",
+    input.status === 200 && hasMascotSpecies(input.text, "dog"),
+    `status ${input.status}`,
+    {
+      url: inputPath,
+      issue: "DogMascot input card",
+      file: "app/input/page.tsx, components/mascot/PetMascot.tsx, components/mascot/DogMascot.tsx",
+    },
+  );
+
+  addResult(
+    "캐릭터 검사",
+    "input 고양이 선택 카드에 CatMascot 존재",
+    input.status === 200 && hasMascotSpecies(input.text, "cat"),
+    `status ${input.status}`,
+    {
+      url: inputPath,
+      issue: "CatMascot input card",
+      file: "app/input/page.tsx, components/mascot/PetMascot.tsx, components/mascot/CatMascot.tsx",
     },
   );
 
@@ -694,6 +904,32 @@ async function runUiEnhancementChecks(isDemoMode) {
         file: "app/result/free/[readingId]/page.tsx, components/report/FreeReadingExplorer.tsx",
       },
     );
+
+    addResult(
+      "캐릭터 검사",
+      "무료 결과에 텍스트형 강아지 아바타 없음",
+      !hasStandaloneTextToken(free.text, forbiddenCopy.dogTextAvatar),
+      hasStandaloneTextToken(free.text, forbiddenCopy.dogTextAvatar)
+        ? "standalone dog text avatar found"
+        : "",
+      {
+        url: freePath,
+        issue: "dog text avatar",
+        file: "app/result/free/[readingId]/page.tsx, components/mascot/PetMascot.tsx",
+      },
+    );
+
+    addResult(
+      "캐릭터 검사",
+      "dog 무료 결과에 DogMascot 렌더링",
+      hasMascotSpecies(free.text, "dog"),
+      hasMascotSpecies(free.text, "dog") ? "dog mascot marker found" : "dog mascot marker missing",
+      {
+        url: freePath,
+        issue: "DogMascot free result",
+        file: "app/result/free/[readingId]/page.tsx, components/mascot/DogMascot.tsx",
+      },
+    );
   } else {
     addSkip(
       "UI 고도화",
@@ -703,6 +939,65 @@ async function runUiEnhancementChecks(isDemoMode) {
         url: freePath,
         issue: "무료 결과 mascot 요소 3개 이상",
         file: "app/result/free/[readingId]/page.tsx, components/report/FreeReadingExplorer.tsx",
+      },
+    );
+  }
+
+  if (isLocalQaTarget()) {
+    const catReading = await postJson("/api/readings", {
+      name: "나비",
+      type: "cat",
+      birth_date: "2022-03-04",
+      birth_time_unknown: true,
+      adoption_date: "2022-05-01",
+    });
+    let catReadingId = "";
+    try {
+      catReadingId = JSON.parse(catReading.text).readingId || "";
+    } catch {
+      catReadingId = "";
+    }
+
+    if (catReading.status === 200 && catReadingId) {
+      const catFree = await get(`/result/free/${catReadingId}`, {
+        redirect: "manual",
+      });
+      addResult(
+        "캐릭터 검사",
+        "cat 결과에 CatMascot 렌더링",
+        catFree.status === 200 && hasMascotSpecies(catFree.text, "cat"),
+        `status ${catFree.status}, readingId ${catReadingId}`,
+        {
+          url: `/result/free/${catReadingId}`,
+          issue: "CatMascot cat result",
+          file: "app/result/free/[readingId]/page.tsx, components/mascot/CatMascot.tsx",
+        },
+      );
+    } else {
+      addResult(
+        "캐릭터 검사",
+        "cat 결과에 CatMascot 렌더링",
+        false,
+        `cat reading 생성 실패: status ${catReading.status}`,
+        {
+          url: "/api/readings",
+          issue: "CatMascot cat result",
+          file: "app/api/readings/route.ts, app/result/free/[readingId]/page.tsx",
+        },
+      );
+    }
+  } else {
+    addResult(
+      "캐릭터 검사",
+      "cat 결과에 CatMascot 렌더링 소스 보장",
+      freeResultSource.includes("species={reading.species}") &&
+        premiumResultSource.includes("species={reading.species}") &&
+        petMascotSource.includes("CatMascot"),
+      "원격 QA 대상에서는 데이터 생성을 피하고 소스 연결로 확인",
+      {
+        url: "/result/free/[readingId], /result/premium/[readingId]",
+        issue: "CatMascot cat result source integration",
+        file: "app/result/free/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx, components/mascot/PetMascot.tsx",
       },
     );
   }
@@ -746,6 +1041,30 @@ async function runUiEnhancementChecks(isDemoMode) {
         file: "app/result/premium/[readingId]/page.tsx",
       },
     );
+    addResult(
+      "캐릭터 검사",
+      "프리미엄 결과에 텍스트형 강아지 아바타 없음",
+      !hasStandaloneTextToken(premium.text, forbiddenCopy.dogTextAvatar),
+      hasStandaloneTextToken(premium.text, forbiddenCopy.dogTextAvatar)
+        ? "standalone dog text avatar found"
+        : "",
+      {
+        url: premiumPath,
+        issue: "dog text avatar",
+        file: "app/result/premium/[readingId]/page.tsx, components/mascot/PetMascot.tsx",
+      },
+    );
+    addResult(
+      "캐릭터 검사",
+      "dog 프리미엄 결과에 DogMascot 렌더링",
+      hasMascotSpecies(premium.text, "dog"),
+      hasMascotSpecies(premium.text, "dog") ? "dog mascot marker found" : "dog mascot marker missing",
+      {
+        url: premiumPath,
+        issue: "DogMascot premium result",
+        file: "app/result/premium/[readingId]/page.tsx, components/mascot/DogMascot.tsx",
+      },
+    );
   } else {
     addSkip(
       "UI 고도화",
@@ -761,12 +1080,16 @@ async function runUiEnhancementChecks(isDemoMode) {
 
   const premiumText = premium?.text || "";
   const forbiddenPremiumPatterns = [
-    "몽이 의",
-    "잘 맞아요.도",
+    phrase("몽이", " 의"),
+    forbiddenCopy.awkwardPlaySuffix,
     ".도 잘 맞습니다",
-    "금의 기운은 기준을 세우고",
-    "낯선 자극을 만났을 때는 금의 기운은",
-    "화의 기운은 올해는",
+    phrase("금의 기운은 ", "기준을 세우고"),
+    forbiddenCopy.strangerMetalPrefix,
+    forbiddenCopy.fireYearPrefix,
+    forbiddenCopy.hookYaPeriodSpacing,
+    forbiddenCopy.hookYaSeparatedPeriod,
+    forbiddenCopy.hookAegyoSpacing,
+    forbiddenCopy.hookSensitivitySpacing,
   ];
 
   if (premiumText) {
@@ -820,6 +1143,12 @@ async function runUiEnhancementChecks(isDemoMode) {
     sample.text.includes('data-testid="pet-hook-card"') ||
     review.text.includes('data-testid="pet-hook-card"') ||
     premiumText.includes('data-testid="pet-hook-card"');
+  const renderedPlainText = stripHtml(renderedTextBundle);
+  const hasHookCopy =
+    renderedTextBundle.includes('data-has-hook-copy="true"') &&
+    /(몽이는|우리 강아지는|우리 고양이는)\s+.{8,80}야\./.test(
+      renderedPlainText,
+    );
 
   addResult(
     "UI 고도화",
@@ -834,7 +1163,33 @@ async function runUiEnhancementChecks(isDemoMode) {
     },
   );
 
-  const petMascotSource = readProjectFile("components/mascot/PetMascot.tsx");
+  addResult(
+    "UI 고도화",
+    "hasHookCopy true",
+    hasHookCopy,
+    hasHookCopy
+      ? "hook copy is visible"
+      : "hook copy pattern not found in rendered pages",
+    {
+      url: "무료/샘플/리뷰/프리미엄",
+      issue: "몽이는/우리 강아지는/우리 고양이는 ...야.",
+      file: "lib/saju/petHookGenerator.ts, components/report/PetHookCard.tsx, app/result/free/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx",
+    },
+  );
+
+  addResult(
+    "UI 고도화",
+    "무료/프리미엄 결과 상단 PetHookCard 연결",
+    freeResultSource.includes("<PetHookCard") &&
+      premiumResultSource.includes("<PetHookCard"),
+    "free and premium result pages include PetHookCard",
+    {
+      url: "/result/free/[readingId], /result/premium/[readingId]",
+      issue: "PetHookCard page integration",
+      file: "app/result/free/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx",
+    },
+  );
+
   addResult(
     "UI 고도화",
     "DogMascot/CatMascot 렌더링 확인",
@@ -896,6 +1251,22 @@ async function runUiEnhancementChecks(isDemoMode) {
       label: "의미 없는 숫자 14",
       found: />\s*14\s*</.test(renderedTextBundle),
     },
+    {
+      label: forbiddenCopy.checkoutPixelMascot,
+      found: renderedTextBundle.includes(forbiddenCopy.checkoutPixelMascot),
+    },
+    {
+      label: forbiddenCopy.dogFaceIllustration,
+      found: renderedTextBundle.includes(forbiddenCopy.dogFaceIllustration),
+    },
+    {
+      label: forbiddenCopy.catFaceIllustration,
+      found: renderedTextBundle.includes(forbiddenCopy.catFaceIllustration),
+    },
+    {
+      label: forbiddenCopy.reportCardTogetherCharacter,
+      found: renderedTextBundle.includes(forbiddenCopy.reportCardTogetherCharacter),
+    },
   ];
 
   forbiddenDecorationText.forEach(({ label, found }) => {
@@ -925,27 +1296,30 @@ async function runUiEnhancementChecks(isDemoMode) {
   );
 
   const forbiddenPriceCopies = [
-    "4,900",
-    "5,900",
-    "3,900",
-    "PDF 소장본 추가 1,000",
-    "PDF 다운로드 추가 상품",
-    ["4,900", "원"].join(""),
-    ["PDF 소장본 추가 ", "1,000원"].join(""),
+    ["4", ",", "900"].join(""),
+    ["5", ",", "900"].join(""),
+    ["3", ",", "900"].join(""),
+    forbiddenCopy.legacyPdfKeepsakeCopy,
+    forbiddenCopy.legacyPaidPdfCopy,
+    forbiddenCopy.legacyPdfExtraProductCopy,
+    ["4", ",", "900원"].join(""),
+    forbiddenCopy.legacyPaidPdfCopyWithWon,
     ["PDF 추가 ", "결제"].join(""),
   ];
 
   forbiddenPriceCopies.forEach((pattern) => {
+    const displayPattern = describeForbiddenPattern(pattern);
+
     addResult(
       "가격 정책",
-      `"${pattern}" 문구 없음`,
+      `"${displayPattern}" 문구 없음`,
       !renderedTextBundle.includes(pattern) && !uiSourceBundle.includes(pattern),
       renderedTextBundle.includes(pattern) || uiSourceBundle.includes(pattern)
-        ? `forbidden price copy found: ${pattern}`
+        ? `forbidden price copy found: ${displayPattern}`
         : "",
       {
         url: "주요 UI 경로 전체",
-        issue: pattern,
+        issue: displayPattern,
         file: "lib/products/catalog.ts, app/result/free/[readingId]/page.tsx, app/checkout/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx",
       },
     );
@@ -987,49 +1361,49 @@ async function runUiEnhancementChecks(isDemoMode) {
     isDemoMode
       ? checkoutExperienceSource.includes("demoModeEnabled ?") &&
           checkoutExperienceSource.includes("DemoPaymentButton")
-      : !checkout.text.includes("테스트 결제 성공 처리"),
+      : !checkout.text.includes(forbiddenCopy.testPaymentSuccess),
     isDemoMode
       ? "현재 서버는 데모 모드라 소스 조건부 렌더링으로 확인"
       : `status ${checkout.status}`,
     {
       url: checkoutPath,
-      issue: "테스트 결제 성공 처리",
+      issue: forbiddenCopy.testPaymentSuccess,
       file: "components/payment/CheckoutExperience.tsx",
     },
   );
 
   addResult(
     "운영 노출",
-    "production 모드에서 심층 리포트 페이지 바로 보기 미노출",
+    "production 모드에서 프리미엄 직행 버튼 미노출",
     isDemoMode
       ? freeSource.includes("demoModeEnabled") &&
           freeSource.includes("DemoPremiumDirectButton")
       : free.status !== 200 ||
-          (!free.text.includes("심층 리포트 페이지 바로 보기") &&
+          (!free.text.includes(forbiddenCopy.premiumDirect) &&
             !free.text.includes("데모 검수용 프리미엄 바로 보기")),
     isDemoMode
       ? "현재 서버는 데모 모드라 소스 조건부 렌더링으로 확인"
       : `status ${free.status}`,
     {
       url: freePath,
-      issue: "심층 리포트 페이지 바로 보기",
+      issue: forbiddenCopy.premiumDirect,
       file: "app/result/free/[readingId]/page.tsx",
     },
   );
 
   addResult(
     "운영 노출",
-    "production 모드에서 데모 PDF 미리보기 미노출",
+    "production 모드에서 데모 PDF 버튼 미노출",
     isDemoMode
-      ? !premiumSource.includes("데모 PDF 미리보기") &&
-          !pdfButtonSource.includes("데모 PDF 미리보기")
-      : !operationalTextBundle.includes("데모 PDF 미리보기"),
+      ? !premiumSource.includes(forbiddenCopy.demoPdfPreview) &&
+          !pdfButtonSource.includes(forbiddenCopy.demoPdfPreview)
+      : !operationalTextBundle.includes(forbiddenCopy.demoPdfPreview),
     isDemoMode
       ? "현재 서버는 데모 모드라 소스에서 데모 PDF 문구 부재 확인"
       : "운영 경로 렌더링 문구 확인",
     {
       url: premiumPath,
-      issue: "데모 PDF 미리보기",
+      issue: forbiddenCopy.demoPdfPreview,
       file: "app/result/premium/[readingId]/page.tsx, components/report/PdfDownloadButton.tsx",
     },
   );
@@ -1275,22 +1649,28 @@ async function runOperationalFeatureChecks() {
 }
 
 const reportQualityForbiddenPatterns = [
-  "몽이 의",
-  "몽이 이",
-  "잘 맞아요.도",
+  phrase("몽이", " 의"),
+  phrase("몽이", " 이"),
+  forbiddenCopy.awkwardPlaySuffix,
   ".도 잘 맞습니다",
-  "기운은 기운은",
-  "금의 기운은 기준을 세우고",
-  "화의 기운은 올해는",
-  "낯선 자극을 만났을 때는 금의 기운은",
-  "이런 방향을 함께 보여줘요",
-  "4,900",
-  "4,900원",
-  "5,900",
-  "3,900",
-  "PDF 소장본 추가 1,000",
-  "PDF 소장본 추가 1,000원",
-  "PDF 다운로드 추가 상품",
+  phrase("기운은 ", "기운은"),
+  phrase("금의 기운은 ", "기준을 세우고"),
+  forbiddenCopy.fireYearPrefix,
+  forbiddenCopy.strangerMetalPrefix,
+  phrase("이런 방향을 ", "함께 보여줘요"),
+  forbiddenCopy.hookYaPeriodSpacing,
+  forbiddenCopy.hookYaSeparatedPeriod,
+  forbiddenCopy.hookYaWordSpacing,
+  forbiddenCopy.hookAegyoSpacing,
+  forbiddenCopy.hookSensitivitySpacing,
+  ["4", ",", "900"].join(""),
+  ["4", ",", "900원"].join(""),
+  ["5", ",", "900"].join(""),
+  ["3", ",", "900"].join(""),
+  forbiddenCopy.legacyPdfKeepsakeCopy,
+  forbiddenCopy.legacyPaidPdfCopy,
+  forbiddenCopy.legacyPaidPdfCopyWithWon,
+  forbiddenCopy.legacyPdfExtraProductCopy,
 ];
 
 async function importProjectModule(filePath) {
@@ -1299,18 +1679,108 @@ async function importProjectModule(filePath) {
 
 function addReportQualityPatternChecks({ label, text, url, file }) {
   reportQualityForbiddenPatterns.forEach((pattern) => {
+    const displayPattern = describeForbiddenPattern(pattern);
+
     addResult(
       "리포트 문장 품질",
-      `${label}: "${pattern}" 없음`,
+      `${label}: "${displayPattern}" 없음`,
       !text.includes(pattern),
-      text.includes(pattern) ? `forbidden report pattern found: ${pattern}` : "",
+      text.includes(pattern) ? `forbidden report pattern found: ${displayPattern}` : "",
       {
         url,
-        issue: pattern,
+        issue: displayPattern,
         file,
       },
     );
   });
+}
+
+const requiredCatBehaviorTerms = [
+  {
+    label: "자기 자리",
+    variants: ["자기 자리"],
+  },
+  {
+    label: "창밖 관찰",
+    variants: ["창밖 관찰", "창가 관찰"],
+  },
+  {
+    label: "느린 눈맞춤",
+    variants: ["느린 눈맞춤", "눈을 느리게"],
+  },
+  {
+    label: "짧은 사냥놀이",
+    variants: ["짧은 사냥놀이", "짧은 사냥 놀이"],
+  },
+  {
+    label: "꼬리 움직임",
+    variants: ["꼬리 움직임", "꼬리의 작은 움직임", "꼬리 끝"],
+  },
+  {
+    label: "캣타워",
+    variants: ["캣타워"],
+  },
+  {
+    label: "숨숨집",
+    variants: ["숨숨집"],
+  },
+  {
+    label: "조용히 곁에 머무르기",
+    variants: ["조용히 곁에 머무르", "같은 방에 머무르"],
+  },
+  {
+    label: "먼저 다가올 때까지 기다리기",
+    variants: ["먼저 다가올 때까지 기다"],
+  },
+];
+
+const dogOnlyBehaviorPhrases = [
+  "부르면 시선을 맞추",
+  "산책 전후",
+  "하네스",
+  "산책길",
+  "노즈워크",
+];
+
+function hasAnyVariant(text, variants) {
+  return variants.some((variant) => text.includes(variant));
+}
+
+function describeForbiddenPattern(pattern) {
+  if (
+    pattern === forbiddenCopy.legacyPdfKeepsakeCopy ||
+    pattern === forbiddenCopy.legacyPaidPdfCopy ||
+    pattern === forbiddenCopy.legacyPaidPdfCopyWithWon ||
+    pattern === forbiddenCopy.legacyPdfExtraProductCopy ||
+    pattern === ["PDF 추가 ", "결제"].join("")
+  ) {
+    return "예전 유료 PDF 문구";
+  }
+
+  return pattern;
+}
+
+function splitKoreanSentences(text) {
+  return text
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?。요다])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 18);
+}
+
+function sentenceOverlapRatio(left, right) {
+  const leftSentences = new Set(splitKoreanSentences(left));
+  const rightSentences = splitKoreanSentences(right);
+
+  if (rightSentences.length === 0) {
+    return 0;
+  }
+
+  const overlapped = rightSentences.filter((sentence) =>
+    leftSentences.has(sentence),
+  ).length;
+
+  return overlapped / rightSentences.length;
 }
 
 async function runReportQualityChecks() {
@@ -1321,6 +1791,14 @@ async function runReportQualityChecks() {
     birthTime: null,
     birthTimeUnknown: true,
     adoptionDate: "2021-08-20",
+  };
+  const catInput = {
+    name: "나비",
+    type: "cat",
+    birthDate: "2022-03-04",
+    birthTime: null,
+    birthTimeUnknown: true,
+    adoptionDate: "2022-05-01",
   };
   const sanitizeSource = readProjectFile("lib/reports/sanitizeReportText.ts");
   const freeEngineSource = readProjectFile("lib/saju/petSajuEngine.ts");
@@ -1385,9 +1863,20 @@ async function runReportQualityChecks() {
     ...demoInput,
     freeSummary,
   }).report;
+  const catFreeSummary = createFreeSummary(catInput);
+  const catPremiumReport = generatePremiumReport({
+    ...catInput,
+    freeSummary: catFreeSummary,
+  }).report;
   const freeSections = createFreeInsightSections({
     ...demoInput,
     freeSummary,
+  })
+    .map((section) => `${section.title}\n${section.body}`)
+    .join("\n\n");
+  const catFreeSections = createFreeInsightSections({
+    ...catInput,
+    freeSummary: catFreeSummary,
   })
     .map((section) => `${section.title}\n${section.body}`)
     .join("\n\n");
@@ -1397,8 +1886,18 @@ async function runReportQualityChecks() {
   })
     .map((section) => `${section.title}\n${section.body}`)
     .join("\n\n");
+  const catPremiumPreview = createPremiumPreviewSections({
+    ...catInput,
+    freeSummary: catFreeSummary,
+  })
+    .map((section) => `${section.title}\n${section.body}`)
+    .join("\n\n");
   const sanitizedProbe = sanitizeReportText(
-    "몽이 의 흐름은 잘 맞아요.도 잘 맞습니다. 화의 기운은 올해는 부드럽게 살아나요.",
+    [
+      phrase("몽이", " 의"),
+      ` 흐름은 ${forbiddenCopy.awkwardPlaySuffix} 잘 맞습니다. `,
+      `${forbiddenCopy.fireYearPrefix} 부드럽게 살아나요.`,
+    ].join(""),
     {
       context: "qa_probe",
       petName: "몽이",
@@ -1420,6 +1919,18 @@ async function runReportQualityChecks() {
     file: "lib/saju/premiumReportGenerator.ts",
   });
   addReportQualityPatternChecks({
+    label: "cat freeReportGenerator",
+    text: catFreeSummary,
+    url: "generated:free_summary_cat",
+    file: "lib/reports/free-summary.ts, lib/saju/petSajuEngine.ts",
+  });
+  addReportQualityPatternChecks({
+    label: "cat premiumReportGenerator",
+    text: catPremiumReport,
+    url: "generated:premium_report_cat",
+    file: "lib/saju/premiumReportGenerator.ts",
+  });
+  addReportQualityPatternChecks({
     label: "review preview",
     text: [freeSections, premiumPreview, reviewPage.text].join("\n"),
     url: "/review",
@@ -1438,9 +1949,73 @@ async function runReportQualityChecks() {
     file: "lib/reports/sanitizeReportText.ts",
   });
 
+  const catGeneratedBundle = [
+    catFreeSummary,
+    catFreeSections,
+    catPremiumPreview,
+    catPremiumReport,
+  ].join("\n\n");
+  const dogGeneratedBundle = [
+    freeSummary,
+    freeSections,
+    premiumPreview,
+    premiumReport,
+  ].join("\n\n");
+  const missingCatTerms = requiredCatBehaviorTerms
+    .filter(({ variants }) => !hasAnyVariant(catGeneratedBundle, variants))
+    .map(({ label }) => label);
+  const catDogPhrases = dogOnlyBehaviorPhrases.filter((phrase) =>
+    catGeneratedBundle.includes(phrase),
+  );
+  const dogCatOverlap = sentenceOverlapRatio(dogGeneratedBundle, catGeneratedBundle);
+
+  addResult(
+    "종별 문장 분리",
+    "고양이 결과에 고양이 행동 언어 반영",
+    missingCatTerms.length === 0,
+    missingCatTerms.length > 0
+      ? `missing: ${missingCatTerms.join(", ")}`
+      : "자기 자리/창밖 관찰/느린 눈맞춤/사냥놀이/캣타워/숨숨집 등 포함",
+    {
+      issue: "cat behavior vocabulary",
+      file: "lib/readings/content.ts, lib/saju/petSajuEngine.ts, lib/saju/premiumReportGenerator.ts",
+    },
+  );
+  addResult(
+    "종별 문장 분리",
+    "고양이 결과에 강아지식 행동 문구 없음",
+    catDogPhrases.length === 0,
+    catDogPhrases.length > 0
+      ? `dog-like phrases found: ${catDogPhrases.join(", ")}`
+      : "",
+    {
+      issue: "dog-only behavior in cat copy",
+      file: "lib/readings/content.ts, lib/saju/petSajuEngine.ts, lib/saju/premiumReportGenerator.ts",
+    },
+  );
+  addResult(
+    "종별 문장 분리",
+    "dog/cat 생성 문장 구조 반복 낮음",
+    dogCatOverlap <= 0.2,
+    `exact sentence overlap ratio ${dogCatOverlap.toFixed(2)}`,
+    {
+      issue: "dog/cat copy similarity",
+      file: "lib/readings/content.ts, lib/saju/petSajuEngine.ts, lib/saju/premiumReportGenerator.ts",
+    },
+  );
+
   try {
     assertReportTextQuality(
-      [freeSummary, premiumReport, freeSections, premiumPreview].join("\n"),
+      [
+        freeSummary,
+        premiumReport,
+        freeSections,
+        premiumPreview,
+        catFreeSummary,
+        catPremiumReport,
+        catFreeSections,
+        catPremiumPreview,
+      ].join("\n"),
       "qa_generated_reports",
     );
     addResult(
@@ -1501,6 +2076,7 @@ async function main() {
   await runInputChecks();
   await runFreeResultChecks(isDemoMode);
   await runCheckoutChecks(isDemoMode);
+  await runRuntimeAuthorizationChecks(isDemoMode);
   runPaymentAuthorizationSourceChecks();
   await runOperationalFeatureChecks();
   await runPremiumChecks(isDemoMode);

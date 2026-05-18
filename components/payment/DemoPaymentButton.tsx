@@ -42,7 +42,7 @@ export function DemoPaymentButton({
       const result = (await response.json()) as DemoPaymentResponse;
 
       if (!response.ok || !result.nextUrl) {
-        throw new Error(result.error ?? "테스트 결제를 승인하지 못했습니다.");
+        throw new Error(result.error ?? "데모 결제를 승인하지 못했습니다.");
       }
 
       router.push(result.nextUrl);
@@ -50,7 +50,7 @@ export function DemoPaymentButton({
       setError(
         paymentError instanceof Error
           ? paymentError.message
-          : "테스트 결제를 승인하지 못했습니다.",
+          : "데모 결제를 승인하지 못했습니다.",
       );
     } finally {
       setIsLoading(false);
@@ -60,9 +60,9 @@ export function DemoPaymentButton({
   return (
     <div className="mt-6 rounded-[2rem] border border-moss/25 bg-moss/10 p-4 shadow-sm">
       <div>
-        <p className="text-sm font-black uppercase text-moss">테스트 결제</p>
+        <p className="text-sm font-black uppercase text-moss">데모 결제</p>
         <h3 className="mt-2 text-lg font-black text-ink">
-          테스트 결제 성공 처리
+          데모 결제 승인
         </h3>
         <p className="mt-2 text-sm leading-6 text-ink/65">
           실제 결제가 발생하지 않는 데모 기능입니다. 카카오페이, PayPal, 카드
@@ -79,7 +79,7 @@ export function DemoPaymentButton({
         <span aria-hidden className="mr-2 rounded-full bg-white/20 px-2 py-0.5 text-xs">
           DEMO
         </span>
-        {isLoading ? "테스트 결제 승인 중" : "테스트 결제 성공 처리"}
+        {isLoading ? "데모 결제 승인 중" : "데모 결제 승인하기"}
       </button>
       {error && (
         <p className="mt-4 rounded-2xl border border-berry/20 bg-berry/10 px-4 py-3 text-sm font-semibold leading-6 text-berry">

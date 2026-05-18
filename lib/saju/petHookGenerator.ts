@@ -37,7 +37,7 @@ const elementKeywords: Record<FiveElement, SpeciesKeywordMap> = {
     cat: ["짧고 강한 표현가", "눈빛 애교러", "선택적 다정러"],
   },
   earth: {
-    dog: ["루틴 지킴이", "안정형 마음부자", "집을 좋아하는 아이"],
+    dog: ["루틴 지킴이", "안정형 마음부자", "익숙한 품을 좋아하는 아이"],
     cat: ["자기 자리 수호자", "안정형 냥이", "루틴 장인"],
   },
   metal: {
@@ -197,6 +197,13 @@ function softlyTrimSentence(sentence: string) {
     .replace("가장 편안해지는", "편안해지는");
 }
 
+function createHookSentence(subject: string, phrase: string) {
+  return `${subject} ${phrase.trim()}야.`
+    .replace(/\s+야([.\s])/g, "야$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function createSubcopy(input: PetHookGeneratorInput) {
   const primaryLabel = getElementLabel(input.dominantElement);
   const secondaryLabel = getElementLabel(input.secondaryElement);
@@ -213,14 +220,17 @@ function createSubcopy(input: PetHookGeneratorInput) {
 export function generatePetHook(input: PetHookGeneratorInput): PetHookResult {
   const hook = findCombinationHook(input) ?? createFallbackHook(input);
   const hookSentence = softlyTrimSentence(
-    `${getSubject(input.petName, input.species)} ${hook.phrase}야.`,
+    createHookSentence(getSubject(input.petName, input.species), hook.phrase),
   );
+  const highlightWords = Array.from(
+    new Set([...hook.highlights, `${hook.keyword}야.`, `${hook.keyword}야`]),
+  ).slice(0, 4);
 
   return {
     hookSentence,
     hookKeyword: hook.keyword,
     hookSubcopy: createSubcopy(input),
-    highlightWords: Array.from(new Set(hook.highlights)).slice(0, 3),
+    highlightWords,
   };
 }
 

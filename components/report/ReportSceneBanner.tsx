@@ -4,6 +4,7 @@ import type { MascotType } from "@/components/mascot/types";
 
 type ReportSceneBannerProps = {
   type?: MascotType;
+  species?: "dog" | "cat";
   title?: string;
   bubbleText?: string;
   className?: string;
@@ -62,10 +63,13 @@ function FloatingCalendar({ className = "" }: { className?: string }) {
 
 export function ReportSceneBanner({
   type = "both",
+  species,
   title,
   bubbleText = "우리 아이 마음결을 살짝 읽어볼까요?",
   className = "",
 }: ReportSceneBannerProps) {
+  const mascotType = species ?? type;
+
   return (
     <section
       className={`relative overflow-hidden rounded-[2rem] border border-berry/10 bg-[#FFF0D9] p-5 shadow-soft ${className}`}
@@ -91,12 +95,12 @@ export function ReportSceneBanner({
           </p>
         ) : null}
         <PetMascot
-          type={type}
+          type={species ? undefined : mascotType}
+          species={species}
           mood="reading"
           size="hero"
           withBubble
           bubbleText={bubbleText}
-          label="사주 카드와 리포트를 함께 보는 멍냥사주 캐릭터"
         />
       </div>
     </section>

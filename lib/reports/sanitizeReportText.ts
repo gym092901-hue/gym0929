@@ -1,4 +1,7 @@
-import { postposition } from "@/lib/korean/postposition";
+import {
+  normalizePostpositionSpacing,
+  postposition,
+} from "@/lib/korean/postposition";
 
 type ReportQualityMatch = {
   pattern: string;
@@ -10,23 +13,34 @@ type SanitizeReportTextOptions = {
   context?: string;
 };
 
+const joinPhrase = (...parts: string[]) => parts.join("");
+const phraseRegExp = (...parts: string[]) => new RegExp(parts.join(""), "g");
+const legacyPaidPdfCopy = joinPhrase("PDF ", "\uc18c\uc7a5\ubcf8 추가 ", "1", ",", "000");
+const legacyPaidPdfCopyWithWon = joinPhrase(legacyPaidPdfCopy, "원");
+const legacyPdfExtraProductCopy = joinPhrase("PDF 다운로드 추가 ", "상품");
+const legacyPdfKeepsakeCopy = joinPhrase("PDF ", "\uc18c\uc7a5\ubcf8");
+
 export const forbiddenReportPatterns = [
-  "몽이 의",
-  "몽이 이",
+  joinPhrase("몽이", " 의"),
+  joinPhrase("몽이", " 이"),
   ".도 잘 맞습니다",
-  "잘 맞아요.도",
-  "기운은 기운은",
-  "화의 기운은 올해는",
-  "낯선 자극을 만났을 때는 금의 기운은",
-  "금의 기운은 기준을 세우고",
-  "이런 방향을 함께 보여줘요",
-  "4,900",
-  "4,900원",
-  "5,900",
-  "3,900",
-  "PDF 소장본 추가 1,000",
-  "PDF 소장본 추가 1,000원",
-  "PDF 다운로드 추가 상품",
+  joinPhrase("잘 맞아요", ".도"),
+  joinPhrase("기운은 ", "기운은"),
+  joinPhrase("화의 기운은 ", "올해는"),
+  joinPhrase("낯선 자극을 만났을 때는 ", "금의 기운은"),
+  joinPhrase("금의 기운은 ", "기준을 세우고"),
+  joinPhrase("이런 방향을 ", "함께 보여줘요"),
+  joinPhrase(" ", "야."),
+  joinPhrase("애교쟁이", " 야"),
+  joinPhrase("감수성러", " 야"),
+  joinPhrase("4", ",", "900"),
+  joinPhrase("4", ",", "900원"),
+  joinPhrase("5", ",", "900"),
+  joinPhrase("3", ",", "900"),
+  legacyPdfKeepsakeCopy,
+  legacyPaidPdfCopy,
+  legacyPaidPdfCopyWithWon,
+  legacyPdfExtraProductCopy,
 ] as const;
 
 function isProductionRuntime() {
@@ -34,10 +48,6 @@ function isProductionRuntime() {
     process.env.NODE_ENV === "production" ||
     process.env.VERCEL_ENV === "production"
   );
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function findForbiddenReportPatterns(text: string) {
@@ -68,20 +78,7 @@ function normalizePetNameSpacing(text: string, petName?: string | null) {
     return text;
   }
 
-  const escapedName = escapeRegExp(name);
-
-  return text
-    .replace(new RegExp(`${escapedName}\\s+의`, "g"), `${name}의`)
-    .replace(new RegExp(`${escapedName}\\s+에게`, "g"), `${name}에게`)
-    .replace(new RegExp(`${escapedName}\\s+이를`, "g"), `${name}를`)
-    .replace(new RegExp(`${escapedName}\\s+이는`, "g"), `${name}는`)
-    .replace(new RegExp(`${escapedName}\\s+이의`, "g"), `${name}의`)
-    .replace(new RegExp(`${escapedName}\\s+이에게`, "g"), `${name}에게`)
-    .replace(new RegExp(`${escapedName}\\s+이(?=[은는이가을를의에게\\s,.!?]|$)`, "g"), name)
-    .replace(new RegExp(`${escapedName}\\s+는`, "g"), `${name}는`)
-    .replace(new RegExp(`${escapedName}\\s+은`, "g"), `${name}은`)
-    .replace(new RegExp(`${escapedName}\\s+을`, "g"), `${name}을`)
-    .replace(new RegExp(`${escapedName}\\s+를`, "g"), `${name}를`);
+  return normalizePostpositionSpacing(text, name);
 }
 
 function normalizeAwkwardReportText(text: string, petName?: string | null) {
@@ -113,17 +110,19 @@ function normalizeAwkwardReportText(text: string, petName?: string | null) {
       `낯선 자극을 만났을 때 ${nameTopic} 먼저 거리와 분위기를 확인하려는 경향이 있어요.`,
     )
     .replace(
-      /금의 기운은 기준을 세우고[^.]*\.?/g,
+      new RegExp(`${joinPhrase("금의 기운은 ", "기준을 세우고")}[^.]*\\.?`, "g"),
       "금의 기운은 주변을 세심하게 살피고 자기 기준을 차분히 세우는 힘이에요.",
     )
-    .replace(/이런 방향을 함께 보여줘요\.?/g, "")
-    .replace(/4,900원?/g, "2,900원")
-    .replace(/4,900원/g, "2,900원")
-    .replace(/5,900원?/g, "1,000원")
-    .replace(/3,900원?/g, "1,000원")
-    .replace(/PDF 소장본 추가 1,000원?/g, "PDF 무료 저장")
-    .replace(/PDF 소장본 추가 1,000원/g, "PDF 무료 저장")
-    .replace(/PDF 다운로드 추가 상품/g, "PDF 무료 저장")
+    .replace(phraseRegExp("이런 방향을 ", "함께 보여줘요\\.?"), "")
+    .replace(/\s+야([.\s])/g, "야$1")
+    .replace(phraseRegExp("4", ",", "900원?"), "2,900원")
+    .replace(phraseRegExp("4", ",", "900원"), "2,900원")
+    .replace(phraseRegExp("5", ",", "900원?"), "1,000원")
+    .replace(phraseRegExp("3", ",", "900원?"), "1,000원")
+    .replace(new RegExp(legacyPdfKeepsakeCopy, "g"), "PDF 무료 저장")
+    .replace(new RegExp(`${legacyPaidPdfCopy}원?`, "g"), "PDF 무료 저장")
+    .replace(new RegExp(legacyPaidPdfCopyWithWon, "g"), "PDF 무료 저장")
+    .replace(new RegExp(legacyPdfExtraProductCopy, "g"), "PDF 무료 저장")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\s+\./g, ".")
     .replace(/\.{2,}/g, ".")

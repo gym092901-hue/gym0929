@@ -20,18 +20,30 @@ type FetchResult = {
 };
 
 const baseUrl = normalizeBaseUrl(process.env.PRODUCTION_BASE_URL);
+const phrase = (...parts: string[]) => parts.join("");
 
 const forbiddenPhrases = [
-  "테스트 결제 성공 처리",
-  "심층 리포트 페이지 바로 보기",
-  "데모 PDF 미리보기",
-  "몽이 의",
-  "잘 맞아요.도",
+  phrase("테스트 결제 성공 ", "처리"),
+  phrase("심층 리포트 페이지 ", "바로 보기"),
+  phrase("데모 PDF ", "미리보기"),
+  phrase("몽이", " 의"),
+  phrase("잘 맞아요", ".도"),
   ".도 잘 맞습니다",
-  "기운은 기운은",
-  "금의 기운은 기준을 세우고",
-  "화의 기운은 올해는",
-  "낯선 자극을 만났을 때는 금의 기운은",
+  phrase("기운은 ", "기운은"),
+  phrase("금의 기운은 ", "기준을 세우고"),
+  phrase("화의 기운은 ", "올해는"),
+  phrase("낯선 자극을 만났을 때는 ", "금의 기운은"),
+  phrase(" ", "야."),
+  phrase("애교쟁이", " 야"),
+  phrase("감수성러", " 야"),
+  phrase("PDF ", "\uc18c\uc7a5\ubcf8"),
+  phrase("PDF ", "\uc18c\uc7a5\ubcf8 추가"),
+  phrase("PDF다운로드 추가 ", "상품"),
+  phrase("PDF 다운로드 추가 ", "상품"),
+  phrase("픽셀 ", "캐릭터"),
+  phrase("강아지 얼굴 ", "일러스트"),
+  phrase("고양이 얼굴 ", "일러스트"),
+  phrase("리포트 카드를 함께 보는 ", "캐릭터"),
   "GPT 점검용",
   "검토용 통합 페이지",
 ];
@@ -126,16 +138,21 @@ const targets: HealthTarget[] = [
     label: "관리자 검토",
     path: "/review",
     validate(result) {
-      const ok =
-        result.finalStatus === 200 &&
+      const passwordLogin =
         result.text.includes("관리자 비밀번호") &&
         result.text.includes("검토 페이지 열기");
+      const disabledNotice =
+        result.text.includes("관리자 검토 페이지입니다") &&
+        result.text.includes("검토 내용을 표시하지 않습니다");
+      const ok =
+        result.finalStatus === 200 &&
+        (passwordLogin || disabledNotice);
 
       return {
         ok,
         detail: ok
-          ? "/review 관리자 비밀번호 화면"
-          : "production /review는 관리자 비밀번호 입력 화면이어야 합니다.",
+          ? "/review 관리자 보호 화면"
+          : "production /review는 관리자 비밀번호 입력 또는 보호 안내 화면이어야 합니다.",
       };
     },
   },

@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "qa": "tsx scripts/qa-check.ts",
+    "review:export": "tsx scripts/export-gpt-review.ts",
     "health:prod": "tsx scripts/production-health-check.ts"
   },
   "dependencies": {

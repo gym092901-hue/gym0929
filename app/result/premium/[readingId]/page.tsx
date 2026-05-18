@@ -155,7 +155,7 @@ export default async function PremiumResultPage({
 
       <div className="grid gap-5">
         <ReportSceneBanner
-          type={reading.species}
+          species={reading.species}
           title={`${reading.petName}의 심층 리포트 카드`}
           bubbleText="오행과 생활 리듬을 차분히 읽어볼게요"
         />
@@ -169,7 +169,7 @@ export default async function PremiumResultPage({
           size="large"
           mascot={
             <PetMascot
-              type={reading.species}
+              species={reading.species}
               mood="reading"
               size="lg"
               label={`${reading.petName} 심층 리포트 훅 캐릭터`}
@@ -225,7 +225,7 @@ export default async function PremiumResultPage({
             <div className="relative min-h-72 rounded-[2rem] border border-berry/10 bg-cream/70 p-5">
               <div className="grid min-h-64 place-items-center">
                 <PetMascot
-                  type={reading.species}
+                  species={reading.species}
                   mood="holding-card"
                   size="hero"
                   withBubble
@@ -254,13 +254,14 @@ export default async function PremiumResultPage({
               </h2>
             </div>
             <PetMascot
-              type="cat"
+              species={reading.species}
               mood="reading"
               size="md"
-              label="목차를 읽는 고양이 캐릭터"
+              label={`${reading.petName} 목차 캐릭터`}
             />
           </div>
           <PremiumTableOfContents
+            species={reading.species}
             sections={safePremiumSections.map((section) => ({
               id: section.id,
               title: section.title,
@@ -285,7 +286,7 @@ export default async function PremiumResultPage({
                 <div className="flex items-start gap-4">
                   <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-persimmon/10">
                     <PetMascot
-                      type={reading.species}
+                      species={reading.species}
                       mood={
                         index % 5 === 0
                           ? "star"
@@ -349,7 +350,7 @@ export default async function PremiumResultPage({
               </p>
             </div>
             <PetMascot
-              type={reading.species}
+              species={reading.species}
               mood="pdf"
               size="lg"
               label="PDF 문서를 든 캐릭터"
@@ -367,12 +368,12 @@ export default async function PremiumResultPage({
         <section className="rounded-[2rem] border border-berry/10 bg-white/65 p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
             <PetMascot
-              type="both"
+              species={reading.species}
               mood="happy"
               size="md"
               withBubble
               bubbleText="다른 아이 이야기도 들어볼까요?"
-              label="함께 인사하는 강아지와 고양이 캐릭터"
+              label={`${reading.petName} 결과 페이지 하단 캐릭터`}
             />
             <div>
               <p className="text-sm font-black text-persimmon">

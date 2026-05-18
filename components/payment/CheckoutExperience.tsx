@@ -79,11 +79,11 @@ export function CheckoutExperience({
           </div>
           <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-[1.5rem] bg-moss/10">
             <PetMascot
-              type={species}
+              species={species}
               mood="holding-card"
               size="sm"
-              label="결제 전 확인 목록을 든 반려동물 픽셀 캐릭터"
               className="scale-90"
+              decorative
             />
           </div>
         </div>
@@ -133,12 +133,12 @@ export function CheckoutExperience({
             </p>
           </div>
           <PetMascot
-            type={species}
+            species={species}
             mood="payment"
             size="md"
             withBubble
             bubbleText="결제 후 바로 리포트를 볼 수 있어요"
-            label="영수증을 든 반려동물 픽셀 캐릭터"
+            decorative
           />
         </div>
 
@@ -157,11 +157,11 @@ export function CheckoutExperience({
             </span>
             <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-white/65 opacity-70 grayscale">
               <PetMascot
-                type={species}
+                species={species}
                 mood="payment"
                 size="sm"
-                label="데모 결제를 안내하는 회색 톤 반려동물 픽셀 캐릭터"
                 className="scale-75"
+                decorative
               />
             </div>
             <p className="text-sm font-black leading-6 text-ink/60">
@@ -216,11 +216,11 @@ export function CheckoutExperience({
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <div className="hidden h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white/80 sm:grid">
             <PetMascot
-              type={species}
+              species={species}
               mood="payment"
               size="sm"
-              label="결제 버튼을 안내하는 반려동물 픽셀 캐릭터"
               className="scale-75"
+              decorative
             />
           </div>
           <div className="min-w-0 flex-1">

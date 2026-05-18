@@ -23,7 +23,7 @@ export default async function KakaoSuccessPage({
       <PageShell
         eyebrow="KakaoPay"
         title="데모 모드에서는 실제 카카오페이 승인을 호출하지 않습니다"
-        description="무료 데모 흐름에서는 checkout 페이지의 테스트 결제 성공 처리 버튼을 사용해주세요."
+        description="무료 데모 흐름에서는 checkout 페이지의 데모 결제 승인 버튼을 사용해주세요."
         narrow
       >
         <div className="warm-panel rounded-[2rem] p-6 sm:p-8">

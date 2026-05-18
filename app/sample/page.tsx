@@ -71,7 +71,7 @@ export default function SampleReportPage() {
           <div className="mt-7 grid gap-5 rounded-[2rem] border border-berry/10 bg-white/60 p-5 sm:grid-cols-[auto_1fr] sm:items-center">
             <div className="grid h-28 w-28 place-items-center rounded-[2rem] bg-berry/10 shadow-soft">
               <PetMascot
-                type="dog"
+                species={demoSamplePet.type}
                 mood="happy"
                 size="md"
                 label="샘플 강아지 캐릭터"

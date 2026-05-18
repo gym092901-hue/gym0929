@@ -8,13 +8,15 @@ import type {
 } from "@/components/mascot/types";
 
 type PetMascotProps = {
-  type: MascotType;
+  type?: MascotType;
+  species?: "dog" | "cat";
   mood?: MascotMood;
   size?: MascotSize;
   withBubble?: boolean;
   bubbleText?: string;
   label?: string;
   className?: string;
+  decorative?: boolean;
 };
 
 const sizeClass: Record<MascotSize, string> = {
@@ -42,24 +44,30 @@ function renderMascot({
 
 export function PetMascot({
   type,
+  species,
   mood = "happy",
   size = "md",
   withBubble = false,
   bubbleText,
   label,
   className = "",
+  decorative,
 }: PetMascotProps) {
+  const resolvedType: MascotType = species ?? type ?? "dog";
   const showBubble = Boolean(withBubble || bubbleText);
   const accessibleLabel = label?.trim();
+  const isDecorative = decorative ?? !showBubble;
+  const shouldExposeLabel = decorative === false && Boolean(accessibleLabel);
 
   return (
     <figure
       className={`relative inline-flex flex-col items-center ${className}`}
-      aria-hidden={!accessibleLabel && !showBubble ? true : undefined}
-      data-mascot={type}
-      data-mascot-role={accessibleLabel ? "meaningful" : "decorative"}
+      aria-hidden={isDecorative ? true : undefined}
+      data-mascot={resolvedType}
+      data-mascot-species={resolvedType === "both" ? "both" : resolvedType}
+      data-mascot-role={isDecorative ? "decorative" : "meaningful"}
     >
-      {accessibleLabel ? (
+      {shouldExposeLabel ? (
         <figcaption className="sr-only">{accessibleLabel}</figcaption>
       ) : null}
 
@@ -69,7 +77,7 @@ export function PetMascot({
         </PetSpeechBubble>
       ) : null}
 
-      {type === "both" ? (
+      {resolvedType === "both" ? (
         <div
           className={`mascot-float flex items-end justify-center -space-x-10 ${sizeClass[size]}`}
         >
@@ -87,7 +95,7 @@ export function PetMascot({
       ) : (
         <div className={`mascot-float ${sizeClass[size]}`}>
           {renderMascot({
-            type,
+            type: resolvedType,
             mood,
             className: "w-full drop-shadow-sm",
           })}

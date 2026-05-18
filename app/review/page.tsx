@@ -11,7 +11,7 @@ import {
   hasAdminSession,
   isAdminPasswordConfigured,
 } from "@/lib/admin/auth";
-import { isProductionRuntime } from "@/lib/demo/config";
+import { isDemoModeEnabled } from "@/lib/demo/config";
 import { postposition } from "@/lib/korean/postposition";
 import { getProductCatalogItem } from "@/lib/products/catalog";
 import { createFreeInsightSections } from "@/lib/readings/content";
@@ -20,9 +20,8 @@ import { calculatePetFiveElements } from "@/lib/saju/petSajuEngine";
 import { generatePremiumReport } from "@/lib/saju/premiumReportGenerator";
 
 export const metadata = {
-  title: "멍냥사주 전체 미리보기",
-  description:
-    "무료 결과부터 심층 리포트, PDF 저장까지 한 번에 확인하는 검토용 페이지입니다.",
+  title: "관리자 검토 페이지",
+  description: "멍냥사주 관리자 검토 페이지입니다.",
 };
 
 const samplePet = {
@@ -81,8 +80,8 @@ function ReviewAdminLogin({ error }: { error?: string }) {
   return (
     <PageShell
       eyebrow="관리자 검토"
-      title="멍냥사주 검토 페이지"
-      description="/review는 정식 운영 환경에서 관리자만 볼 수 있는 내부 검토 페이지입니다."
+      title="관리자 검토 페이지입니다"
+      description="/review는 관리자만 볼 수 있는 내부 검토 페이지입니다."
       narrow
     >
       {error && reviewErrorMessages[error] ? (
@@ -118,12 +117,12 @@ function ReviewAdminDisabled() {
   return (
     <PageShell
       eyebrow="관리자 검토"
-      title="ADMIN_PASSWORD가 필요합니다"
-      description="운영 환경에서 /review를 열려면 Vercel Production 환경변수에 ADMIN_PASSWORD를 설정해 주세요."
+      title="관리자 검토 페이지입니다"
+      description="운영 환경에서는 내부 검토 페이지 내용을 공개하지 않습니다."
       narrow
     >
       <div className="warm-panel rounded-[2rem] p-5 text-sm font-semibold leading-6 text-ink/70 sm:p-8">
-        이 페이지는 내부 검토용이므로 일반 사용자에게 공개되지 않습니다.
+        관리자 비밀번호가 설정되어 있지 않아 검토 내용을 표시하지 않습니다.
       </div>
     </PageShell>
   );
@@ -206,8 +205,9 @@ function PricePolicyCard() {
 
 export default async function ReviewPage({ searchParams }: ReviewPageProps) {
   const params = await searchParams;
+  const reviewOpenWithoutPassword = isDemoModeEnabled();
 
-  if (isProductionRuntime()) {
+  if (!reviewOpenWithoutPassword) {
     if (!isAdminPasswordConfigured()) {
       return <ReviewAdminDisabled />;
     }
@@ -332,7 +332,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
           description="결제 전 사용자가 읽게 되는 무료 결과입니다. 카드형 구성과 유료 전환 문구를 함께 확인할 수 있어요."
           mascot={
             <PetMascot
-              type="dog"
+              species={samplePet.type}
               mood="holding-card"
               size="md"
               label="무료 사주 맛보기를 안내하는 강아지 캐릭터"
@@ -410,10 +410,10 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
           description="실제 유료 리포트 생성 엔진의 문장 품질, 섹션 흐름, 무료 결과와의 차이를 확인하는 영역입니다."
           mascot={
             <PetMascot
-              type="both"
+              species={samplePet.type}
               mood="reading"
               size="lg"
-              label="심층 리포트를 함께 읽는 강아지와 고양이 캐릭터"
+              label="심층 리포트를 읽는 샘플 캐릭터"
             />
           }
         >
@@ -449,10 +449,10 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <ReviewBadge>검토용</ReviewBadge>
             <PetMascot
-              type="cat"
+              species={samplePet.type}
               mood="star"
               size="sm"
-              label="별을 보는 고양이 캐릭터"
+              label="오행 흐름을 보는 샘플 캐릭터"
             />
             <p className="text-sm font-black text-persimmon">
               오행 밸런스 표시
@@ -472,10 +472,10 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
           description="PDF는 별도 결제 상품처럼 보이지 않아야 하며, premium_report 승인 사용자에게만 서버 권한 검사 후 열립니다."
           mascot={
             <PetMascot
-              type="dog"
+              species={samplePet.type}
               mood="pdf"
               size="md"
-              label="PDF 문서를 든 강아지 캐릭터"
+              label="PDF 문서를 든 샘플 캐릭터"
             />
           }
         >
@@ -504,9 +504,9 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
               <h3 className="text-lg font-black text-ink">권한 기준</h3>
               <ul className="mt-4 grid gap-2 text-sm font-bold leading-6 text-ink/66">
                 <li>premium_report 승인 결제가 있어야 PDF 저장 가능</li>
-                <li>pdf_report는 0원 정책이며 별도 추가 결제로 보이지 않음</li>
+                <li>pdf_report는 0원 정책이며 심층 리포트 구매자에게 무료 제공</li>
                 <li>권한 없는 PDF API 요청은 403으로 차단</li>
-                <li>production에서는 데모 PDF 미리보기 숨김</li>
+                <li>production에서는 데모용 PDF 미리보기 숨김</li>
               </ul>
             </article>
           </div>

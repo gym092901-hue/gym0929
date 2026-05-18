@@ -1,0 +1,266 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+
+type Snapshot = {
+  label: string;
+  path: string;
+  fileBase: string;
+  status: number;
+  finalUrl: string;
+  text: string;
+  html: string;
+};
+
+const baseUrl = (process.env.GPT_REVIEW_BASE_URL || "http://127.0.0.1:3000")
+  .replace(/\/$/, "");
+const outDir = path.join(process.cwd(), "gpt-review");
+const phrase = (...parts: string[]) => parts.join("");
+
+function stripHtml(html: string) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchSnapshot(
+  label: string,
+  routePath: string,
+  fileBase: string,
+  init?: RequestInit,
+): Promise<Snapshot> {
+  const response = await fetch(`${baseUrl}${routePath}`, {
+    redirect: "follow",
+    ...init,
+  });
+  const html = await response.text();
+  const text = stripHtml(html);
+
+  return {
+    label,
+    path: routePath,
+    fileBase,
+    status: response.status,
+    finalUrl: response.url,
+    text,
+    html,
+  };
+}
+
+async function createReading(species: "dog" | "cat") {
+  const response = await fetch(`${baseUrl}/api/readings`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: species === "dog" ? "몽이" : "나비",
+      type: species,
+      birth_date: species === "dog" ? "2021-05-14" : "2022-03-04",
+      birth_time_unknown: true,
+      adoption_date: species === "dog" ? "2021-08-20" : "2022-05-01",
+      owner_email: null,
+    }),
+  });
+  const body = (await response.json().catch(() => ({}))) as {
+    readingId?: string;
+  };
+
+  if (!response.ok || !body.readingId) {
+    throw new Error(`샘플 ${species} reading 생성 실패: ${response.status}`);
+  }
+
+  return body.readingId;
+}
+
+function has(text: string, phrase: string) {
+  return text.includes(phrase);
+}
+
+function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId: string) {
+  const bundle = snapshots.map((snapshot) => snapshot.text).join("\n\n");
+  const htmlBundle = snapshots.map((snapshot) => snapshot.html).join("\n\n");
+  const checks = {
+    dogReadingId,
+    catReadingId,
+    hasDogMascot:
+      has(htmlBundle, 'data-mascot="dog"') ||
+      has(htmlBundle, 'data-mascot-kind="dog"'),
+    hasCatMascot:
+      has(htmlBundle, 'data-mascot="cat"') ||
+      has(htmlBundle, 'data-mascot-kind="cat"'),
+    hasPetHookCard: has(bundle, "몽이는") || has(bundle, "나비는"),
+    hasOldPrice4900: has(bundle, "4,900") || has(bundle, "4,900원"),
+    hasOldPrice5900: has(bundle, "5,900") || has(bundle, "5,900원"),
+    hasOldPrice3900: has(bundle, "3,900") || has(bundle, "3,900원"),
+    hasOldPdfKeepsakeCopy: has(bundle, phrase("PDF ", "\uc18c\uc7a5\ubcf8")),
+    hasOldPdfPaidCopy: has(bundle, phrase("PDF ", "\uc18c\uc7a5\ubcf8 추가 ", "1", ",", "000")),
+    hasOldPdfExtraPaymentCopy:
+      has(bundle, phrase("PDF 추가 ", "결제")) ||
+      has(bundle, phrase("PDF 다운로드 추가 ", "상품")),
+    hasBadPostposition: has(bundle, "몽이 의"),
+    hasAwkwardSentence: has(bundle, "잘 맞아요.도"),
+    hasHookSpacingError:
+      has(bundle, phrase(" ", "야.")) ||
+      has(bundle, phrase("애교쟁이", " 야")) ||
+      has(bundle, phrase("감수성러", " 야")),
+    hasPixelMascotCopy: has(bundle, phrase("픽셀 ", "캐릭터")),
+    hasDogFaceIllustrationCopy: has(bundle, phrase("강아지 얼굴 ", "일러스트")),
+    hasCatFaceIllustrationCopy: has(bundle, phrase("고양이 얼굴 ", "일러스트")),
+    hasReportCardTogetherCharacterCopy: has(
+      bundle,
+      phrase("리포트 카드를 함께 보는 ", "캐릭터"),
+    ),
+    hasCatBehaviorVocabulary:
+      has(bundle, "자기 자리") &&
+      has(bundle, "창밖 관찰") &&
+      (has(bundle, "느린 눈맞춤") || has(bundle, "눈을 느리게")) &&
+      (has(bundle, "짧은 사냥놀이") || has(bundle, "짧은 사냥 놀이")) &&
+      has(bundle, "꼬리") &&
+      has(bundle, "캣타워") &&
+      has(bundle, "숨숨집") &&
+      has(bundle, "먼저 다가올 때까지 기다"),
+    reviewProtected:
+      has(bundle, "관리자 검토 페이지입니다") &&
+      !has(bundle, "검토용 통합 페이지") &&
+      !has(bundle, "GPT 점검용"),
+    hasPremiumDirectBypassCopy: has(bundle, "심층 리포트 페이지 바로 보기"),
+    hasDemoPaymentCopy: has(bundle, "테스트 결제 성공 처리"),
+    hasDemoPdfPreviewCopy: has(bundle, "데모 PDF 미리보기"),
+  };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    baseUrl,
+    dogReadingId,
+    catReadingId,
+    snapshots: snapshots.map((snapshot) => ({
+      label: snapshot.label,
+      path: snapshot.path,
+      status: snapshot.status,
+      finalUrl: snapshot.finalUrl,
+      fileBase: snapshot.fileBase,
+    })),
+    checks,
+  };
+}
+
+function buildPrompt(summary: ReturnType<typeof buildSummary>, snapshots: Snapshot[]) {
+  const pages = snapshots
+    .map(
+      (snapshot) => `### ${snapshot.label}
+- URL: ${snapshot.finalUrl}
+- HTTP: ${snapshot.status}
+- 파일: \`${snapshot.fileBase}.html\`, \`${snapshot.fileBase}.txt\`
+
+\`\`\`text
+${snapshot.text.slice(0, 5000)}
+\`\`\``,
+    )
+    .join("\n\n");
+
+  return `# 멍냥사주 GPT 재점검 패키지
+
+생성 시각: ${summary.generatedAt}
+기준 URL: ${summary.baseUrl}
+
+아래 스냅샷과 요약을 기준으로 멍냥사주 정식 출시 전 UI, 문구, 가격, 결제 권한, PDF 권한, 캐릭터 일관성을 검토해줘.
+
+## 중점 검토 항목
+
+- 무료 결과와 유료 결과가 명확히 구분되는지
+- 무료 결과에 결제 없이 프리미엄으로 바로 들어가는 우회 버튼이 없는지
+- 프리미엄 리포트와 PDF는 결제 승인 없이 열리지 않는지
+- dog 결과에는 강아지 캐릭터, cat 결과에는 고양이 캐릭터가 자연스럽게 보이는지
+- “멍” 같은 텍스트형 아바타가 실제 캐릭터 대신 노출되지 않는지
+- 가격 정책이 심층 리포트 2,900원, 추가 콘텐츠 1,000원, PDF 무료 저장으로 일관적인지
+- “4,900원”, “5,900원”, “3,900원”과 예전 유료 PDF 문구가 없는지
+- “몽이 의”, “잘 맞아요.도”, “화의 기운은 올해는”, “낯선 자극을 만났을 때는 금의 기운은” 같은 문장 오류가 없는지
+- 입력폼의 개인정보 안내와 개인정보처리방침 링크가 충분한지
+- 모바일 리포트형 UI로 읽기 좋은지
+
+## 자동 요약
+
+\`\`\`json
+${JSON.stringify(summary, null, 2)}
+\`\`\`
+
+## 페이지 스냅샷
+
+${pages}
+`;
+}
+
+async function main() {
+  await fs.mkdir(outDir, { recursive: true });
+
+  const dogReadingId = await createReading("dog");
+  const catReadingId = await createReading("cat");
+
+  const snapshots: Snapshot[] = [];
+  const targets = [
+    ["홈", "/", "home"],
+    ["입력", "/input", "input"],
+    ["공개 샘플", "/sample", "sample"],
+    ["강아지 무료 결과", `/result/free/${dogReadingId}`, "free-result-dog"],
+    ["고양이 무료 결과", `/result/free/${catReadingId}`, "free-result-cat"],
+    [
+      "심층 리포트 체크아웃",
+      `/checkout/${dogReadingId}?productType=premium_report`,
+      "checkout-premium-report",
+    ],
+    ["프리미엄 직접 접근 차단", `/result/premium/${dogReadingId}`, "premium-blocked"],
+    ["PDF API 권한 차단", `/api/pdf/${dogReadingId}`, "pdf-api-blocked"],
+    ["검토 페이지", "/review", "review"],
+    ["베타 테스트 안내", "/test", "test"],
+  ] as const;
+
+  for (const [label, routePath, fileBase] of targets) {
+    const snapshot = await fetchSnapshot(label, routePath, fileBase);
+    snapshots.push(snapshot);
+    await fs.writeFile(path.join(outDir, `${fileBase}.html`), snapshot.html);
+    await fs.writeFile(path.join(outDir, `${fileBase}.txt`), snapshot.text);
+  }
+
+  const summary = buildSummary(snapshots, dogReadingId, catReadingId);
+  await fs.writeFile(
+    path.join(outDir, "summary.json"),
+    `${JSON.stringify(summary, null, 2)}\n`,
+  );
+  await fs.writeFile(
+    path.join(outDir, "GPT_REVIEW_PROMPT.md"),
+    buildPrompt(summary, snapshots),
+  );
+  await fs.writeFile(
+    path.join(outDir, "README.md"),
+    `# 멍냥사주 GPT 점검 패키지
+
+이 폴더는 GPT가 localhost에 직접 접속하지 못할 때 업로드해서 검토할 수 있는 최신 스냅샷입니다.
+
+1. \`GPT_REVIEW_PROMPT.md\` 내용을 GPT에 붙여넣으세요.
+2. 더 정확한 점검을 원하면 이 폴더의 \`.txt\`, \`.html\`, \`summary.json\` 파일을 함께 업로드하세요.
+3. 외부 URL로 검토받으려면 Vercel 배포 후 \`https://배포주소/sample\`, \`https://배포주소/test\`를 공유하세요.
+4. 정식 production에서는 프리미엄 직접 접근과 PDF API가 결제 없이 열리면 안 됩니다.
+
+생성 기준 URL: ${baseUrl}
+생성 시각: ${summary.generatedAt}
+`,
+  );
+
+  console.log(`GPT review snapshot exported to ${outDir}`);
+  console.log(JSON.stringify(summary.checks, null, 2));
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -50,6 +50,9 @@ export function PetHookCard({
   mascot,
 }: PetHookCardProps) {
   const animalLabel = species === "cat" ? "고양이 훅" : "강아지 훅";
+  const sentenceHighlightWords = Array.from(
+    new Set([...highlightWords, `${hookKeyword}야.`, `${hookKeyword}야`]),
+  );
 
   return (
     <section
@@ -57,6 +60,8 @@ export function PetHookCard({
         size === "large" ? "sm:p-7" : ""
       }`}
       data-testid="pet-hook-card"
+      data-has-hook-copy="true"
+      data-hook-species={species}
     >
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div>
@@ -73,11 +78,14 @@ export function PetHookCard({
               size === "large" ? "text-3xl sm:text-5xl" : "text-2xl sm:text-4xl"
             }`}
           >
-            {renderHighlightedSentence(hookSentence, highlightWords)}
+            {renderHighlightedSentence(hookSentence, sentenceHighlightWords)}
           </h2>
         </div>
         {mascot ? (
-          <div className="hidden justify-self-end sm:block" aria-hidden="true">
+          <div
+            className="justify-self-center sm:justify-self-end"
+            aria-hidden="true"
+          >
             {mascot}
           </div>
         ) : null}

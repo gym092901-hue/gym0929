@@ -18,6 +18,7 @@ import {
   getElementLabel,
 } from "@/lib/saju/petSajuEngine";
 import type { ReadingSection } from "@/types/reading";
+import type { PetSpecies } from "@/types/reading";
 
 type FreeResultPageProps = {
   params: Promise<{
@@ -51,7 +52,7 @@ function SummaryCard({
   body: string;
   accent: "berry" | "moss" | "persimmon";
   mascotMood: "happy" | "curious" | "star" | "holding-card";
-  species: "dog" | "cat";
+  species: PetSpecies;
 }) {
   const tone = {
     berry: "border-berry/15 bg-berry/5 text-berry",
@@ -64,7 +65,7 @@ function SummaryCard({
       <div className="flex items-start gap-3">
         <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/80">
           <PetMascot
-            type={species}
+            species={species}
             mood={mascotMood}
             size="sm"
             label={`${title} 미니 캐릭터`}
@@ -144,7 +145,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
 
       <div className="grid gap-5">
         <ReportSceneBanner
-          type={reading.species}
+          species={reading.species}
           title={`${reading.petName} 무료 리포트`}
           bubbleText="우리 아이 마음결을 살짝 읽어볼까요?"
         />
@@ -157,7 +158,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
           highlightWords={hook.highlightWords}
           mascot={
             <PetMascot
-              type={reading.species}
+              species={reading.species}
               mood="star"
               size="md"
               label={`${reading.petName} 훅 문장 캐릭터`}
@@ -168,9 +169,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
         <section className="warm-panel rounded-[2rem] p-5 sm:p-8">
           <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-              <p className="text-sm font-black text-persimmon">
-                대표 해석 본문
-              </p>
+              <p className="text-sm font-black text-persimmon">대표 해석</p>
               <h1 className="mt-2 break-keep text-3xl font-black leading-tight text-ink sm:text-5xl">
                 {petPossessive} 한 줄 성향
               </h1>
@@ -195,7 +194,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
             </div>
             <div className="grid place-items-center rounded-[2rem] bg-berry/10 p-4 shadow-soft lg:min-w-56">
               <PetMascot
-                type={reading.species}
+                species={reading.species}
                 mood="happy"
                 size="lg"
                 withBubble
@@ -240,13 +239,13 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
                 {petObject} 더 깊게 이해하고 싶다면
               </h2>
               <p className="mt-3 break-keep text-base font-semibold leading-7 text-ink/65">
-                지금 보고 있는 무료 맛보기는 무료로 계속 열람할 수 있어요.
-                유료 심층 리포트에서는 오행 밸런스, 애착 방식, 예민해지기 쉬운
-                순간, 올해의 생활 흐름을 더 자세히 읽어드려요.
+                지금 보고 있는 무료 맛보기는 결제 없이 계속 열람할 수 있어요.
+                심층 리포트에서는 오행 밸런스, 애착 방식, 예민해지기 쉬운 순간,
+                올해의 흐름까지 더 자세히 읽어드립니다.
               </p>
             </div>
             <div className="rounded-[1.5rem] bg-berry/10 px-5 py-4 text-center">
-              <p className="text-xs font-black text-berry">유료 심층 리포트</p>
+              <p className="text-xs font-black text-berry">심층 리포트</p>
               <p className="mt-1 text-3xl font-black text-ink">
                 {premiumPrice}원
               </p>
@@ -271,7 +270,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
               </h2>
             </div>
             <PetMascot
-              type={reading.species}
+              species={reading.species}
               mood="reading"
               size="md"
               label={`${reading.petName} 잠금 카드 캐릭터`}
@@ -291,7 +290,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
             ))}
           </ul>
           <p className="mt-4 rounded-2xl border border-moss/20 bg-moss/10 px-4 py-3 text-sm font-semibold leading-6 text-ink/60">
-            무서운 예언이 아니라, 반려생활을 더 다정하게 이해하기 위한
+            무서운 예언이 아니라, 반려생활을 다정하게 이해하기 위한
             엔터테인먼트 콘텐츠입니다.
           </p>
 
@@ -313,7 +312,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
         <section className="rounded-[2rem] border border-berry/10 bg-white/65 p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
             <PetMascot
-              type={reading.species}
+              species={reading.species}
               mood="holding-card"
               size="md"
               withBubble
@@ -337,7 +336,7 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
       <ReportFloatingActions />
       <MobileStickyCTA
         href={premiumHref}
-        label={`유료 심층 리포트 보기 · ${premiumPrice}원`}
+        label={`심층 리포트 보기 · ${premiumPrice}원`}
         subLabel="현재 무료 맛보기는 무료 열람 중 · 결제 후 심층 리포트 열람"
       />
     </PageShell>

@@ -1,4 +1,7 @@
-import { postposition } from "@/lib/korean/postposition";
+import {
+  normalizePostpositionSpacing,
+  postposition,
+} from "@/lib/korean/postposition";
 import { sanitizeReportText } from "@/lib/reports/sanitizeReportText";
 import {
   calculatePetFiveElements,
@@ -252,11 +255,11 @@ function safeAssert(report: string, petName: string) {
       pattern: new RegExp(`${escapedName}\\s+이(?=\\s|[,.!?]|$)`),
     },
     {
-      label: "기운은 기운은",
+      label: ["기운은 ", "기운은"].join(""),
       pattern: /기운은\s+기운은/,
     },
     {
-      label: "잘 맞아요.도",
+      label: ["잘 맞아요", ".도"].join(""),
       pattern: /잘 맞아요\.도/,
     },
     {
@@ -268,20 +271,20 @@ function safeAssert(report: string, petName: string) {
       pattern: /올해는\s+올해는/,
     },
     {
-      label: "낯선 자극을 만났을 때는 금의 기운은",
+      label: ["낯선 자극을 만났을 때는 ", "금의 기운은"].join(""),
       pattern: /낯선 자극을 만났을 때는\s+[목화토금수]의 기운은/,
     },
     {
-      label: "금의 기운은 기준을 세우고",
-      pattern: /금의 기운은 기준을 세우고/,
+      label: ["금의 기운은 ", "기준을 세우고"].join(""),
+      pattern: new RegExp(["금의 기운은 ", "기준을 세우고"].join("")),
     },
     {
-      label: "화의 기운은 올해는",
+      label: ["화의 기운은 ", "올해는"].join(""),
       pattern: /[목화토금수]의 기운은\s+올해는/,
     },
     {
-      label: "이런 방향을 함께 보여줘요",
-      pattern: /이런 방향을 함께 보여줘요/,
+      label: ["이런 방향을 ", "함께 보여줘요"].join(""),
+      pattern: new RegExp(["이런 방향을 ", "함께 보여줘요"].join("")),
     },
   ];
   const matchedPattern = forbiddenPatterns.find(({ pattern }) =>
@@ -300,17 +303,7 @@ function normalizeSentence(sentence: string) {
 }
 
 function fixNameSpacing(report: string, petName: string) {
-  const escapedName = escapeRegExp(petName.trim());
-
-  return report
-    .replace(new RegExp(`${escapedName}\\s+의`, "g"), `${petName.trim()}의`)
-    .replace(new RegExp(`${escapedName}\\s+에게`, "g"), `${petName.trim()}에게`)
-    .replace(new RegExp(`${escapedName}\\s+이(?=\\s|[,.!?]|$)`, "g"), postposition.subject(petName))
-    .replace(new RegExp(`${escapedName}\\s+가(?=\\s|[,.!?]|$)`, "g"), postposition.subject(petName))
-    .replace(new RegExp(`${escapedName}\\s+은(?=\\s|[,.!?]|$)`, "g"), postposition.topic(petName))
-    .replace(new RegExp(`${escapedName}\\s+는(?=\\s|[,.!?]|$)`, "g"), postposition.topic(petName))
-    .replace(new RegExp(`${escapedName}\\s+을(?=\\s|[,.!?]|$)`, "g"), postposition.object(petName))
-    .replace(new RegExp(`${escapedName}\\s+를(?=\\s|[,.!?]|$)`, "g"), postposition.object(petName));
+  return normalizePostpositionSpacing(report, petName);
 }
 
 function normalizeAwkwardPatterns(report: string, petName: string) {
@@ -344,10 +337,10 @@ function normalizeAwkwardPatterns(report: string, petName: string) {
       `낯선 자극을 만났을 때 ${nameTopic} 먼저 거리와 분위기를 확인하려는 경향이 있어요.`,
     )
     .replace(
-      /금의 기운은 기준을 세우고[^.]*\.?/g,
+      new RegExp(`${["금의 기운은 ", "기준을 세우고"].join("")}[^.]*\\.?`, "g"),
       "금의 기운은 주변을 세심하게 살피고 자기 기준을 차분히 세우는 힘이에요.",
     )
-    .replace(/이런 방향을 함께 보여줘요\.?/g, "")
+    .replace(new RegExp(["이런 방향을 ", "함께 보여줘요", "\\.?"].join(""), "g"), "")
     .replace(/\s+\./g, ".")
     .replace(/\.{2,}/g, ".");
 }
@@ -442,6 +435,50 @@ export function generatePremiumReport(input: PremiumReportInput) {
   const nameObject = postposition.object(input.name);
   const namePossessive = postposition.possessive(input.name);
   const nameTo = postposition.to(input.name);
+  const personalityExamples =
+    input.type === "cat"
+      ? `예를 들어 평소보다 오래 같은 방에 머무르거나, 캣타워에서 보호자를 내려다보다가 조용히 내려와 근처에 앉거나, 느린 눈맞춤을 보내는 모습은 모두 ${nameSubject} 자기 방식으로 신뢰를 표현하는 장면일 수 있습니다.`
+      : `예를 들어 평소보다 조금 더 가까운 자리를 고르거나, 부르면 한 박자 늦게라도 돌아보거나, 놀이가 끝난 뒤 보호자 주변에 머무는 모습은 모두 ${nameSubject} 자기 방식으로 신뢰를 표현하는 장면일 수 있습니다.`;
+  const sensitivityResponse =
+    input.type === "cat"
+      ? `이런 상황에서도 숨숨집으로 이동하거나, 캣타워 위에서 거리를 재거나, 꼬리 끝을 작게 움직이며 분위기를 확인하는 모습이 나타날 수 있어요.`
+      : `이런 상황에서도 잠깐 멈추거나, 고개를 돌리거나, 보호자의 반응을 먼저 보는 모습이 나타날 수 있어요.`;
+  const sensitivitySignals =
+    input.type === "cat"
+      ? `${nameTopic} 불편함을 말로 설명하지 못하니까 귀의 방향, 꼬리 움직임, 몸을 낮추는 정도, 숨는 위치, 시선의 길이로 자기 마음을 알려줄 수 있어요.`
+      : `${nameTopic} 불편함을 말로 설명하지 못하니까 몸의 방향, 숨는 위치, 꼬리나 귀의 작은 변화, 시선의 움직임으로 자기 마음을 알려줄 수 있어요.`;
+  const loveExamples =
+    input.type === "cat"
+      ? `조용히 같은 방에 머무르거나, 보호자가 움직일 때 눈만 천천히 따라가거나, 먼저 다가와 짧게 몸을 스치고 자기 자리로 돌아가는 것도 충분히 애정 표현일 수 있어요.`
+      : `조용히 곁에 눕거나, 보호자가 움직일 때 시선만 따라가거나, 놀이가 끝난 뒤 같은 공간에 머무르는 것도 충분히 애정 표현일 수 있어요.`;
+  const loveGuidance =
+    input.type === "cat"
+      ? `손을 먼저 뻗기보다 ${nameSubject} 먼저 다가올 때까지 기다리고, 느린 눈맞춤과 낮은 목소리로 반응해주면 보호자는 ${nameTo} 아주 믿을 만한 기준점이 됩니다.`
+      : `이름을 부르는 톤, 칭찬의 말, 다가가는 속도를 일정하게 해주면 보호자는 ${nameTo} 아주 믿을 만한 기준점이 됩니다.`;
+  const strangerGuidance =
+    input.type === "cat"
+      ? `낯선 사람에게 바로 손을 내밀게 하기보다, ${nameSubject} 캣타워나 숨숨집처럼 물러날 수 있는 자리를 먼저 확인하게 해주세요. 낯선 공간에서는 도착하자마자 탐색을 재촉하기보다 물, 화장실 위치, 자기 냄새가 묻은 담요, 보호자가 앉아 있는 위치처럼 기본 단서를 먼저 알려주는 것이 좋아요.`
+      : `낯선 사람에게 바로 만지게 하기보다, ${nameSubject} 먼저 냄새를 맡거나 바라볼 시간을 주세요. 낯선 공간에서는 도착하자마자 많은 것을 시키기보다 물, 자리, 보호자의 위치처럼 기본 단서를 먼저 알려주는 것이 좋아요.`;
+  const routineTitle =
+    input.type === "cat"
+      ? "사냥놀이/관찰/휴식 루틴 조언"
+      : "산책/놀이/휴식 루틴 조언";
+  const routineSpecific =
+    input.type === "cat"
+      ? "놀이 전에는 장난감을 갑자기 들이밀기보다 바닥을 따라 천천히 움직이며 시선을 끌어주세요. 짧은 사냥놀이가 끝난 뒤에는 식사나 간식, 그다음 자기 자리나 숨숨집에서 쉬는 흐름으로 이어지면 좋아요. 캣타워, 창가, 물그릇, 화장실 동선은 자주 바꾸지 않는 편이 안정적입니다."
+      : "산책 전에는 같은 말이나 하네스 준비 순서를 쓰고, 산책 중에는 냄새 맡는 시간을 조금 남겨주세요. 집에 돌아온 뒤에는 물을 마시고 조용히 쉬는 마무리까지 이어지면 좋아요.";
+  const yearlyExample =
+    input.type === "cat"
+      ? "예를 들어 창밖 관찰 시간을 일정하게 두거나, 짧은 사냥놀이 시간을 하루 두세 번으로 나누거나, 숨숨집 근처에 편안한 담요를 하나 더해주는 식이 좋아요."
+      : "예를 들어 산책 코스나 놀이 시간을 완전히 바꾸기보다, 기존 루틴에 새로운 냄새 맡기 장소 하나를 더하거나, 쉬는 자리 근처에 편안한 담요를 하나 추가하는 식이 좋아요.";
+  const monthlyRecordExample =
+    input.type === "cat"
+      ? `“오늘은 창가에서 오래 쉬었다”, “새 장난감을 바로 잡기보다 냄새만 맡고 지나갔다”, “짧은 사냥놀이 뒤에 숨숨집에서 편안히 쉬었다” 같은 한 줄이면 충분해요.`
+      : `“오늘은 창가에서 오래 쉬었다”, “낯선 소리에 잠깐 멈췄지만 금방 돌아왔다”, “짧은 놀이 뒤에 더 편안해 보였다” 같은 한 줄이면 충분해요.`;
+  const finalSignalExamples =
+    input.type === "cat"
+      ? "느린 눈맞춤, 꼬리의 작은 움직임, 자기 자리에서 보호자를 바라보는 시간, 먼저 다가왔다가 다시 물러나는 속도"
+      : "눈빛, 몸의 방향, 다가오는 거리, 쉬는 자리, 놀이를 시작하고 끝내는 속도";
 
   const sections = [
     `1. ${namePossessive} 사주 한 장 요약
@@ -454,29 +491,29 @@ ${nameTopic} ${primaryLabel}의 기운이 앞에 서고 ${secondaryLabel}의 기
 ${basisLabel}을 기준으로 간단히 살핀 ${namePossessive} 오행 흐름은 숫자로 평가하기보다 행동 언어로 읽는 편이 더 다정합니다. ${elementBalanceText(primaryLabel, secondaryLabel)} 오행은 보호자가 아이를 평가하는 도구가 아니라, 아이가 어떤 방식으로 안정감을 느끼고 어떤 자극에 마음이 열리는지 살피는 언어에 가깝습니다. ${primaryText.core} ${secondaryText.core} 이 두 기운이 함께 있을 때 ${nameTopic} ${world.movement} 같은 일상의 단서에 민감하게 반응하면서도, 보호자의 분위기를 통해 다시 자기 자리를 찾아가려는 경향이 보여요. 특히 ${petKind}의 생활에서는 몸으로 표현되는 신호가 중요합니다. 가까이 오는 거리, 시선의 길이, 머무는 자리, 놀이 후 쉬는 방식 같은 작은 장면을 보면 ${namePossessive} 오행 기질이 훨씬 자연스럽게 보일 수 있어요.`,
 
     `3. 성격의 장점
-${namePossessive} 가장 예쁜 장점은 자기만의 속도로 관계를 쌓아간다는 점이에요. ${primaryText.gift} ${secondaryLabel}의 기운까지 함께 보면 ${secondaryText.gift} 이런 모습도 자연스럽게 섞여요. 보호자가 보기에는 아주 작은 변화처럼 보여도, ${nameTo}는 큰 의미가 있는 행동일 수 있어요. 예를 들어 평소보다 조금 더 가까운 자리를 고르거나, 부르면 한 박자 늦게라도 돌아보거나, 놀이가 끝난 뒤 보호자 주변에 머무는 모습은 모두 ${nameSubject} 자기 방식으로 신뢰를 표현하는 장면일 수 있습니다. 너무 빠른 기대보다 작은 신호를 알아봐주는 보호자와 함께 있을 때 ${namePossessive} 장점은 더 또렷하게 살아나요. 이 아이는 보호자를 기쁘게 하려고 무리해서 맞추기보다, 편안하다고 느끼는 순간에 가장 자기다운 사랑스러움을 보여주는 경향이 있어요.`,
+${namePossessive} 가장 예쁜 장점은 자기만의 속도로 관계를 쌓아간다는 점이에요. ${primaryText.gift} ${secondaryLabel}의 기운까지 함께 보면 ${secondaryText.gift} 이런 모습도 자연스럽게 섞여요. 보호자가 보기에는 아주 작은 변화처럼 보여도, ${nameTo}는 큰 의미가 있는 행동일 수 있어요. ${personalityExamples} 너무 빠른 기대보다 작은 신호를 알아봐주는 보호자와 함께 있을 때 ${namePossessive} 장점은 더 또렷하게 살아나요. 이 아이는 보호자를 기쁘게 하려고 무리해서 맞추기보다, 편안하다고 느끼는 순간에 가장 자기다운 사랑스러움을 보여주는 경향이 있어요.`,
 
     `4. 예민해지기 쉬운 상황
-${nameSubject} 예민해지는 순간은 대개 마음의 준비보다 자극이 먼저 들어올 때예요. ${primaryText.sensitivity} 여기에 ${secondaryLabel}의 결이 더해지면 ${secondaryText.sensitivity} 이런 상황에서도 잠깐 멈추거나, 고개를 돌리거나, 보호자의 반응을 먼저 보는 모습이 나타날 수 있어요. 이것을 고집이나 문제로만 보기보다 “지금 이 아이가 무엇을 확인하고 싶어 할까?”라고 바라봐주면 훨씬 다정한 해석이 됩니다. ${nameTopic} 불편함을 말로 설명하지 못하니까 몸의 방향, 숨는 위치, 꼬리나 귀의 작은 변화, 시선의 움직임으로 자기 마음을 알려줄 수 있어요. 보호자는 그 신호를 발견했을 때 바로 더 큰 자극을 주기보다, 한 걸음 물러나고 익숙한 목소리로 짧게 안내해주는 편이 좋아요. 무조건 피하게 하기보다 안전한 거리에서 살필 시간을 주면, ${nameTopic} 자기 속도로 다시 편안함을 찾을 수 있어요.`,
+${nameSubject} 예민해지는 순간은 대개 마음의 준비보다 자극이 먼저 들어올 때예요. ${primaryText.sensitivity} 여기에 ${secondaryLabel}의 결이 더해지면 ${secondaryText.sensitivity} ${sensitivityResponse} 이것을 고집이나 문제로만 보기보다 “지금 이 아이가 무엇을 확인하고 싶어 할까?”라고 바라봐주면 훨씬 다정한 해석이 됩니다. ${sensitivitySignals} 보호자는 그 신호를 발견했을 때 바로 더 큰 자극을 주기보다, 한 걸음 물러나고 익숙한 목소리로 짧게 안내해주는 편이 좋아요. 무조건 피하게 하기보다 안전한 거리에서 살필 시간을 주면, ${nameTopic} 자기 속도로 다시 편안함을 찾을 수 있어요.`,
 
     `5. 보호자에게 사랑을 표현하는 방식
-${nameSubject} 보호자에게 사랑을 표현하는 방식은 ${petKind}다운 몸짓 안에 숨어 있을 때가 많아요. ${world.greeting} ${primaryText.love} ${secondaryLabel}의 기운은 또 ${secondaryText.love} 이런 식으로 애착을 더 섬세하게 만들어줍니다. 그래서 ${nameSubject} 늘 크게 반응하지 않더라도 마음이 없는 것은 아니에요. 조용히 곁에 눕거나, 보호자가 움직일 때 시선만 따라가거나, 놀이가 끝난 뒤 같은 공간에 머무르는 것도 충분히 애정 표현일 수 있어요. 보호자가 해야 할 일은 표현의 크기를 재는 것이 아니라 반복되는 신호를 기억하는 것입니다. ${nameTopic} “늘 같은 방식으로 나를 알아봐주는 사람”에게 더 깊은 안정감을 느끼는 경향이 있어요. 이름을 부르는 톤, 칭찬의 말, 다가가는 속도를 일정하게 해주면 보호자는 ${nameTo} 아주 믿을 만한 기준점이 됩니다.`,
+${nameSubject} 보호자에게 사랑을 표현하는 방식은 ${petKind}다운 몸짓 안에 숨어 있을 때가 많아요. ${world.greeting} ${primaryText.love} ${secondaryLabel}의 기운은 또 ${secondaryText.love} 이런 식으로 애착을 더 섬세하게 만들어줍니다. 그래서 ${nameSubject} 늘 크게 반응하지 않더라도 마음이 없는 것은 아니에요. ${loveExamples} 보호자가 해야 할 일은 표현의 크기를 재는 것이 아니라 반복되는 신호를 기억하는 것입니다. ${nameTopic} “늘 같은 방식으로 나를 알아봐주는 사람”에게 더 깊은 안정감을 느끼는 경향이 있어요. ${loveGuidance}`,
 
     `6. 낯선 사람과 공간에 대한 반응
-낯선 자극을 만났을 때 ${nameTopic} 먼저 거리와 분위기를 확인하려는 경향이 있어요. ${world.social}이 대표적인 모습일 수 있습니다. ${primaryLabel}의 흐름은 ${primaryCore} ${secondaryLabel}의 흐름은 ${secondaryCore} 이 두 결이 함께 더해져 ${nameSubject} 갑자기 밀려오는 자극보다 천천히 확인할 수 있는 환경에서 더 편안해질 수 있어요. 강하게 밀어붙이면 ${nameTopic} 마음을 닫기보다 잠깐 멈추고 확인하려 할 수 있어요. 이때 보호자가 “괜찮아, 천천히 보자”는 분위기를 만들어주면 좋습니다. 낯선 사람에게 바로 만지게 하기보다, ${nameSubject} 먼저 냄새를 맡거나 바라볼 시간을 주세요. 낯선 공간에서는 도착하자마자 많은 것을 시키기보다 물, 자리, 보호자의 위치처럼 기본 단서를 먼저 알려주는 것이 좋아요. ${nameTopic} 새로운 것을 싫어한다기보다, 새로움을 자기 안에 넣는 데 시간이 필요한 타입일 수 있어요.`,
+낯선 자극을 만났을 때 ${nameTopic} 먼저 거리와 분위기를 확인하려는 경향이 있어요. ${world.social}이 대표적인 모습일 수 있습니다. ${primaryLabel}의 흐름은 ${primaryCore} ${secondaryLabel}의 흐름은 ${secondaryCore} 이 두 결이 함께 더해져 ${nameSubject} 갑자기 밀려오는 자극보다 천천히 확인할 수 있는 환경에서 더 편안해질 수 있어요. 강하게 밀어붙이면 ${nameTopic} 마음을 닫기보다 잠깐 멈추고 확인하려 할 수 있어요. 이때 보호자가 “괜찮아, 천천히 보자”는 분위기를 만들어주면 좋습니다. ${strangerGuidance} ${nameTopic} 새로운 것을 싫어한다기보다, 새로움을 자기 안에 넣는 데 시간이 필요한 타입일 수 있어요.`,
 
-    `7. 산책/놀이/휴식 루틴 조언
-${nameTo} 잘 맞는 루틴은 활동과 휴식을 분리하지 않고 하나의 흐름으로 이어주는 방식이에요. ${primaryText.routine} ${secondaryLabel}의 결에서는 ${secondaryText.routine} 두 리듬을 번갈아 살피면 놀이 뒤 흥분이 오래 남지 않고, 휴식으로 넘어가는 과정도 더 부드러워질 수 있어요. ${petKind}에게 루틴은 단순한 반복이 아니라 마음을 놓을 수 있는 약속이에요. ${input.type === "dog" ? "산책 전에는 같은 말이나 하네스 준비 순서를 쓰고, 산책 중에는 냄새 맡는 시간을 조금 남겨주세요. 집에 돌아온 뒤에는 물을 마시고 조용히 쉬는 마무리까지 이어지면 좋아요." : "놀이 전에는 장난감을 갑자기 들이밀기보다 짧은 시선 유도부터 시작하고, 사냥 놀이가 끝난 뒤에는 스스로 쉬는 자리로 갈 수 있게 해주세요."} 놀이도 길게 한 번보다 짧게 여러 번이 더 잘 맞을 수 있어요. 휴식은 보상처럼 주는 시간이 아니라, ${nameSubject} 하루를 정리하는 중요한 리듬입니다. 보호자가 이 리듬을 존중해주면 ${nameTopic} 더 편안한 얼굴로 일상을 받아들일 수 있어요.`,
+    `7. ${routineTitle}
+${nameTo} 잘 맞는 루틴은 활동과 휴식을 분리하지 않고 하나의 흐름으로 이어주는 방식이에요. ${primaryText.routine} ${secondaryLabel}의 결에서는 ${secondaryText.routine} 두 리듬을 번갈아 살피면 놀이 뒤 흥분이 오래 남지 않고, 휴식으로 넘어가는 과정도 더 부드러워질 수 있어요. ${petKind}에게 루틴은 단순한 반복이 아니라 마음을 놓을 수 있는 약속이에요. ${routineSpecific} 놀이도 길게 한 번보다 짧게 여러 번이 더 잘 맞을 수 있어요. 휴식은 보상처럼 주는 시간이 아니라, ${nameSubject} 하루를 정리하는 중요한 리듬입니다. 보호자가 이 리듬을 존중해주면 ${nameTopic} 더 편안한 얼굴로 일상을 받아들일 수 있어요.`,
 
     `8. 올해의 전체 흐름
-올해 ${nameTo} 중요한 흐름은 “작게 반복하고, 천천히 넓히기”입니다. 올해는 ${namePossessive} 표현력이 조금 더 살아날 수 있는 흐름이에요. ${secondaryLabel}의 흐름에서는 ${secondaryYear} 두 기운을 함께 보면 큰 변화를 한 번에 만드는 것보다, 이미 익숙한 생활 안에서 좋은 습관을 조금씩 강화하는 편이 잘 맞습니다. 예를 들어 산책 코스나 놀이 시간을 완전히 바꾸기보다, 기존 루틴에 새로운 냄새 맡기 장소 하나를 더하거나, 쉬는 자리 근처에 편안한 담요를 하나 추가하는 식이 좋아요. ${nameTopic} 보호자의 조급함보다 안정적인 반복에 더 잘 반응할 수 있습니다. 올해의 포인트는 성과가 아니라 편안함이에요. 보호자가 ${namePossessive} 작은 신호를 기록하고, 잘 맞았던 환경을 기억해두면 일상의 만족감이 더 커질 수 있어요. 이 흐름은 보호자와 ${nameSubject} 서로의 속도를 더 잘 맞춰가는 시간으로 읽힙니다.`,
+올해 ${nameTo} 중요한 흐름은 “작게 반복하고, 천천히 넓히기”입니다. 올해는 ${namePossessive} 표현력이 조금 더 살아날 수 있는 흐름이에요. ${secondaryLabel}의 흐름에서는 ${secondaryYear} 두 기운을 함께 보면 큰 변화를 한 번에 만드는 것보다, 이미 익숙한 생활 안에서 좋은 습관을 조금씩 강화하는 편이 잘 맞습니다. ${yearlyExample} ${nameTopic} 보호자의 조급함보다 안정적인 반복에 더 잘 반응할 수 있습니다. 올해의 포인트는 성과가 아니라 편안함이에요. 보호자가 ${namePossessive} 작은 신호를 기록하고, 잘 맞았던 환경을 기억해두면 일상의 만족감이 더 커질 수 있어요. 이 흐름은 보호자와 ${nameSubject} 서로의 속도를 더 잘 맞춰가는 시간으로 읽힙니다.`,
 
     `9. 월별 조언
 ${monthlyAdvice(input.name, input.type, primary)}
-월별 조언은 운명을 정해놓는 달력이 아니라, 보호자가 한 달씩 생활을 돌아볼 수 있도록 만든 작은 체크리스트에 가까워요. ${nameSubject} 잘 반응했던 놀이, 조금 불편해했던 상황, 좋아했던 휴식 공간을 짧게 메모해보세요. 몇 달이 지나면 ${namePossessive} 패턴이 훨씬 선명하게 보일 거예요. 이 기록은 거창할 필요가 없습니다. “오늘은 창가에서 오래 쉬었다”, “낯선 소리에 잠깐 멈췄지만 금방 돌아왔다”, “짧은 놀이 뒤에 더 편안해 보였다” 같은 한 줄이면 충분해요. ${nameTopic} 보호자가 이렇게 자기 신호를 알아봐주는 것만으로도 더 안정된 일상을 경험할 수 있습니다.`,
+월별 조언은 운명을 정해놓는 달력이 아니라, 보호자가 한 달씩 생활을 돌아볼 수 있도록 만든 작은 체크리스트에 가까워요. ${nameSubject} 잘 반응했던 놀이, 조금 불편해했던 상황, 좋아했던 휴식 공간을 짧게 메모해보세요. 몇 달이 지나면 ${namePossessive} 패턴이 훨씬 선명하게 보일 거예요. 이 기록은 거창할 필요가 없습니다. ${monthlyRecordExample} ${nameTopic} 보호자가 이렇게 자기 신호를 알아봐주는 것만으로도 더 안정된 일상을 경험할 수 있습니다.`,
 
     `10. 보호자에게 전하는 메시지
-${nameObject} 가장 잘 이해하는 방법은 빠르게 결론을 내리는 것이 아니라, 반복되는 작은 장면을 오래 바라보는 것입니다. ${nameTopic} 이미 보호자에게 많은 이야기를 하고 있어요. 다만 그 이야기가 말이 아니라 눈빛, 몸의 방향, 다가오는 거리, 쉬는 자리, 놀이를 시작하고 끝내는 속도로 표현될 뿐입니다. 보호자가 그 신호를 알아봐주면 ${nameTopic} “내가 이해받고 있구나”라는 안정감을 조금씩 쌓아갈 수 있어요. 너무 완벽한 보호자가 되려고 애쓰지 않아도 괜찮습니다. 같은 목소리로 불러주고, 기다려주고, 성공한 순간에 작게 칭찬해주는 것만으로도 ${nameTo}는 충분히 따뜻한 기준이 됩니다. 이 리포트는 불안을 만들기 위한 글이 아니라, 보호자가 ${nameObject} 더 다정하게 바라볼 수 있도록 돕는 안내서입니다. 오늘도 ${nameTopic} 자기만의 방식으로 보호자를 믿고, 확인하고, 곁에 머물고 있을 가능성이 커요. 그 마음을 천천히 받아주세요.`,
+${nameObject} 가장 잘 이해하는 방법은 빠르게 결론을 내리는 것이 아니라, 반복되는 작은 장면을 오래 바라보는 것입니다. ${nameTopic} 이미 보호자에게 많은 이야기를 하고 있어요. 다만 그 이야기가 말이 아니라 ${finalSignalExamples}로 표현될 뿐입니다. 보호자가 그 신호를 알아봐주면 ${nameTopic} “내가 이해받고 있구나”라는 안정감을 조금씩 쌓아갈 수 있어요. 너무 완벽한 보호자가 되려고 애쓰지 않아도 괜찮습니다. 같은 목소리로 불러주고, 기다려주고, 성공한 순간에 작게 칭찬해주는 것만으로도 ${nameTo}는 충분히 따뜻한 기준이 됩니다. 이 리포트는 불안을 만들기 위한 글이 아니라, 보호자가 ${nameObject} 더 다정하게 바라볼 수 있도록 돕는 안내서입니다. 오늘도 ${nameTopic} 자기만의 방식으로 보호자를 믿고, 확인하고, 곁에 머물고 있을 가능성이 커요. 그 마음을 천천히 받아주세요.`,
   ];
 
   const report = sanitizePremiumReport(sections.join("\n\n"), input.name);

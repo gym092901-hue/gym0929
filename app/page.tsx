@@ -133,19 +133,34 @@ export default function Home() {
               멍냥사주는 생일, 입양일, 생활 리듬을 바탕으로 아이의 오행 성향과
               보호자에게 보내는 작은 신호를 따뜻하게 풀어드립니다.
             </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <PrimaryLink href="/input" className="min-h-14 text-base sm:min-w-48">
-                <CtaPaw />
-                무료 사주 맛보기 시작
-              </PrimaryLink>
-              <PrimaryLink
-                href={sampleHref}
-                tone="light"
-                className="min-h-14 text-base sm:min-w-48"
+            <div className="relative mt-6">
+              <span
+                aria-hidden
+                className="mascot-bob absolute -left-2 -top-3 hidden h-8 w-8 rotate-[-10deg] rounded-xl border border-persimmon/20 bg-white/80 shadow-sm sm:block"
               >
-                <CtaPaw tone="berry" />
-                샘플 리포트 보기
-              </PrimaryLink>
+                <span className="mx-auto mt-2 block h-1.5 w-4 rounded-full bg-persimmon/40" />
+                <span className="mx-auto mt-1 block h-1.5 w-3 rounded-full bg-berry/30" />
+              </span>
+              <span
+                aria-hidden
+                className="absolute -right-4 top-2 hidden h-6 w-6 rotate-12 rounded-full bg-moss/15 sm:grid sm:place-items-center"
+              >
+                <span className="h-3 w-3 rounded-full bg-moss/35" />
+              </span>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <PrimaryLink href="/input" className="min-h-14 text-base sm:min-w-48">
+                  <CtaPaw />
+                  무료 사주 맛보기 시작
+                </PrimaryLink>
+                <PrimaryLink
+                  href={sampleHref}
+                  tone="light"
+                  className="min-h-14 text-base sm:min-w-48"
+                >
+                  <CtaPaw tone="berry" />
+                  샘플 리포트 보기
+                </PrimaryLink>
+              </div>
             </div>
             <p className="mt-3 text-sm font-semibold leading-6 text-ink/55">
               무료 맛보기는 무료로 볼 수 있고, 심층 리포트는 원할 때만
@@ -166,6 +181,14 @@ export default function Home() {
             <HeroSparkle className="absolute bottom-20 left-12 h-10 w-10 bg-moss/15 [&_span_span]:bg-moss/45" />
             <FourLeafClover className="absolute bottom-28 right-28 hidden sm:grid" />
             <div className="relative grid min-h-[27rem] place-items-center p-5 text-center">
+              <div
+                aria-hidden
+                className="absolute bottom-20 left-1/2 z-0 grid w-44 -translate-x-1/2 gap-2 rounded-[1.5rem] border border-white/70 bg-white/75 p-3 shadow-soft sm:bottom-24"
+              >
+                <span className="h-2 w-24 rounded-full bg-berry/30" />
+                <span className="h-2 w-32 rounded-full bg-moss/25" />
+                <span className="h-2 w-20 rounded-full bg-persimmon/30" />
+              </div>
               <PetMascot
                 type="both"
                 mood="reading"

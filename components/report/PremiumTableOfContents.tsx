@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PetMascot } from "@/components/mascot/PetMascot";
 
 type PremiumTableOfContentsProps = {
+  species?: "dog" | "cat";
   sections: Array<{
     id: string;
     title: string;
@@ -11,6 +12,7 @@ type PremiumTableOfContentsProps = {
 };
 
 export function PremiumTableOfContents({
+  species = "dog",
   sections,
 }: PremiumTableOfContentsProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
@@ -53,7 +55,7 @@ export function PremiumTableOfContents({
         </p>
         <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-persimmon/10">
           <PetMascot
-            type="cat"
+            species={species}
             mood="reading"
             size="sm"
             label="목차를 읽는 고양이 캐릭터"

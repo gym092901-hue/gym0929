@@ -12,6 +12,10 @@ const HANGUL_END = 0xd7a3;
 const FINAL_CONSONANT_COUNT = 28;
 const RIEUL_FINAL_INDEX = 8;
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function getLastChar(value: string) {
   return Array.from(value.trim()).at(-1) ?? "";
 }
@@ -70,3 +74,51 @@ export const postposition = {
   possessive: (value: string) => withPostposition(value, "의"),
   to: (value: string) => withPostposition(value, "에게"),
 };
+
+export function normalizePostpositionSpacing(text: string, name: string) {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    return text;
+  }
+
+  const escapedName = escapeRegExp(trimmedName);
+
+  return text
+    .replace(new RegExp(`${escapedName}\\s+이의`, "g"), `${trimmedName}의`)
+    .replace(new RegExp(`${escapedName}\\s+이에게`, "g"), `${trimmedName}에게`)
+    .replace(
+      new RegExp(`${escapedName}\\s+이를`, "g"),
+      postposition.object(trimmedName),
+    )
+    .replace(
+      new RegExp(`${escapedName}\\s+이는`, "g"),
+      postposition.topic(trimmedName),
+    )
+    .replace(new RegExp(`${escapedName}\\s+의`, "g"), `${trimmedName}의`)
+    .replace(new RegExp(`${escapedName}\\s+에게`, "g"), `${trimmedName}에게`)
+    .replace(
+      new RegExp(`${escapedName}\\s+이(?=\\s|[,.!?]|$)`, "g"),
+      postposition.subject(trimmedName),
+    )
+    .replace(
+      new RegExp(`${escapedName}\\s+가(?=\\s|[,.!?]|$)`, "g"),
+      postposition.subject(trimmedName),
+    )
+    .replace(
+      new RegExp(`${escapedName}\\s+은(?=\\s|[,.!?]|$)`, "g"),
+      postposition.topic(trimmedName),
+    )
+    .replace(
+      new RegExp(`${escapedName}\\s+는(?=\\s|[,.!?]|$)`, "g"),
+      postposition.topic(trimmedName),
+    )
+    .replace(
+      new RegExp(`${escapedName}\\s+을(?=\\s|[,.!?]|$)`, "g"),
+      postposition.object(trimmedName),
+    )
+    .replace(
+      new RegExp(`${escapedName}\\s+를(?=\\s|[,.!?]|$)`, "g"),
+      postposition.object(trimmedName),
+    );
+}

@@ -108,23 +108,23 @@ export function PetElementBalance({
   const gentleElement = rankedElements.at(-1)?.element;
   const maxScore = Math.max(...orderedElements.map((element) => scores[element]), 1);
   const petNamePossessive = postposition.possessive(petName);
+  const balanceTitle = `${petNamePossessive} 기운 흐름`;
 
   return (
     <section className="warm-panel rounded-[2rem] p-5 sm:p-7">
       <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
         <div className="grid h-28 w-28 place-items-center overflow-hidden rounded-[2rem] bg-persimmon/10">
           <PetMascot
-            type={species}
+            species={species}
             mood="star"
             size="md"
-            label="별자리 카드를 보는 반려동물 픽셀 캐릭터"
           />
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-black text-persimmon">오행 밸런스</p>
             <h2 className="mt-1 break-keep text-2xl font-black text-ink">
-              {petNamePossessive} 기운 흐름
+              {balanceTitle}
             </h2>
           </div>
           <div className="max-w-sm rounded-[1.5rem] border border-berry/10 bg-white/65 px-4 py-3">
@@ -155,7 +155,7 @@ export function PetElementBalance({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-cream">
                   <PetMascot
-                    type={species}
+                    species={species}
                     mood={isStrongest ? "star" : isGentle ? "curious" : "happy"}
                     size="sm"
                     label={`${meta.label} 기운을 나타내는 미니 캐릭터`}

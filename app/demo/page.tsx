@@ -66,7 +66,7 @@ export default function DemoPage() {
               리포트 페이지로 이동합니다.
             </p>
             <p className="rounded-2xl bg-white/70 p-4">
-              checkout에서는 실제 결제 버튼 대신 테스트 결제 성공 처리 버튼만
+              checkout에서는 실제 결제 버튼 대신 데모 결제 승인 버튼만
               노출됩니다.
             </p>
             <p className="rounded-2xl bg-white/70 p-4">

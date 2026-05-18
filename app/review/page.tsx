@@ -23,6 +23,14 @@ import type { PetLifestyleProfile } from "@/types/reading";
 export const metadata = {
   title: "관리자 검토 페이지",
   description: "멍냥사주 관리자 검토 페이지입니다.",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 const samplePet = {
@@ -515,7 +523,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
               <ul className="mt-4 grid gap-2 text-sm font-bold leading-6 text-ink/66">
                 <li>premium_report 승인 결제가 있어야 PDF 저장 가능</li>
                 <li>pdf_report는 0원 정책이며 심층 리포트 열람자에게 무료 제공</li>
-                <li>권한 없는 PDF API 요청은 403으로 차단</li>
+                <li>권한 없는 PDF 저장 요청은 403으로 차단</li>
                 <li>production에서는 데모용 PDF 미리보기 숨김</li>
               </ul>
             </article>

@@ -28,6 +28,18 @@ type AdminPageProps = {
   }>;
 };
 
+export const metadata = {
+  title: "멍냥사주 관리자",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
+
 const errorMessages: Record<string, string> = {
   invalid_password: "비밀번호가 올바르지 않습니다.",
   session_required: "관리자 로그인이 필요합니다.",

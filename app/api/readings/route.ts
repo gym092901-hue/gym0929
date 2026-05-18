@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isDemoModeEnabled, isProductionRuntime } from "@/lib/demo/config";
 import { normalizeLifestyleProfile } from "@/lib/readings/lifestyle";
 import { createFreeSummary } from "@/lib/reports/free-summary";
 import { createLocalReading } from "@/lib/readings/localReadingStore";
@@ -55,6 +56,10 @@ function todayDateString() {
 
 function isFutureDate(value: string | null) {
   return Boolean(value) && value! > todayDateString();
+}
+
+function canUseLocalReadingFallback() {
+  return process.env.NODE_ENV === "development" || isDemoModeEnabled();
 }
 
 export async function POST(request: NextRequest) {
@@ -149,6 +154,15 @@ export async function POST(request: NextRequest) {
   });
 
   if (!isSupabaseConfigured()) {
+    if (isProductionRuntime() || !canUseLocalReadingFallback()) {
+      console.error("[readings] Supabase is not configured in production runtime.");
+
+      return NextResponse.json(
+        { error: "운영 데이터베이스 설정이 필요합니다." },
+        { status: 500 },
+      );
+    }
+
     const localReading = createLocalReading({
       name,
       type,

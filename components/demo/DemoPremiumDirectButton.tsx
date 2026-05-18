@@ -63,7 +63,7 @@ export function DemoPremiumDirectButton({
         {isLoading ? "데모 결제 승인 중" : "데모 검수용 프리미엄 바로 보기"}
       </button>
       <p className="rounded-2xl border border-berry/10 bg-white/65 px-4 py-3 text-xs font-semibold leading-5 text-ink/55">
-        데모 모드에서만 보이는 버튼입니다. 클릭하면 실제 결제 API 없이
+        데모 모드에서만 보이는 버튼입니다. 클릭하면 실제 결제 연결 없이
         premium_report 테스트 결제를 승인한 뒤 심층 리포트를 엽니다.
       </p>
       {error ? (

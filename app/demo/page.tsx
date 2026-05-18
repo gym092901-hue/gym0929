@@ -4,6 +4,18 @@ import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
 import { isDemoModeEnabled } from "@/lib/demo/config";
 
+export const metadata = {
+  title: "멍냥사주 데모",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
+
 export default function DemoPage() {
   if (!isDemoModeEnabled()) {
     notFound();

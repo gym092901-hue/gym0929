@@ -12,7 +12,7 @@ type PayPalCaptureOrderBody = {
 export async function POST(request: NextRequest) {
   if (isDemoModeEnabled()) {
     return NextResponse.json(
-      { error: "DEMO_MODE에서는 실제 PayPal capture API를 호출하지 않습니다." },
+      { error: "데모 모드에서는 실제 PayPal 결제 승인을 진행하지 않습니다." },
       { status: 403 },
     );
   }

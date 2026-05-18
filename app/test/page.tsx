@@ -11,16 +11,14 @@ export const metadata = {
   title: "멍냥사주 베타 테스트 안내",
   description:
     "외부 테스터가 멍냥사주 입력, 무료 결과, 체크아웃, 리포트 화면을 점검할 수 있는 안내 페이지입니다.",
-  robots: productionRuntime
-    ? {
-        index: false,
-        follow: false,
-        googleBot: {
-          index: false,
-          follow: false,
-        },
-      }
-    : undefined,
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 const testSteps = [

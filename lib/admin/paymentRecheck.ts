@@ -44,7 +44,7 @@ export async function recordFailedPaymentRecheck(paymentId: string) {
     admin_recheck: {
       checked_at: new Date().toISOString(),
       result: "provider_status_query_not_connected",
-      note: "현재는 provider별 결제 상태 조회 API가 연결되지 않아 실패 상태를 유지합니다.",
+      note: "현재는 결제수단별 상태 조회 연결이 준비되지 않아 실패 상태를 유지합니다.",
     },
   });
 

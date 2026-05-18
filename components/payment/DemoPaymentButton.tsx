@@ -66,7 +66,7 @@ export function DemoPaymentButton({
         </h3>
         <p className="mt-2 text-sm leading-6 text-ink/65">
           실제 결제가 발생하지 않는 데모 기능입니다. 카카오페이, PayPal, 카드
-          API를 호출하지 않고 이 브라우저 세션 안에 approved mock payment를
+          결제 연결을 사용하지 않고 이 브라우저 세션 안에 테스트 승인 기록을
           저장합니다.
         </p>
       </div>

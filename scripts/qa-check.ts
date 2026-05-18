@@ -239,6 +239,7 @@ async function runInputChecks() {
     "components/report/PetInputSummaryTags.tsx",
   );
   const readingsRouteSource = readProjectFile("app/api/readings/route.ts");
+  const localReadingStoreSource = readProjectFile("lib/readings/localReadingStore.ts");
   const databaseTypes = readProjectFile("types/database.ts");
   const lifestyleSource = readProjectFile("lib/readings/lifestyle.ts");
   const contentSource = readProjectFile("lib/readings/content.ts");
@@ -397,6 +398,27 @@ async function runInputChecks() {
     {
       issue: "lifestyle report personalization",
       file: "lib/readings/lifestyle.ts, lib/readings/content.ts, lib/saju/petSajuEngine.ts, lib/saju/premiumReportGenerator.ts",
+    },
+  );
+  addResult(
+    "운영 가드",
+    "production에서 Supabase 미설정 시 local reading 생성 금지",
+    readingsRouteSource.includes("isProductionRuntime()") &&
+      readingsRouteSource.includes("isDemoModeEnabled()") &&
+      readingsRouteSource.includes('process.env.NODE_ENV === "development"') &&
+      readingsRouteSource.includes("운영 데이터베이스 설정이 필요합니다.") &&
+      readingsRouteSource.indexOf("운영 데이터베이스 설정이 필요합니다.") <
+        readingsRouteSource.indexOf("createLocalReading({") &&
+      localReadingStoreSource.includes("isProductionRuntime()") &&
+      localReadingStoreSource.includes("isDemoModeEnabled()") &&
+      localReadingStoreSource.includes('process.env.NODE_ENV === "development"') &&
+      localReadingStoreSource.includes("throw new Error") &&
+      localReadingStoreSource.includes("운영 데이터베이스 설정이 필요합니다."),
+    "운영에서는 DB 설정 오류를 반환하고, development 또는 DEMO_MODE=true일 때만 local-* fallback 허용",
+    {
+      url: "/api/readings",
+      issue: "production local reading fallback block",
+      file: "app/api/readings/route.ts, lib/readings/localReadingStore.ts",
     },
   );
 }
@@ -616,8 +638,66 @@ async function runCheckoutChecks(isDemoMode) {
     checkoutSource.includes("isKakaoPayConfigured") &&
       checkoutSource.includes("isPayPalConfigured") &&
       checkoutExperienceSource.includes("결제 준비 중입니다") &&
-      checkoutExperienceSource.includes("hasLivePaymentProvider"),
-    "서버에서 provider 준비 여부를 boolean으로 전달",
+      checkoutExperienceSource.includes("hasLivePaymentProvider") &&
+      checkoutExperienceSource.includes("!hasLivePaymentProvider ?") &&
+      checkoutExperienceSource.includes("!demoModeEnabled && !hasLivePaymentProvider"),
+    "서버에서 provider 준비 여부를 boolean으로 전달하고 결제수단이 없으면 준비 안내만 표시",
+  );
+  addResult(
+    "체크아웃",
+    "KakaoPay env 없으면 숨김, env 있으면 카카오페이 버튼 표시 분기",
+    [
+      "KAKAOPAY_CLIENT_ID",
+      "KAKAOPAY_SECRET_KEY",
+      "KAKAOPAY_CID",
+      "KAKAOPAY_BASE_URL",
+      "isSiteUrlConfigured()",
+      "kakaoPayEnabled={isKakaoPayConfigured()}",
+    ].every((needle) => checkoutSource.includes(needle)) &&
+      checkoutExperienceSource.includes("kakaoPayEnabled ?") &&
+      checkoutExperienceSource.includes("<CheckoutPaymentButtons"),
+    "KakaoPay 필수 환경변수와 사이트 URL이 모두 설정된 경우에만 버튼 렌더링",
+    {
+      url: "/checkout/[readingId]?productType=premium_report",
+      issue: "KakaoPay env-gated checkout button",
+      file: "app/checkout/[readingId]/page.tsx, components/payment/CheckoutExperience.tsx",
+    },
+  );
+  addResult(
+    "체크아웃",
+    "PayPal env 없으면 숨김, env 있으면 PayPal 버튼 표시 분기",
+    [
+      "PAYPAL_CLIENT_ID",
+      "PAYPAL_CLIENT_SECRET",
+      "PAYPAL_BASE_URL",
+      "NEXT_PUBLIC_PAYPAL_CLIENT_ID",
+      "isSiteUrlConfigured()",
+      "paypalEnabled={isPayPalConfigured()}",
+    ].every((needle) => checkoutSource.includes(needle)) &&
+      checkoutExperienceSource.includes("paypalEnabled ?") &&
+      checkoutExperienceSource.includes("<PayPalCheckout"),
+    "PayPal 서버/브라우저용 환경변수와 사이트 URL이 모두 설정된 경우에만 버튼 렌더링",
+    {
+      url: "/checkout/[readingId]?productType=premium_report",
+      issue: "PayPal env-gated checkout button",
+      file: "app/checkout/[readingId]/page.tsx, components/payment/CheckoutExperience.tsx",
+    },
+  );
+  addResult(
+    "체크아웃",
+    "production + 결제 env 없음이면 데모/실제 결제 버튼 없이 준비 안내",
+    checkoutExperienceSource.includes("!hasLivePaymentProvider ?") &&
+      checkoutExperienceSource.includes("결제 준비 중입니다") &&
+      checkoutExperienceSource.includes("DemoPaymentButton") &&
+      checkoutExperienceSource.includes("demoModeEnabled ?") &&
+      checkoutExperienceSource.includes("kakaoPayEnabled ?") &&
+      checkoutExperienceSource.includes("paypalEnabled ?"),
+    "DEMO_MODE가 꺼지고 provider env가 없으면 준비 안내 분기만 렌더링",
+    {
+      url: "/checkout/[readingId]?productType=premium_report",
+      issue: "production no live payment provider fallback",
+      file: "components/payment/CheckoutExperience.tsx",
+    },
   );
   addResult(
     "체크아웃",
@@ -862,6 +942,9 @@ async function runUiEnhancementChecks(isDemoMode) {
   const demo = await get(demoPath, { redirect: "manual" });
   const sample = await get(samplePath, { redirect: "manual" });
   const reviewSource = readProjectFile("app/review/page.tsx");
+  const testSource = readProjectFile("app/test/page.tsx");
+  const demoSource = readProjectFile("app/demo/page.tsx");
+  const adminSource = readProjectFile("app/admin/page.tsx");
   const sampleSource = readProjectFile("app/sample/page.tsx");
   const freeResultSource = readProjectFile("app/result/free/[readingId]/page.tsx");
   const premiumResultSource = readProjectFile(
@@ -873,13 +956,18 @@ async function runUiEnhancementChecks(isDemoMode) {
   const petMascotSource = readProjectFile("components/mascot/PetMascot.tsx");
 
   const testLocation = test.headers.get("location") || "";
+  const expectsProductionVisibility =
+    process.env.QA_EXPECT_PRODUCTION === "true" ||
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production";
+  const testRouteOk = expectsProductionVisibility
+    ? [307, 308].includes(test.status) && testLocation.includes("/sample")
+    : test.status === 200 &&
+      test.text.includes("멍냥사주를 먼저 써보고 알려주세요");
   addResult(
     "운영 노출 정책",
     "/test는 production에서 /sample redirect, demo/dev에서만 공개",
-    isDemoMode
-      ? test.status === 200 &&
-          test.text.includes("멍냥사주를 먼저 써보고 알려주세요")
-      : [307, 308].includes(test.status) && testLocation.includes("/sample"),
+    testRouteOk,
     `status ${test.status}, location ${testLocation || test.url}`,
     {
       url: testPath,
@@ -926,6 +1014,97 @@ async function runUiEnhancementChecks(isDemoMode) {
       url: samplePath,
       issue: "premium direct, mock payment, demo PDF",
       file: "app/sample/page.tsx",
+    },
+  );
+
+  addResult(
+    "운영 노출 정책",
+    "review/test/demo/admin 성격 페이지 noindex 적용",
+    [reviewSource, testSource, demoSource, adminSource].every(
+      (source) =>
+        source.includes("robots") &&
+        source.includes("index: false") &&
+        source.includes("follow: false"),
+    ),
+    "review, test, demo, admin metadata robots 확인",
+    {
+      url: "/review, /test, /demo, /admin",
+      issue: "noindex protected/internal routes",
+      file: "app/review/page.tsx, app/test/page.tsx, app/demo/page.tsx, app/admin/page.tsx",
+    },
+  );
+
+  addResult(
+    "운영 노출 정책",
+    "/review는 production에서 ADMIN_PASSWORD 보호",
+    reviewSource.includes("isAdminPasswordConfigured") &&
+      reviewSource.includes("hasAdminSession") &&
+      reviewSource.includes("ReviewAdminLogin") &&
+      reviewSource.includes("ReviewAdminDisabled") &&
+      reviewSource.includes("isDemoModeEnabled"),
+    "DEMO_MODE가 아니면 관리자 비밀번호와 세션 없이는 내용 미노출",
+    {
+      url: "/review",
+      issue: "review admin password protection",
+      file: "app/review/page.tsx, lib/admin/auth.ts",
+    },
+  );
+
+  addResult(
+    "운영 노출 정책",
+    "/test는 production에서 /sample redirect 또는 noindex",
+    testSource.includes("productionRuntime") &&
+      testSource.includes('redirect("/sample")') &&
+      testSource.includes("robots"),
+    "/test production redirect 및 noindex metadata 확인",
+    {
+      url: "/test",
+      issue: "/test production redirect/noindex",
+      file: "app/test/page.tsx",
+    },
+  );
+
+  addResult(
+    "운영 노출 정책",
+    "/demo는 production에서 404 처리",
+    demoSource.includes("isDemoModeEnabled") &&
+      demoSource.includes("notFound()") &&
+      demoSource.includes("robots"),
+    "DEMO_MODE가 아니면 /demo는 notFound 처리",
+    {
+      url: "/demo",
+      issue: "/demo production notFound",
+      file: "app/demo/page.tsx",
+    },
+  );
+
+  addResult(
+    "운영 노출 정책",
+    "/admin은 ADMIN_PASSWORD 보호",
+    adminSource.includes("isAdminPasswordConfigured") &&
+      adminSource.includes("hasAdminSession") &&
+      adminSource.includes("AdminLogin") &&
+      adminSource.includes("robots"),
+    "관리자 비밀번호 설정과 세션 없이는 대시보드 미노출",
+    {
+      url: "/admin",
+      issue: "admin password protection",
+      file: "app/admin/page.tsx, lib/admin/auth.ts",
+    },
+  );
+
+  addResult(
+    "운영 노출 정책",
+    "production에서 demo-mong-2026 무료 결과 직접 공개 차단",
+    freeResultSource.includes("isDemoReadingId(readingId)") &&
+      freeResultSource.includes("!demoModeEnabled") &&
+      (freeResultSource.includes('redirect("/sample")') ||
+        freeResultSource.includes("notFound()")),
+    "데모 readingId는 운영에서 /sample redirect 또는 notFound 처리",
+    {
+      url: "/result/free/demo-mong-2026",
+      issue: "demo reading production block",
+      file: "app/result/free/[readingId]/page.tsx",
     },
   );
 
@@ -1127,6 +1306,31 @@ async function runUiEnhancementChecks(isDemoMode) {
           url: `/result/free/${catReadingId}`,
           issue: "CatMascot cat result",
           file: "app/result/free/[readingId]/page.tsx, components/mascot/CatMascot.tsx",
+        },
+      );
+    } else if (
+      catReading.status === 500 &&
+      catReading.text.includes("운영 데이터베이스 설정이 필요합니다.")
+    ) {
+      addResult(
+        "운영 가드",
+        "production에서 Supabase 미설정 시 cat local reading 생성 금지",
+        true,
+        "status 500, local-* fallback 차단 확인",
+        {
+          url: "/api/readings",
+          issue: "production cat local reading fallback block",
+          file: "app/api/readings/route.ts, lib/readings/localReadingStore.ts",
+        },
+      );
+      addSkip(
+        "캐릭터 검사",
+        "cat 결과에 CatMascot 렌더링",
+        "운영 모드에서 DB 미설정 local reading 생성 차단이 정상 작동하여 런타임 cat 페이지 생성 검사를 건너뜁니다.",
+        {
+          url: "/api/readings",
+          issue: "CatMascot cat result",
+          file: "app/api/readings/route.ts, app/result/free/[readingId]/page.tsx",
         },
       );
     } else {
@@ -1440,32 +1644,32 @@ async function runUiEnhancementChecks(isDemoMode) {
     },
   );
 
-  const customerAiForbiddenTerms = [
-    "AI 코멘트",
-    "AI 분석",
-    "AI 생성",
-    "인공지능이 분석",
-    "Gemini",
-    "프롬프트",
-    "자동 생성",
-    "모델 응답",
-    "API 호출",
+  const customerGenerationForbiddenTerms = [
+    { label: "AI", pattern: /(^|[^A-Za-z])AI([^A-Za-z]|$)/ },
+    { label: "인공지능", pattern: /인공지능/ },
+    { label: "Gemini", pattern: /Gemini/ },
+    { label: "API", pattern: /(^|[^A-Za-z])API([^A-Za-z]|$)/ },
+    { label: "프롬프트", pattern: /프롬프트/ },
+    { label: "모델 응답", pattern: /모델 응답/ },
+    { label: "자동 생성", pattern: /자동 생성/ },
+    { label: "규칙 기반 엔진", pattern: /규칙 기반 엔진/ },
   ];
-  const customerAiForbiddenFound = customerAiForbiddenTerms.filter((term) =>
-    operationalTextBundle.includes(term),
-  );
+  const customerGenerationForbiddenFound =
+    customerGenerationForbiddenTerms.filter(({ pattern }) =>
+      pattern.test(stripHtml(operationalTextBundle)),
+    );
 
   addResult(
     "UI 고도화",
-    "고객 화면 AI/모델성 문구 미노출",
-    customerAiForbiddenFound.length === 0 &&
+    "고객 화면 기술 생성 방식 문구 미노출",
+    customerGenerationForbiddenFound.length === 0 &&
       !premiumTabsSource.includes("TabAiComment"),
-    customerAiForbiddenFound.length > 0
-      ? `found: ${customerAiForbiddenFound.join(", ")}`
-      : "customer-facing pages do not expose AI/model wording",
+    customerGenerationForbiddenFound.length > 0
+      ? `found: ${customerGenerationForbiddenFound.map(({ label }) => label).join(", ")}`
+      : "customer-facing pages do not expose implementation wording",
     {
       url: "/, /input, /result/free, /checkout, /result/premium",
-      issue: "customer-facing AI wording",
+      issue: "customer-facing implementation wording",
       file: "components/report/PremiumReportTabs.tsx, components/report/TabInsightCard.tsx, lib/report/tabInsightGenerator.ts",
     },
   );
@@ -1692,6 +1896,31 @@ async function runUiEnhancementChecks(isDemoMode) {
     {
       label: "고객 화면 Gemini",
       found: customerRenderedPlainText.includes("Gemini"),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 API",
+      found: /(^|[^A-Za-z])API([^A-Za-z]|$)/.test(customerRenderedPlainText),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 프롬프트",
+      found: customerRenderedPlainText.includes("프롬프트"),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 모델 응답",
+      found: customerRenderedPlainText.includes("모델 응답"),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 자동 생성",
+      found: customerRenderedPlainText.includes("자동 생성"),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 규칙 기반 엔진",
+      found: customerRenderedPlainText.includes("규칙 기반 엔진"),
       file: "components/report/*, app/**/*.tsx",
     },
   ];

@@ -6,7 +6,7 @@ export async function POST() {
   return NextResponse.json(
     {
       error:
-        "공통 승인 API는 실제 결제 연동 이후 비활성화되었습니다. KakaoPay success URL 또는 PayPal capture-order API를 사용하세요.",
+        "공통 승인 요청은 비활성화되었습니다. 결제수단별 완료 절차를 이용해 주세요.",
     },
     { status: 410 },
   );

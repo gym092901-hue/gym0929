@@ -105,6 +105,23 @@ function has(text: string, phrase: string) {
   return text.includes(phrase);
 }
 
+const customerFacingGenerationPatterns = [
+  { label: "AI", pattern: /(^|[^A-Za-z])AI([^A-Za-z]|$)/ },
+  { label: "인공지능", pattern: /인공지능/ },
+  { label: "Gemini", pattern: /Gemini/ },
+  { label: "API", pattern: /(^|[^A-Za-z])API([^A-Za-z]|$)/ },
+  { label: "프롬프트", pattern: /프롬프트/ },
+  { label: "모델 응답", pattern: /모델 응답/ },
+  { label: "자동 생성", pattern: /자동 생성/ },
+  { label: "규칙 기반 엔진", pattern: /규칙 기반 엔진/ },
+] as const;
+
+function findCustomerFacingGenerationPhrases(text: string) {
+  return customerFacingGenerationPatterns
+    .filter(({ pattern }) => pattern.test(text))
+    .map(({ label }) => label);
+}
+
 function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId: string) {
   const bundle = snapshots.map((snapshot) => snapshot.text).join("\n\n");
   const htmlBundle = snapshots.map((snapshot) => snapshot.html).join("\n\n");
@@ -151,13 +168,12 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     "페이팔 실패 화면 보기",
     "데모 PDF 미리보기",
   ].filter((pattern) => has(bundle, pattern));
-  const customerFacingAiPhraseMatches = [
-    /\bAI\b/,
-    /인공지능/,
-    /Gemini/,
-  ]
-    .filter((pattern) => pattern.test(bundle))
-    .map((pattern) => pattern.source);
+  const customerFacingGenerationPhraseMatches = Array.from(
+    new Set([
+      ...findCustomerFacingGenerationPhrases(bundle),
+      ...findCustomerFacingGenerationPhrases(htmlBundle),
+    ]),
+  );
   const hasHookCopy =
     has(htmlBundle, 'data-testid="pet-hook-card"') &&
     /(몽이는|나비는|우리 강아지는|우리 고양이는)\s+.{8,90}야\./.test(
@@ -165,6 +181,18 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     );
   const hasRawElementScore = /[목화토금수]\s*\d+점/.test(bundle);
   const hasStandaloneMeongAvatar = /(^|\s)멍(?=\s|$)/.test(plainBundle);
+  const premiumBlockedSnapshot = snapshots.find(
+    (snapshot) => snapshot.fileBase === "premium-blocked",
+  );
+  const pdfBlockedSnapshot = snapshots.find(
+    (snapshot) => snapshot.fileBase === "pdf-api-blocked",
+  );
+  const premiumAccessBlockedBeforePayment = Boolean(
+    premiumBlockedSnapshot &&
+      (premiumBlockedSnapshot.finalUrl.includes("/checkout/") ||
+        [401, 403, 307, 308].includes(premiumBlockedSnapshot.status)),
+  );
+  const pdfApiBlockedBeforePayment = pdfBlockedSnapshot?.status === 403;
   const checks = {
     dogReadingId,
     catReadingId,
@@ -183,7 +211,9 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     hasOldPricePhrases: oldPricePhraseMatches.length > 0,
     hasStandaloneMeongAvatar,
     hasPdfPaidPhrase: pdfPaidPhraseMatches.length > 0,
-    hasCustomerFacingAiPhrase: customerFacingAiPhraseMatches.length > 0,
+    hasCustomerFacingAiPhrase: customerFacingGenerationPhraseMatches.length > 0,
+    hasCustomerFacingGenerationPhrase:
+      customerFacingGenerationPhraseMatches.length > 0,
     hasOldPrice4900: has(bundle, "4,900") || has(bundle, "4,900원"),
     hasOldPrice5900: has(bundle, "5,900") || has(bundle, "5,900원"),
     hasOldPrice3900: has(bundle, "3,900") || has(bundle, "3,900원"),
@@ -219,6 +249,8 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     hasPremiumDirectBypassCopy: has(bundle, "심층 리포트 페이지 바로 보기"),
     hasDemoPaymentCopy: has(bundle, "테스트 결제 성공 처리"),
     hasDemoPdfPreviewCopy: has(bundle, "데모 PDF 미리보기"),
+    premiumAccessBlockedBeforePayment,
+    pdfApiBlockedBeforePayment,
     forbiddenSensitiveTermMatches,
     oldPricePhraseMatches,
     pdfPaidPhraseMatches,
@@ -226,7 +258,8 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     badPostpositionMatches,
     awkwardSentenceMatches,
     productionBypassMatches,
-    customerFacingAiPhraseMatches,
+    customerFacingAiPhraseMatches: customerFacingGenerationPhraseMatches,
+    customerFacingGenerationPhraseMatches,
   };
 
   return {
@@ -275,7 +308,7 @@ ${snapshot.text.slice(0, 5000)}
 - 가격 정책이 심층 리포트 2,900원, 추가 콘텐츠 1,000원, PDF 저장 무료로 일관적인지
 - "4,900원", "5,900원", "3,900원"과 예전 유료 PDF 문구가 없는지
 - "몽이 의", "잘 맞아요.도", "화의 기운은 올해는", "낯선 자극을 만났을 때는 금의 기운은" 같은 문장 오류가 없는지
-- 고객 화면에 AI, 인공지능, Gemini 같은 내부 구현 표현이 노출되지 않는지
+- 고객 화면에 기술 생성 방식이 드러나는 표현이 노출되지 않는지
 - 모바일 리포트형 UI로 읽기 좋은지
 
 ## 자동 요약
@@ -310,7 +343,7 @@ async function main() {
       "checkout-premium-report",
     ],
     ["프리미엄 직접 접근 차단", `/result/premium/${dogReadingId}`, "premium-blocked"],
-    ["PDF API 권한 차단", `/api/pdf/${dogReadingId}`, "pdf-api-blocked"],
+    ["PDF 저장 권한 차단", `/api/pdf/${dogReadingId}`, "pdf-api-blocked"],
     ["검토 페이지", "/review", "review"],
     ["베타 테스트 안내", "/test", "test"],
   ] as const;
@@ -340,12 +373,20 @@ async function main() {
 1. \`GPT_REVIEW_PROMPT.md\` 내용을 GPT에 붙여넣으세요.
 2. 더 정확한 점검을 원하면 이 폴더의 \`.txt\`, \`.html\`, \`summary.json\` 파일을 함께 업로드하세요.
 3. 외부 URL로 검토받으려면 Vercel 배포 후 \`https://배포주소/sample\`을 공유하세요.
-4. 정식 production에서는 프리미엄 직접 접근과 PDF API가 결제 없이 열리면 안 됩니다.
+4. 정식 production에서는 프리미엄 직접 접근과 PDF 저장 요청이 결제 없이 열리면 안 됩니다.
 
 생성 기준 URL: ${baseUrl}
 생성 시각: ${summary.generatedAt}
 `,
   );
+
+  if (summary.checks.hasCustomerFacingGenerationPhrase) {
+    console.error(
+      "review export txt/html에서 고객 화면 금지 문구가 발견되었습니다.",
+      summary.checks.customerFacingGenerationPhraseMatches,
+    );
+    process.exit(1);
+  }
 
   console.log(`GPT review snapshot exported to ${outDir}`);
   console.log(JSON.stringify(summary.checks, null, 2));

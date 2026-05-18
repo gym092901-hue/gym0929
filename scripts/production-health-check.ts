@@ -90,6 +90,11 @@ const targets: HealthTarget[] = [
     validate: expectFinalStatus(200),
   },
   {
+    label: "공개 샘플",
+    path: "/sample",
+    validate: expectFinalStatus(200),
+  },
+  {
     label: "테스터 안내 production 숨김",
     path: "/test",
     validate(result) {
@@ -104,6 +109,19 @@ const targets: HealthTarget[] = [
         detail: ok
           ? "/test는 production에서 /sample로 redirect"
           : "production /test는 공개되지 않고 /sample로 redirect되어야 합니다.",
+      };
+    },
+  },
+  {
+    label: "데모 페이지 production 404",
+    path: "/demo",
+    validate(result) {
+      return {
+        ok: result.finalStatus === 404,
+        detail:
+          result.finalStatus === 404
+            ? "/demo는 production에서 404"
+            : "production /demo는 공개되면 안 됩니다.",
       };
     },
   },

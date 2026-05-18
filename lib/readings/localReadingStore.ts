@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isDemoModeEnabled, isProductionRuntime } from "@/lib/demo/config";
 import {
   createFreeInsightSections,
   createFreeKeywords,
@@ -31,7 +32,15 @@ function getStore() {
   return globalThis.__meongnyangLocalReadings;
 }
 
+function canCreateLocalReading() {
+  return process.env.NODE_ENV === "development" || isDemoModeEnabled();
+}
+
 export function createLocalReading(input: LocalReadingInput) {
+  if (isProductionRuntime() || !canCreateLocalReading()) {
+    throw new Error("운영 데이터베이스 설정이 필요합니다.");
+  }
+
   const readingId = `local-${randomUUID()}`;
   const petId = `local-pet-${randomUUID()}`;
   const birthTime = input.birthTimeUnknown ? null : input.birthTime;

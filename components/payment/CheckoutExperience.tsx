@@ -48,7 +48,9 @@ export function CheckoutExperience({
   const hasLivePaymentProvider = kakaoPayEnabled || paypalEnabled;
   const priceLabel = price === 0 ? "무료" : `${price.toLocaleString("ko-KR")}원`;
   const stickyCtaLabel =
-    productType === "premium_report"
+    !demoModeEnabled && !hasLivePaymentProvider
+      ? "결제 준비 중입니다"
+      : productType === "premium_report"
       ? `${priceLabel} 결제하고 리포트 보기`
       : price === 0
         ? "무료로 확인하기"

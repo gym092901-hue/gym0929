@@ -116,7 +116,7 @@ export function generatePremiumPetSajuReport(input: PetSajuInput) {
 
   const sections = [
     `1. 기본 사주 해석
-${input.name}의 심층 사주는 ${basisLabel}을 중심으로 오행의 흐름을 읽는 방식으로 구성했습니다. 지금 단계의 계산은 실제 만세력 전체를 대신하는 규칙 기반 엔진이지만, 한국식 사주에서 사용하는 목, 화, 토, 금, 수의 상징을 반려동물의 성향 언어로 바꾸어 해석합니다. ${input.name}에게 가장 앞에 서는 기운은 ${primaryLabel}이고, 그다음을 받쳐주는 기운은 ${secondaryLabel}입니다. ${primaryLabel}은 ${primaryDetail.nature} ${secondaryLabel}은 ${secondaryDetail.nature} 그래서 ${input.name}는 한 가지 모습으로만 설명하기보다, 보호자에게 보이는 일상적 행동과 혼자 있을 때의 리듬을 함께 보아야 더 자연스럽게 이해됩니다. ${timeLine} ${input.name}의 리포트는 단정적인 예언이 아니라, 보호자가 아이의 반응을 더 섬세하게 알아차리도록 돕는 해석입니다.`,
+${input.name}의 심층 사주는 ${basisLabel}을 중심으로 오행의 흐름을 읽는 방식으로 구성했습니다. 입력한 정보를 바탕으로 구성된 맞춤형 해석이며, 한국식 사주에서 사용하는 목, 화, 토, 금, 수의 상징을 반려동물의 성향 언어로 바꾸어 살펴봅니다. ${input.name}에게 가장 앞에 서는 기운은 ${primaryLabel}이고, 그다음을 받쳐주는 기운은 ${secondaryLabel}입니다. ${primaryLabel}은 ${primaryDetail.nature} ${secondaryLabel}은 ${secondaryDetail.nature} 그래서 ${input.name}는 한 가지 모습으로만 설명하기보다, 보호자에게 보이는 일상적 행동과 혼자 있을 때의 리듬을 함께 보아야 더 자연스럽게 이해됩니다. ${timeLine} ${input.name}의 리포트는 단정적인 예언이 아니라, 보호자가 아이의 반응을 더 섬세하게 알아차리도록 돕는 해석입니다.`,
 
     `2. 오행 밸런스
 ${input.name}의 오행 점수는 ${scoreLine(profile.scores)}으로 계산되었습니다. 점수가 높다는 것은 그 기운이 좋고 낮다는 것은 부족하다는 뜻이 아닙니다. 반려동물에게 오행은 성향이 나타나는 통로에 가깝습니다. ${primaryLabel}의 기운이 높으면 ${input.name}는 ${primaryDetail.nature} 이런 결을 자주 보여줄 수 있습니다. ${secondaryLabel}의 기운은 그 모습을 보조하면서 행동의 색을 바꿉니다. 예를 들어 ${primaryLabel}이 앞에 서더라도 ${secondaryLabel}이 받쳐주면, 같은 자극 앞에서도 표현 방식이 부드러워지거나 더 신중해질 수 있습니다. 보호자는 점수의 높낮이를 평가하기보다, ${input.name}가 어떤 상황에서 편안해지고 어떤 리듬에서 자기다운 반응을 보이는지 관찰하는 것이 좋습니다. 오행 밸런스는 아이를 고정된 성격표에 넣는 도구가 아니라, 매일의 선택을 더 다정하게 조율하는 지도에 가깝습니다.`,

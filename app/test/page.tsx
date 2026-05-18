@@ -3,6 +3,7 @@ import { AnonymousFeedbackForm } from "@/components/feedback/AnonymousFeedbackFo
 import { PetMascot } from "@/components/mascot/PetMascot";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
 import { isDemoModeEnabled, isProductionRuntime } from "@/lib/demo/config";
+import { redirect } from "next/navigation";
 
 const productionRuntime = isProductionRuntime();
 
@@ -58,6 +59,10 @@ const safetyItems = [
 ];
 
 export default function TesterPage() {
+  if (productionRuntime) {
+    redirect("/sample");
+  }
+
   const demoModeEnabled = isDemoModeEnabled();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   const shareUrl = siteUrl ? `${siteUrl}/test` : "/test";

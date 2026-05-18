@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DemoPremiumDirectButton } from "@/components/demo/DemoPremiumDirectButton";
 import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
@@ -8,7 +8,7 @@ import { ReportFloatingActions } from "@/components/report/ReportFloatingActions
 import { ReportMobileBar } from "@/components/report/ReportMobileBar";
 import { ReportSceneBanner } from "@/components/report/ReportSceneBanner";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
-import { isDemoModeEnabled } from "@/lib/demo/config";
+import { isDemoModeEnabled, isDemoReadingId } from "@/lib/demo/config";
 import { postposition } from "@/lib/korean/postposition";
 import { getProductCatalogItem } from "@/lib/products/catalog";
 import { getReading, getSpeciesLabel } from "@/lib/readings";
@@ -88,6 +88,11 @@ function SummaryCard({
 export default async function FreeResultPage({ params }: FreeResultPageProps) {
   const { readingId } = await params;
   const demoModeEnabled = isDemoModeEnabled();
+
+  if (isDemoReadingId(readingId) && !demoModeEnabled) {
+    redirect("/sample");
+  }
+
   const reading = await getReading(readingId);
 
   if (!reading) {

@@ -278,7 +278,7 @@ export async function getReading(readingId: string) {
   }
 
   if (readingId === demoReadingId) {
-    return getDemoReading();
+    return isDemoModeEnabled() ? getDemoReading() : null;
   }
 
   if (!isSupabaseConfigured()) {

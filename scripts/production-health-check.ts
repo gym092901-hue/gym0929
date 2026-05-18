@@ -90,14 +90,39 @@ const targets: HealthTarget[] = [
     validate: expectFinalStatus(200),
   },
   {
-    label: "테스터 안내",
+    label: "테스터 안내 production 숨김",
     path: "/test",
-    validate: expectFinalStatus(200),
+    validate(result) {
+      const redirectedToSample = result.finalUrl.endsWith("/sample");
+      const ok =
+        [307, 308].includes(result.initialStatus) &&
+        result.finalStatus === 200 &&
+        redirectedToSample;
+
+      return {
+        ok,
+        detail: ok
+          ? "/test는 production에서 /sample로 redirect"
+          : "production /test는 공개되지 않고 /sample로 redirect되어야 합니다.",
+      };
+    },
   },
   {
-    label: "무료 결과",
+    label: "데모 무료 결과 production 차단",
     path: "/result/free/demo-mong-2026",
-    validate: expectFinalStatus(200),
+    validate(result) {
+      const redirectedToSample = result.finalUrl.endsWith("/sample");
+      const accessBlocked = [404, 410].includes(result.finalStatus);
+      const ok =
+        (result.initialStatus !== 200 && redirectedToSample) || accessBlocked;
+
+      return {
+        ok,
+        detail: ok
+          ? "demo free result는 /sample redirect 또는 차단"
+          : "production에서 demo free result가 직접 열리면 안 됩니다.",
+      };
+    },
   },
   {
     label: "체크아웃",

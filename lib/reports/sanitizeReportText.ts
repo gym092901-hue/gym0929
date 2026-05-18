@@ -21,8 +21,6 @@ const legacyPdfExtraProductCopy = joinPhrase("PDF 다운로드 추가 ", "상품
 const legacyPdfKeepsakeCopy = joinPhrase("PDF ", "\uc18c\uc7a5\ubcf8");
 
 export const forbiddenReportPatterns = [
-  joinPhrase("몽이", " 의"),
-  joinPhrase("몽이", " 이"),
   ".도 잘 맞습니다",
   joinPhrase("잘 맞아요", ".도"),
   joinPhrase("기운은 ", "기운은"),
@@ -43,6 +41,18 @@ export const forbiddenReportPatterns = [
   legacyPdfExtraProductCopy,
 ] as const;
 
+function getPetNameSpacingPatterns(petName?: string | null) {
+  const name = petName?.trim();
+
+  if (!name) {
+    return [];
+  }
+
+  return ["의", "이", "은", "는", "을", "를", "에게"].map(
+    (postpositionParticle) => `${name} ${postpositionParticle}`,
+  );
+}
+
 function isProductionRuntime() {
   return (
     process.env.NODE_ENV === "production" ||
@@ -50,8 +60,8 @@ function isProductionRuntime() {
   );
 }
 
-export function findForbiddenReportPatterns(text: string) {
-  return forbiddenReportPatterns
+export function findForbiddenReportPatterns(text: string, petName?: string | null) {
+  return [...forbiddenReportPatterns, ...getPetNameSpacingPatterns(petName)]
     .map<ReportQualityMatch | null>((pattern) => {
       const index = text.indexOf(pattern);
 
@@ -135,9 +145,9 @@ export function sanitizeReportText(
   options: SanitizeReportTextOptions = {},
 ) {
   const context = options.context ?? "report";
-  const initialMatches = findForbiddenReportPatterns(text);
+  const initialMatches = findForbiddenReportPatterns(text, options.petName);
   const sanitized = normalizeAwkwardReportText(text, options.petName);
-  const remainingMatches = findForbiddenReportPatterns(sanitized);
+  const remainingMatches = findForbiddenReportPatterns(sanitized, options.petName);
 
   warnReportQuality(context, initialMatches);
 
@@ -159,8 +169,12 @@ export function sanitizeReportText(
   return sanitized;
 }
 
-export function assertReportTextQuality(text: string, context = "report") {
-  const matches = findForbiddenReportPatterns(text);
+export function assertReportTextQuality(
+  text: string,
+  context = "report",
+  petName?: string | null,
+) {
+  const matches = findForbiddenReportPatterns(text, petName);
 
   if (matches.length === 0) {
     return;

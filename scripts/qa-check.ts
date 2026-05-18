@@ -320,6 +320,7 @@ async function runFreeResultChecks(isDemoMode) {
   const freeSource = readProjectFile("app/result/free/[readingId]/page.tsx");
   const homeSource = readProjectFile("app/page.tsx");
   const demoConfigSource = readProjectFile("lib/demo/config.ts");
+  const readingsSource = readProjectFile("lib/readings.ts");
   const free = await get(`/result/free/${readingId}`, { redirect: "manual" });
   const staticDemoGuard =
     freeSource.includes("demoModeEnabled") &&
@@ -401,6 +402,20 @@ async function runFreeResultChecks(isDemoMode) {
     homeSource.includes('"/sample"') &&
       homeSource.includes("isDemoModeEnabled()"),
     "데모 비활성 환경에서는 /sample 사용",
+  );
+  addResult(
+    "운영 가드",
+    "demo reading은 production에서 무료 결과와 getReading 모두 차단",
+    freeSource.includes("isDemoReadingId(readingId)") &&
+      freeSource.includes('redirect("/sample")') &&
+      readingsSource.includes("readingId === demoReadingId") &&
+      readingsSource.includes("isDemoModeEnabled() ? getDemoReading() : null"),
+    "demo-mong-2026은 운영에서 /sample redirect 또는 null 처리",
+    {
+      url: `/result/free/${readingId}`,
+      issue: "demo reading production guard",
+      file: "app/result/free/[readingId]/page.tsx, lib/readings.ts",
+    },
   );
 }
 
@@ -750,6 +765,7 @@ async function runUiEnhancementChecks(isDemoMode) {
   const premiumPath = `/result/premium/${readingId}#premium-section-1`;
   const reviewPath = "/review";
   const testPath = "/test";
+  const demoPath = "/demo";
   const samplePath = "/sample";
 
   const home = await get(homePath);
@@ -758,6 +774,7 @@ async function runUiEnhancementChecks(isDemoMode) {
   const checkout = await get(checkoutPath, { redirect: "manual" });
   const review = await get(reviewPath, { redirect: "manual" });
   const test = await get(testPath, { redirect: "manual" });
+  const demo = await get(demoPath, { redirect: "manual" });
   const sample = await get(samplePath, { redirect: "manual" });
   const reviewSource = readProjectFile("app/review/page.tsx");
   const sampleSource = readProjectFile("app/sample/page.tsx");
@@ -767,15 +784,31 @@ async function runUiEnhancementChecks(isDemoMode) {
   );
   const petMascotSource = readProjectFile("components/mascot/PetMascot.tsx");
 
+  const testLocation = test.headers.get("location") || "";
   addResult(
     "운영 노출 정책",
-    "/test 공개 베타 테스트 안내 페이지 유지",
-    test.status === 200 && test.text.includes("멍냥사주를 먼저 써보고 알려주세요"),
-    `status ${test.status}`,
+    "/test는 production에서 /sample redirect, demo/dev에서만 공개",
+    isDemoMode
+      ? test.status === 200 &&
+          test.text.includes("멍냥사주를 먼저 써보고 알려주세요")
+      : [307, 308].includes(test.status) && testLocation.includes("/sample"),
+    `status ${test.status}, location ${testLocation || test.url}`,
     {
       url: testPath,
-      issue: "/test public beta page",
+      issue: "/test production hidden",
       file: "app/test/page.tsx",
+    },
+  );
+
+  addResult(
+    "운영 노출 정책",
+    "/demo는 production에서 숨김",
+    isDemoMode ? demo.status === 200 : demo.status === 404,
+    `status ${demo.status}`,
+    {
+      url: demoPath,
+      issue: "/demo production hidden",
+      file: "app/demo/page.tsx",
     },
   );
 
@@ -1841,6 +1874,20 @@ async function runReportQualityChecks() {
     "",
     {
       issue: "production report quality gate",
+      file: "lib/reports/sanitizeReportText.ts",
+    },
+  );
+
+  addResult(
+    "리포트 문장 품질",
+    "조사 오류 금지 패턴은 petName 기반 동적 검사",
+    sanitizeSource.includes("getPetNameSpacingPatterns") &&
+      sanitizeSource.includes("findForbiddenReportPatterns(text, petName") &&
+      !sanitizeSource.includes('joinPhrase("몽이", " 의")') &&
+      !sanitizeSource.includes('joinPhrase("몽이", " 이")'),
+    "몽이 전용 하드코딩 대신 petName 기반 공백 조사 검사",
+    {
+      issue: "dynamic petName postposition quality gate",
       file: "lib/reports/sanitizeReportText.ts",
     },
   );

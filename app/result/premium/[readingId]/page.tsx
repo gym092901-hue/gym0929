@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
@@ -15,6 +16,7 @@ import { ReportSceneBanner } from "@/components/report/ReportSceneBanner";
 import { isDemoModeEnabled, isDemoReadingId } from "@/lib/demo/config";
 import { postposition } from "@/lib/korean/postposition";
 import { checkPaymentAccess } from "@/lib/payment/checkPaymentAccess";
+import { getProductCatalogItem } from "@/lib/products/catalog";
 import { getOrCreatePremiumReading } from "@/lib/readings";
 import { generatePetHook } from "@/lib/saju/petHookGenerator";
 import {
@@ -23,6 +25,7 @@ import {
   type FiveElement,
 } from "@/lib/saju/petSajuEngine";
 import { sanitizePremiumReport } from "@/lib/saju/premiumReportGenerator";
+import type { ProductType } from "@/types/database";
 
 type PremiumResultPageProps = {
   params: Promise<{
@@ -37,6 +40,41 @@ const elementKeywords: Record<FiveElement, string[]> = {
   metal: ["섬세함", "신중함", "규칙성"],
   water: ["관찰력", "감수성", "차분함"],
 };
+
+const addOnProductTypes = [
+  "guardian_match",
+  "two_pet_match",
+  "yearly_fortune",
+] satisfies ProductType[];
+
+const addOnProductCopy: Record<
+  (typeof addOnProductTypes)[number],
+  {
+    badge: string;
+    shortTitle: string;
+    benefit: string;
+  }
+> = {
+  guardian_match: {
+    badge: "보호자 교감",
+    shortTitle: "보호자 궁합",
+    benefit: "서로 편해지는 말투와 기다림의 속도를 더 자세히 볼 수 있어요.",
+  },
+  two_pet_match: {
+    badge: "함께 사는 아이",
+    shortTitle: "두 마리 궁합",
+    benefit: "두 아이의 거리감, 공간 동선, 함께 쉬는 리듬을 비교해요.",
+  },
+  yearly_fortune: {
+    badge: "2026 흐름",
+    shortTitle: "연간 흐름",
+    benefit: "월별 교감 포인트와 계절별 생활 체크리스트를 이어서 확인해요.",
+  },
+};
+
+function formatKrw(price: number) {
+  return `${price.toLocaleString("ko-KR")}원`;
+}
 
 function getElementKeywords(element: FiveElement, species: "dog" | "cat") {
   if (species === "cat" && element === "fire") {
@@ -334,7 +372,7 @@ export default async function PremiumResultPage({
                 리포트 목차
               </p>
               <h2 className="mt-2 break-keep text-2xl font-black text-ink">
-                읽고 싶은 부분부터 열어보세요
+                필요한 부분을 빠르게 찾아보세요
               </h2>
             </div>
             <PetMascot
@@ -367,44 +405,7 @@ export default async function PremiumResultPage({
                 summary={summary}
                 defaultOpen={index === 0}
               >
-                <div className="flex items-start gap-4">
-                  <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-persimmon/10">
-                    <PetMascot
-                      species={reading.species}
-                      mood={
-                        index % 5 === 0
-                          ? "star"
-                          : index % 5 === 1
-                            ? "happy"
-                            : index % 5 === 2
-                              ? "curious"
-                              : index % 5 === 3
-                                ? "reading"
-                                : "holding-card"
-                      }
-                      size="sm"
-                      label={`${section.title} 섹션 미니 캐릭터`}
-                      className="scale-75"
-                    />
-                  </span>
-                  <div>
-                    <p className="text-sm font-black uppercase text-persimmon">
-                      심층 해석 {String(index + 1).padStart(2, "0")}
-                    </p>
-                    <h2 className="mt-1 break-keep text-2xl font-black leading-tight text-ink">
-                      {section.title}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-[1.5rem] border border-berry/10 bg-berry/5 px-4 py-3">
-                  <p className="text-xs font-black text-berry">짧은 요약</p>
-                  <p className="mt-2 break-keep text-sm font-bold leading-6 text-ink/70">
-                    {summary}
-                  </p>
-                </div>
-
-                <div className="report-reading mt-5 space-y-4">
+                <div className="report-reading space-y-4">
                   {paragraphs.map((paragraph, paragraphIndex) => (
                     <p key={`${section.id}-${paragraphIndex}`}>{paragraph}</p>
                   ))}
@@ -456,6 +457,58 @@ export default async function PremiumResultPage({
           </div>
         </section>
 
+        <section className="rounded-[2rem] border border-berry/15 bg-white/80 p-5 shadow-soft sm:p-7">
+          <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start">
+            <div>
+              <p className="text-sm font-black text-berry">추가 리포트</p>
+              <h2 className="mt-2 break-keep text-2xl font-black leading-tight text-ink">
+                더 깊게 보고 싶은 내용이 있나요?
+              </h2>
+              <p className="mt-3 break-keep text-sm font-semibold leading-6 text-ink/65">
+                심층 리포트를 읽고 나면 궁금해지는 교감, 함께 사는 아이,
+                연간 흐름을 990원 추가 콘텐츠로 이어서 볼 수 있어요.
+              </p>
+            </div>
+            <PetMascot
+              species={reading.species}
+              mood="holding-card"
+              size="md"
+              label={`${reading.petName} 추가 리포트 안내 캐릭터`}
+            />
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {addOnProductTypes.map((productType) => {
+              const product = getProductCatalogItem(productType);
+              const copy = addOnProductCopy[productType];
+
+              return (
+                <Link
+                  key={product.productType}
+                  href={`/checkout/${reading.id}?productType=${product.productType}`}
+                  className="group flex h-full flex-col rounded-[1.5rem] border border-berry/12 bg-cream/70 p-4 transition hover:-translate-y-0.5 hover:border-berry/35 hover:bg-white hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-berry/30"
+                >
+                  <span className="w-fit rounded-full bg-berry/10 px-3 py-1 text-xs font-black text-berry">
+                    {copy.badge}
+                  </span>
+                  <strong className="mt-3 break-keep text-lg font-black leading-snug text-ink">
+                    {copy.shortTitle}
+                  </strong>
+                  <span className="mt-1 text-sm font-black text-persimmon">
+                    {formatKrw(product.price)}
+                  </span>
+                  <span className="mt-3 grow break-keep text-sm font-semibold leading-6 text-ink/65">
+                    {copy.benefit}
+                  </span>
+                  <span className="mt-4 inline-flex items-center justify-center rounded-full bg-berry px-4 py-2 text-sm font-black text-white transition group-hover:bg-berry/90">
+                    결제하고 보기
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="rounded-[2rem] border border-berry/10 bg-white/65 p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
             <PetMascot
@@ -471,7 +524,7 @@ export default async function PremiumResultPage({
                 리포트 읽기 완료
               </p>
               <p className="mt-2 break-keep text-base font-bold leading-7 text-ink/70">
-                이 리포트는 결론을 단정하기보다 {postposition.object(reading.petName)}
+                이 리포트는 결론을 단정하기보다 {postposition.object(reading.petName)}{" "}
                 더 다정하게 이해하기 위한 안내서예요.
               </p>
             </div>

@@ -369,13 +369,13 @@ async function runHomeChecks() {
     "무료/유료 가격 안내 분리",
     home.text.includes("무료 맛보기는 무료로 볼 수 있고") &&
       home.text.includes("심층 리포트") &&
-      home.text.includes("2,900원"),
+      home.text.includes("1,990원"),
     "홈에서는 무료 시작과 유료 심층 리포트 선택 결제를 함께 안내",
   );
   addResult(
     "홈",
-    "샘플 리포트 보기 버튼 존재",
-    home.text.includes("샘플 리포트 보기"),
+    "샘플 리포트 보기 버튼 미노출",
+    !home.text.includes("샘플 리포트 보기"),
   );
   addResult(
     "홈",
@@ -2388,10 +2388,10 @@ async function runUiEnhancementChecks(isDemoMode) {
   });
 
   const expectedProductPrices = {
-    premium_report: 2900,
-    guardian_match: 1000,
-    two_pet_match: 1000,
-    yearly_fortune: 1000,
+    premium_report: 1990,
+    guardian_match: 990,
+    two_pet_match: 990,
+    yearly_fortune: 990,
     pdf_report: 0,
   };
 

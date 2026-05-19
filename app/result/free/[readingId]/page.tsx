@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { DemoPremiumDirectButton } from "@/components/demo/DemoPremiumDirectButton";
 import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
+import { FiveElementPentagonChart } from "@/components/report/FiveElementPentagonChart";
 import { MobileStickyCTA } from "@/components/report/MobileStickyCTA";
 import { PetHookCard } from "@/components/report/PetHookCard";
 import { PetInputSummaryTags } from "@/components/report/PetInputSummaryTags";
@@ -9,7 +10,11 @@ import { ReportFloatingActions } from "@/components/report/ReportFloatingActions
 import { ReportMobileBar } from "@/components/report/ReportMobileBar";
 import { ReportSceneBanner } from "@/components/report/ReportSceneBanner";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
-import { isDemoModeEnabled, isDemoReadingId } from "@/lib/demo/config";
+import {
+  isDemoModeEnabled,
+  isDemoReadingId,
+  shouldAllowTestPremiumAccess,
+} from "@/lib/demo/config";
 import { postposition } from "@/lib/korean/postposition";
 import { getProductCatalogItem } from "@/lib/products/catalog";
 import { getReading } from "@/lib/readings";
@@ -115,6 +120,7 @@ function speciesTeaser(species: PetSpecies, petName: string) {
 export default async function FreeResultPage({ params }: FreeResultPageProps) {
   const { readingId } = await params;
   const demoModeEnabled = isDemoModeEnabled();
+  const testPremiumAccess = shouldAllowTestPremiumAccess();
 
   if (isDemoReadingId(readingId) && !demoModeEnabled) {
     redirect("/sample");
@@ -214,6 +220,12 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
           strangerReaction={reading.lifestyle.strangerReaction}
           guardianDistance={reading.lifestyle.guardianDistance}
           favoriteActivities={reading.lifestyle.favoriteActivities}
+        />
+
+        <FiveElementPentagonChart
+          petName={reading.petName}
+          species={reading.species}
+          scores={elementProfile.scores}
         />
 
         <section className="warm-panel rounded-[2rem] p-5 sm:p-8">
@@ -342,17 +354,27 @@ export default async function FreeResultPage({ params }: FreeResultPageProps) {
             무서운 예언이 아니라, 반려생활을 다정하게 이해하기 위한 콘텐츠입니다.
           </p>
 
-          {demoModeEnabled ? (
+          {testPremiumAccess ? (
             <div className="mt-5 rounded-2xl border border-ink/10 bg-ink/5 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-ink/50">
-                  데모 검수용
+                  테스트용
                 </span>
                 <p className="text-sm font-bold text-ink/55">
-                  개발 검수 환경에서만 보이는 프리미엄 바로 보기입니다.
+                  결제 없이 심층 리포트 화면까지 확인할 수 있는 테스트 링크입니다.
                 </p>
               </div>
-              <DemoPremiumDirectButton readingId={reading.id} />
+              {demoModeEnabled ? (
+                <DemoPremiumDirectButton readingId={reading.id} />
+              ) : (
+                <PrimaryLink
+                  href={`/result/premium/${reading.id}`}
+                  tone="light"
+                  className="w-full"
+                >
+                  결제 없이 심층 리포트 보기
+                </PrimaryLink>
+              )}
             </div>
           ) : null}
         </section>

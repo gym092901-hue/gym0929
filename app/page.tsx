@@ -1,7 +1,6 @@
 import { PawPattern } from "@/components/mascot/PawPattern";
 import { PetMascot } from "@/components/mascot/PetMascot";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
-import { demoReadingId, isDemoModeEnabled } from "@/lib/demo/config";
 
 const freeItems = ["기본 성향", "대표 기운", "교감 포인트"];
 
@@ -111,10 +110,6 @@ function HeroSparkle({ className = "" }: { className?: string }) {
 }
 
 export default function Home() {
-  const sampleHref = isDemoModeEnabled()
-    ? `/result/free/${demoReadingId}`
-    : "/sample";
-
   return (
     <main>
       <section className="px-4 pb-10 pt-7 sm:px-6 sm:pb-16 sm:pt-14">
@@ -152,19 +147,11 @@ export default function Home() {
                   <CtaPaw />
                   무료 사주 맛보기 시작
                 </PrimaryLink>
-                <PrimaryLink
-                  href={sampleHref}
-                  tone="light"
-                  className="min-h-14 text-base sm:min-w-48"
-                >
-                  <CtaPaw tone="berry" />
-                  샘플 리포트 보기
-                </PrimaryLink>
               </div>
             </div>
             <p className="mt-3 text-sm font-semibold leading-6 text-ink/55">
               무료 맛보기는 무료로 볼 수 있고, 심층 리포트는 원할 때만
-              2,900원으로 열람해요.
+              1,990원으로 열람해요.
             </p>
           </div>
 

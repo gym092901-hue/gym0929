@@ -17,6 +17,7 @@ type PetMascotProps = {
   label?: string;
   className?: string;
   decorative?: boolean;
+  variant?: number | string;
 };
 
 const sizeClass: Record<MascotSize, string> = {
@@ -30,15 +31,17 @@ function renderMascot({
   type,
   mood,
   className,
+  variant,
 }: {
   type: "dog" | "cat";
   mood: MascotMood;
   className: string;
+  variant?: number | string;
 }) {
   return type === "dog" ? (
-    <DogMascot mood={mood} className={className} />
+    <DogMascot mood={mood} className={className} variant={variant} />
   ) : (
-    <CatMascot mood={mood} className={className} />
+    <CatMascot mood={mood} className={className} variant={variant} />
   );
 }
 
@@ -52,6 +55,7 @@ export function PetMascot({
   label,
   className = "",
   decorative,
+  variant,
 }: PetMascotProps) {
   const resolvedType: MascotType = species ?? type ?? "dog";
   const showBubble = Boolean(withBubble || bubbleText);
@@ -79,17 +83,19 @@ export function PetMascot({
 
       {resolvedType === "both" ? (
         <div
-          className={`mascot-float flex items-end justify-center -space-x-10 ${sizeClass[size]}`}
+          className={`mascot-float flex items-end justify-center gap-2 sm:gap-3 ${sizeClass[size]}`}
         >
           {renderMascot({
             type: "dog",
             mood,
-            className: "w-[58%] drop-shadow-sm",
+            className: "w-[48%] rotate-[-2deg] drop-shadow-sm",
+            variant: variant ?? "home-dog",
           })}
           {renderMascot({
             type: "cat",
             mood: mood === "payment" ? "holding-card" : mood,
-            className: "w-[58%] drop-shadow-sm",
+            className: "w-[48%] rotate-[2deg] drop-shadow-sm",
+            variant: variant ?? "home-cat",
           })}
         </div>
       ) : (
@@ -98,6 +104,7 @@ export function PetMascot({
             type: resolvedType,
             mood,
             className: "w-full drop-shadow-sm",
+            variant,
           })}
         </div>
       )}

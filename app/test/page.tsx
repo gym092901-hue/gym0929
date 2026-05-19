@@ -58,7 +58,7 @@ const safetyItems = [
 
 export default function TesterPage() {
   if (productionRuntime) {
-    redirect("/sample");
+    redirect("/input");
   }
 
   const demoModeEnabled = isDemoModeEnabled();
@@ -90,9 +90,6 @@ export default function TesterPage() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <PrimaryLink href="/input" className="min-h-14 text-base">
               테스트 시작하기
-            </PrimaryLink>
-            <PrimaryLink href="/sample" tone="light" className="min-h-14 text-base">
-              샘플 리포트 보기
             </PrimaryLink>
           </div>
 

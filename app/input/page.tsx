@@ -7,37 +7,13 @@ import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
 import { PetInputSummaryTags } from "@/components/report/PetInputSummaryTags";
 import { ReportMobileBar } from "@/components/report/ReportMobileBar";
-import {
-  aloneTimeOptions,
-  dailyActivityOptions,
-  favoriteActivityOptions,
-  getLifestyleSummaryTags,
-  guardianDistanceOptions,
-  guardianQuestionOptions,
-  livingEnvironmentOptions,
-  strangerReactionOptions,
-} from "@/lib/readings/lifestyle";
-import type {
-  AloneTime,
-  DailyActivityFrequency,
-  FavoriteActivity,
-  GuardianDistance,
-  GuardianQuestion,
-  LivingEnvironment,
-  PetLifestyleProfile,
-  PetSpecies,
-  StrangerReaction,
-} from "@/types/reading";
+import type { PetSpecies } from "@/types/reading";
 
-type FieldKey =
-  | "petName"
-  | "species"
-  | "birthDate"
-  | "adoptionDate"
-  | "guardianEmail"
-  | "form";
+type FieldKey = "petName" | "species" | "birthDate" | "adoptionDate" | "form";
 
 type FieldErrors = Partial<Record<FieldKey, string>>;
+
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 function getTodayDateString() {
   const now = new Date();
@@ -46,12 +22,23 @@ function getTodayDateString() {
   return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10);
 }
 
-function isFutureDate(value: string, today: string) {
-  return Boolean(value) && value > today;
+function isValidDateString(value: string) {
+  if (!datePattern.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
-function isEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+function isFutureDate(value: string, today: string) {
+  return Boolean(value) && value > today;
 }
 
 function ErrorText({ message, id }: { message?: string; id: string }) {
@@ -63,6 +50,14 @@ function ErrorText({ message, id }: { message?: string; id: string }) {
     <p id={id} className="text-xs font-bold leading-5 text-berry">
       {message}
     </p>
+  );
+}
+
+function DateFormatHint() {
+  return (
+    <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-ink/45 shadow-sm">
+      연도-월-일
+    </span>
   );
 }
 
@@ -95,7 +90,7 @@ function MiniScene({
         className="scale-[0.62]"
       />
       <span
-        aria-hidden
+        aria-hidden="true"
         className="absolute bottom-1 right-1 grid h-5 w-5 place-items-center rounded-full bg-white/90 shadow-sm"
       >
         {icon === "calendar" ? (
@@ -118,7 +113,7 @@ function MiniScene({
 function ButtonPaws() {
   return (
     <span
-      aria-hidden
+      aria-hidden="true"
       className="mt-3 flex items-center justify-center gap-1.5 text-berry/45"
     >
       <span className="mascot-bob h-2 w-2 rounded-full bg-berry/35" />
@@ -130,61 +125,34 @@ function ButtonPaws() {
   );
 }
 
-function ChipGroup({
-  title,
-  description,
-  options,
-  selectedValues,
-  onToggle,
-  multiple = false,
+function UnknownToggle({
+  checked,
+  onChange,
+  children,
+  scene,
 }: {
-  title: string;
-  description?: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
-  selectedValues: string[];
-  onToggle: (value: string) => void;
-  multiple?: boolean;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: string;
+  scene: "calendar" | "clock";
 }) {
   return (
-    <fieldset className="grid gap-3 rounded-[1.75rem] border border-berry/10 bg-white/70 p-4">
-      <legend className="px-1 text-sm font-black text-ink">{title}</legend>
-      {description ? (
-        <p className="text-xs font-semibold leading-5 text-ink/50">{description}</p>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const selected = selectedValues.includes(option.value);
-
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onToggle(option.value)}
-              className={`min-h-11 rounded-full border px-4 py-2 text-sm font-black transition ${
-                selected
-                  ? "scale-[1.02] border-berry/55 bg-berry text-white shadow-soft"
-                  : "border-berry/15 bg-white text-ink/65 hover:border-berry/35 hover:bg-berry/10"
-              }`}
-            >
-              {option.label}
-              {multiple && selected ? (
-                <span aria-hidden="true" className="ml-1">
-                  ✓
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
+    <label className="flex min-h-14 w-full cursor-pointer items-center gap-2 rounded-2xl bg-white/85 px-3 py-2 text-xs font-bold text-ink/65 shadow-sm sm:min-h-12 sm:w-52">
+      <MiniScene
+        type={scene === "calendar" ? "cat" : "dog"}
+        mood={scene === "calendar" ? "holding-card" : "curious"}
+        tone={scene === "calendar" ? "moss" : "persimmon"}
+        icon={scene}
+      />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-5 w-5 rounded border-berry/30 text-berry"
+      />
+      <span>{children}</span>
+    </label>
   );
-}
-
-function toggleArrayValue<T extends string>(values: T[], value: string) {
-  return values.includes(value as T)
-    ? values.filter((item) => item !== value)
-    : [...values, value as T];
 }
 
 export default function InputPage() {
@@ -197,56 +165,10 @@ export default function InputPage() {
   const [adoptionDate, setAdoptionDate] = useState("");
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [birthTime, setBirthTime] = useState("");
-  const [livingEnvironment, setLivingEnvironment] = useState<
-    LivingEnvironment[]
-  >([]);
-  const [dailyActivityFrequency, setDailyActivityFrequency] =
-    useState<DailyActivityFrequency | null>(null);
-  const [aloneTime, setAloneTime] = useState<AloneTime | null>(null);
-  const [strangerReaction, setStrangerReaction] =
-    useState<StrangerReaction | null>(null);
-  const [guardianDistance, setGuardianDistance] =
-    useState<GuardianDistance | null>(null);
-  const [favoriteActivities, setFavoriteActivities] = useState<
-    FavoriteActivity[]
-  >([]);
-  const [guardianQuestions, setGuardianQuestions] = useState<
-    GuardianQuestion[]
-  >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const summaryErrors = Object.values(errors).filter(Boolean);
-  const lifestyle: PetLifestyleProfile = useMemo(
-    () => ({
-      livingEnvironment,
-      dailyActivityFrequency,
-      aloneTime,
-      strangerReaction,
-      guardianDistance,
-      favoriteActivities,
-      guardianQuestions,
-    }),
-    [
-      aloneTime,
-      dailyActivityFrequency,
-      favoriteActivities,
-      guardianDistance,
-      guardianQuestions,
-      livingEnvironment,
-      strangerReaction,
-    ],
-  );
-  const summaryTags = useMemo(
-    () =>
-      getLifestyleSummaryTags({
-        petName,
-        species,
-        birthTimeUnknown: timeUnknown,
-        lifestyle,
-      }),
-    [lifestyle, petName, species, timeUnknown],
-  );
 
   function validate(formData: FormData) {
     const nextErrors: FieldErrors = {};
@@ -257,9 +179,6 @@ export default function InputPage() {
       : birthDate || String(formData.get("birthDate") ?? "");
     const submittedAdoptionDate =
       adoptionDate || String(formData.get("adoptionDate") ?? "");
-    const guardianEmail = String(formData.get("guardianEmail") ?? "")
-      .trim()
-      .toLowerCase();
 
     if (!name) {
       nextErrors.petName = "우리 아이 이름을 입력해 주세요.";
@@ -271,11 +190,16 @@ export default function InputPage() {
       nextErrors.species = "강아지인지 고양이인지 알려주세요.";
     }
 
-    if (isFutureDate(submittedBirthDate, today)) {
+    if (submittedBirthDate && !isValidDateString(submittedBirthDate)) {
+      nextErrors.birthDate = "생년월일은 연도-월-일 형식으로 입력해 주세요.";
+    } else if (isFutureDate(submittedBirthDate, today)) {
       nextErrors.birthDate = "미래 날짜는 사용할 수 없어요.";
     }
 
-    if (isFutureDate(submittedAdoptionDate, today)) {
+    if (submittedAdoptionDate && !isValidDateString(submittedAdoptionDate)) {
+      nextErrors.adoptionDate =
+        "입양일 또는 처음 만난 날은 연도-월-일 형식으로 입력해 주세요.";
+    } else if (isFutureDate(submittedAdoptionDate, today)) {
       nextErrors.adoptionDate = "미래 날짜는 사용할 수 없어요.";
     }
 
@@ -292,12 +216,6 @@ export default function InputPage() {
         nextErrors.adoptionDate ?? "생일을 모른다면 처음 만난 날을 알려주세요.";
     }
 
-    if (guardianEmail && !isEmail(guardianEmail)) {
-      nextErrors.guardianEmail = "이메일 형식이 올바르지 않아요.";
-    } else if (guardianEmail.length > 254) {
-      nextErrors.guardianEmail = "이메일 주소가 너무 길어요.";
-    }
-
     return {
       errors: nextErrors,
       values: {
@@ -305,7 +223,6 @@ export default function InputPage() {
         species: submittedSpecies,
         birthDate: submittedBirthDate,
         adoptionDate: submittedAdoptionDate,
-        guardianEmail,
         birthTime: timeUnknown ? "" : birthTime,
       },
     };
@@ -331,14 +248,7 @@ export default function InputPage() {
       birth_time: timeUnknown ? null : values.birthTime,
       birth_time_unknown: timeUnknown,
       adoption_date: values.adoptionDate || null,
-      owner_email: values.guardianEmail || null,
-      living_environment: lifestyle.livingEnvironment,
-      daily_activity_frequency: lifestyle.dailyActivityFrequency,
-      alone_time: lifestyle.aloneTime,
-      stranger_reaction: lifestyle.strangerReaction,
-      guardian_distance: lifestyle.guardianDistance,
-      favorite_activities: lifestyle.favoriteActivities,
-      guardian_questions: lifestyle.guardianQuestions,
+      owner_email: null,
     };
 
     try {
@@ -379,12 +289,7 @@ export default function InputPage() {
       description="생일을 몰라도 괜찮아요. 처음 만난 날도 하나의 소중한 기준이 될 수 있어요."
       narrow
     >
-      <ReportMobileBar
-        title="정보 입력"
-        backHref="/"
-        rightLabel="샘플"
-        rightHref="/sample"
-      />
+      <ReportMobileBar title="정보 입력" backHref="/" />
 
       <div className="mb-6 overflow-hidden rounded-[2rem] border border-berry/10 bg-white/65 p-5 sm:p-6">
         <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
@@ -396,11 +301,11 @@ export default function InputPage() {
             bubbleText="차근차근 같이 적어봐요"
           />
           <div>
-            <p className="text-sm font-black text-persimmon">입력 도움말</p>
+            <p className="text-sm font-black text-persimmon">입력 안내</p>
             <p className="mt-2 break-keep text-base font-semibold leading-7 text-ink/68">
-              정확한 생일을 몰라도 괜찮아요. 입양일이나 처음 만난 날처럼
-              보호자에게 의미 있는 날짜를 기준으로 우리 아이의 성향을
-              다정하게 읽어드릴게요.
+              생년월일, 처음 만난 날, 태어난 시간을 순서대로 알려주세요.
+              날짜는 모두 <span className="font-black text-ink">연도-월-일</span>{" "}
+              형식으로 입력하면 됩니다.
             </p>
           </div>
         </div>
@@ -408,7 +313,7 @@ export default function InputPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="warm-panel rounded-[2rem] p-5 sm:p-8"
+        className="warm-panel rounded-[2rem] p-5 pb-28 sm:p-8"
         noValidate
       >
         {summaryErrors.length > 0 ? (
@@ -426,29 +331,6 @@ export default function InputPage() {
             </ul>
           </section>
         ) : null}
-
-        {summaryTags.length > 0 ? (
-          <section className="mb-6 rounded-[1.5rem] border border-moss/20 bg-moss/10 px-4 py-3">
-            <p className="text-sm font-black text-moss">입력 요약</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {summaryTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-ink/65 shadow-sm"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : (
-          <section className="mb-6 rounded-[1.5rem] border border-oat/70 bg-white/60 px-4 py-3">
-            <p className="text-xs font-bold leading-5 text-ink/50">
-              선택한 정보는 여기에서 태그로 정리돼요. 생활 패턴은 선택 사항이라
-              비워두어도 무료 결과를 볼 수 있습니다.
-            </p>
-          </section>
-        )}
 
         <div className="grid gap-5">
           <label className="grid gap-2">
@@ -482,7 +364,10 @@ export default function InputPage() {
           <fieldset className="grid gap-3" aria-describedby="species-error">
             <legend className="text-sm font-bold text-ink">강아지/고양이 선택</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="group cursor-pointer rounded-[2rem] border-2 border-berry/15 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-berry/35 hover:shadow-soft focus-within:ring-2 focus-within:ring-berry/30 has-[:checked]:scale-[1.025] has-[:checked]:border-berry/65 has-[:checked]:bg-berry/10 has-[:checked]:shadow-soft sm:p-4">
+              <label
+                data-mascot-species="dog"
+                className="group cursor-pointer rounded-[2rem] border-2 border-berry/15 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-berry/35 hover:shadow-soft focus-within:ring-2 focus-within:ring-berry/30 has-[:checked]:scale-[1.025] has-[:checked]:border-berry/65 has-[:checked]:bg-berry/10 has-[:checked]:shadow-soft sm:p-4"
+              >
                 <input
                   type="radio"
                   name="species"
@@ -492,7 +377,7 @@ export default function InputPage() {
                     setSpecies("dog");
                     setErrors((current) => ({ ...current, species: undefined }));
                   }}
-                  className="sr-only peer"
+                  className="peer sr-only"
                 />
                 <span className="relative flex min-h-56 flex-col items-center justify-end overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-berry/10 via-cream/70 to-white px-4 pb-5 pt-6 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.035] peer-checked:bg-white peer-checked:text-berry peer-checked:shadow-soft sm:min-h-64 sm:pb-6 sm:pt-7">
                   <span
@@ -519,7 +404,11 @@ export default function InputPage() {
                   </span>
                 </span>
               </label>
-              <label className="group cursor-pointer rounded-[2rem] border-2 border-moss/15 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-moss/35 hover:shadow-soft focus-within:ring-2 focus-within:ring-moss/30 has-[:checked]:scale-[1.025] has-[:checked]:border-moss/65 has-[:checked]:bg-moss/10 has-[:checked]:shadow-soft sm:p-4">
+
+              <label
+                data-mascot-species="cat"
+                className="group cursor-pointer rounded-[2rem] border-2 border-moss/15 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-moss/35 hover:shadow-soft focus-within:ring-2 focus-within:ring-moss/30 has-[:checked]:scale-[1.025] has-[:checked]:border-moss/65 has-[:checked]:bg-moss/10 has-[:checked]:shadow-soft sm:p-4"
+              >
                 <input
                   type="radio"
                   name="species"
@@ -529,7 +418,7 @@ export default function InputPage() {
                     setSpecies("cat");
                     setErrors((current) => ({ ...current, species: undefined }));
                   }}
-                  className="sr-only peer"
+                  className="peer sr-only"
                 />
                 <span className="relative flex min-h-56 flex-col items-center justify-end overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-moss/10 via-cream/70 to-white px-4 pb-5 pt-6 text-center text-ink shadow-sm transition duration-200 peer-checked:scale-[1.035] peer-checked:bg-white peer-checked:text-moss peer-checked:shadow-soft sm:min-h-64 sm:pb-6 sm:pt-7">
                   <span
@@ -560,55 +449,99 @@ export default function InputPage() {
             <ErrorText id="species-error" message={errors.species} />
           </fieldset>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <section className="grid gap-5 rounded-[2rem] border border-berry/10 bg-white/60 p-4 sm:p-5">
             <div className="grid gap-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-sm font-bold text-ink">생년월일</span>
-                <label className="flex min-h-14 cursor-pointer items-center gap-2 rounded-2xl bg-white/80 px-3 py-2 text-xs font-bold text-ink/65 shadow-sm sm:min-h-12">
-                  <MiniScene
-                    type="cat"
-                    mood="holding-card"
-                    tone="moss"
-                    icon="calendar"
-                  />
-                  <input
-                    type="checkbox"
-                    checked={birthDateUnknown}
-                    onChange={(event) => {
-                      const isChecked = event.target.checked;
-                      setBirthDateUnknown(isChecked);
-                      if (isChecked) {
-                        setBirthDate("");
-                      }
-                      setErrors((current) => ({
-                        ...current,
-                        birthDate: undefined,
-                      }));
-                    }}
-                    className="h-5 w-5 rounded border-berry/30 text-berry"
-                  />
+                <span className="flex items-center gap-2 text-sm font-bold text-ink">
+                  생년월일
+                  <DateFormatHint />
+                </span>
+                <UnknownToggle
+                  checked={birthDateUnknown}
+                  onChange={(isChecked) => {
+                    setBirthDateUnknown(isChecked);
+                    if (isChecked) {
+                      setBirthDate("");
+                    }
+                    setErrors((current) => ({
+                      ...current,
+                      birthDate: undefined,
+                    }));
+                  }}
+                  scene="calendar"
+                >
                   생일을 몰라요
-                </label>
+                </UnknownToggle>
               </div>
               <input
                 name="birthDate"
-                type="date"
+                type="text"
+                inputMode="numeric"
                 value={birthDate}
-                onChange={(event) => setBirthDate(event.target.value)}
-                max={today}
+                onChange={(event) => {
+                  setBirthDate(event.target.value);
+                  setErrors((current) => ({ ...current, birthDate: undefined }));
+                }}
+                placeholder="2021-05-14"
+                maxLength={10}
                 disabled={birthDateUnknown}
                 aria-invalid={Boolean(errors.birthDate)}
                 aria-describedby="birthDate-help birthDate-error"
                 className="focus-ring rounded-2xl border border-berry/20 bg-white px-4 py-3 text-base disabled:bg-oat/30 disabled:text-ink/40"
               />
               <p id="birthDate-help" className="text-xs font-semibold leading-5 text-ink/50">
-                생일을 모르면 입양일 또는 처음 만난 날을 기준으로 읽어드려요.
+                생일을 모르면 바로 아래 처음 만난 날을 기준으로 볼 수 있어요.
               </p>
               <ErrorText id="birthDate-error" message={errors.birthDate} />
             </div>
 
             <label className="grid gap-2">
-              <span className="text-sm font-bold text-ink">태어난 시간</span>
+              <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
+                입양일 또는 처음 만난 날
+                <DateFormatHint />
+                {birthDateUnknown ? (
+                  <span className="rounded-full bg-berry/10 px-2 py-1 text-xs font-black text-berry">
+                    필수
+                  </span>
+                ) : null}
+              </span>
+              <input
+                name="adoptionDate"
+                type="text"
+                inputMode="numeric"
+                value={adoptionDate}
+                onChange={(event) => {
+                  setAdoptionDate(event.target.value);
+                  setErrors((current) => ({
+                    ...current,
+                    adoptionDate: undefined,
+                  }));
+                }}
+                placeholder="2021-08-20"
+                maxLength={10}
+                aria-invalid={Boolean(errors.adoptionDate)}
+                aria-describedby="adoptionDate-error"
+                className="focus-ring rounded-2xl border border-berry/20 bg-white px-4 py-3 text-base"
+              />
+              <ErrorText id="adoptionDate-error" message={errors.adoptionDate} />
+            </label>
+
+            <div className="grid gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm font-bold text-ink">태어난 시간</span>
+                <UnknownToggle
+                  checked={timeUnknown}
+                  onChange={(isChecked) => {
+                    setTimeUnknown(isChecked);
+                    if (isChecked) {
+                      setBirthTime("");
+                    }
+                  }}
+                  scene="clock"
+                >
+                  태어난 시간을 몰라요
+                </UnknownToggle>
+              </div>
               <input
                 name="birthTime"
                 type="time"
@@ -617,183 +550,15 @@ export default function InputPage() {
                 disabled={timeUnknown}
                 className="focus-ring rounded-2xl border border-berry/20 bg-white px-4 py-3 text-base disabled:bg-oat/30 disabled:text-ink/40"
               />
-            </label>
-          </div>
-
-          <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-2xl border border-moss/20 bg-white px-4 py-3 shadow-sm">
-            <MiniScene
-              type="dog"
-              mood="curious"
-              tone="persimmon"
-              icon="clock"
-            />
-            <input
-              type="checkbox"
-              checked={timeUnknown}
-              onChange={(event) => {
-                setTimeUnknown(event.target.checked);
-                if (event.target.checked) {
-                  setBirthTime("");
-                }
-              }}
-              className="h-5 w-5 rounded border-berry/30 text-berry"
-            />
-            <span className="text-sm font-semibold text-ink">태어난 시간을 몰라요</span>
-          </label>
-
-          <label className="grid gap-2">
-            <span className="text-sm font-bold text-ink">
-              입양일 또는 처음 만난 날
-              {birthDateUnknown ? (
-                <span className="ml-2 text-xs font-black text-berry">필수</span>
-              ) : null}
-            </span>
-            <input
-              name="adoptionDate"
-              type="date"
-              value={adoptionDate}
-              onChange={(event) => {
-                setAdoptionDate(event.target.value);
-                setErrors((current) => ({
-                  ...current,
-                  adoptionDate: undefined,
-                }));
-              }}
-              max={today}
-              aria-invalid={Boolean(errors.adoptionDate)}
-              aria-describedby="adoptionDate-error"
-              className="focus-ring rounded-2xl border border-berry/20 bg-white px-4 py-3 text-base"
-            />
-            <ErrorText id="adoptionDate-error" message={errors.adoptionDate} />
-          </label>
-
-          <section className="grid gap-4 rounded-[2rem] border border-moss/15 bg-moss/5 p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-black text-moss">생활 패턴</p>
-                <p className="mt-1 text-xs font-semibold leading-5 text-ink/50">
-                  선택 사항이에요. 알려주신 내용은 보호자 교감과 루틴 조언을
-                  더 개인화하는 데만 사용됩니다.
-                </p>
-              </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-moss shadow-sm">
-                선택 입력
-              </span>
             </div>
-
-            <ChipGroup
-              title="생활 환경"
-              description="여러 개를 골라도 괜찮아요."
-              options={livingEnvironmentOptions}
-              selectedValues={livingEnvironment}
-              multiple
-              onToggle={(value) =>
-                setLivingEnvironment((current) =>
-                  toggleArrayValue<LivingEnvironment>(current, value),
-                )
-              }
-            />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ChipGroup
-                title="하루 산책/놀이 횟수"
-                options={dailyActivityOptions}
-                selectedValues={
-                  dailyActivityFrequency ? [dailyActivityFrequency] : []
-                }
-                onToggle={(value) =>
-                  setDailyActivityFrequency((current) =>
-                    current === value ? null : (value as DailyActivityFrequency),
-                  )
-                }
-              />
-              <ChipGroup
-                title="혼자 있는 시간"
-                options={aloneTimeOptions}
-                selectedValues={aloneTime ? [aloneTime] : []}
-                onToggle={(value) =>
-                  setAloneTime((current) =>
-                    current === value ? null : (value as AloneTime),
-                  )
-                }
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ChipGroup
-                title="낯선 사람 반응"
-                options={strangerReactionOptions}
-                selectedValues={strangerReaction ? [strangerReaction] : []}
-                onToggle={(value) =>
-                  setStrangerReaction((current) =>
-                    current === value ? null : (value as StrangerReaction),
-                  )
-                }
-              />
-              <ChipGroup
-                title="보호자와의 거리감"
-                options={guardianDistanceOptions}
-                selectedValues={guardianDistance ? [guardianDistance] : []}
-                onToggle={(value) =>
-                  setGuardianDistance((current) =>
-                    current === value ? null : (value as GuardianDistance),
-                  )
-                }
-              />
-            </div>
-
-            <ChipGroup
-              title="좋아하는 활동"
-              description="우리 아이가 자주 좋아하는 것을 골라주세요."
-              options={favoriteActivityOptions}
-              selectedValues={favoriteActivities}
-              multiple
-              onToggle={(value) =>
-                setFavoriteActivities((current) =>
-                  toggleArrayValue<FavoriteActivity>(current, value),
-                )
-              }
-            />
-
-            <ChipGroup
-              title="보호자가 궁금한 점"
-              description="심층 리포트에서 더 보고 싶은 방향을 골라주세요."
-              options={guardianQuestionOptions}
-              selectedValues={guardianQuestions}
-              multiple
-              onToggle={(value) =>
-                setGuardianQuestions((current) =>
-                  toggleArrayValue<GuardianQuestion>(current, value),
-                )
-              }
-            />
           </section>
 
-          <label className="grid gap-2">
-            <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
-              보호자 이메일
-              <span className="rounded-full bg-moss/10 px-3 py-1 text-xs font-black text-moss">
-                선택이에요
-              </span>
-            </span>
-            <input
-              name="guardianEmail"
-              type="email"
-              maxLength={254}
-              placeholder="name@example.com"
-              aria-invalid={Boolean(errors.guardianEmail)}
-              aria-describedby="guardianEmail-help guardianEmail-error"
-              className="focus-ring rounded-2xl border border-berry/20 bg-white px-4 py-3 text-base"
-            />
-            <div
-              id="guardianEmail-help"
-              className="rounded-[1.25rem] border border-moss/15 bg-moss/10 px-4 py-3"
-            >
-              <p className="text-xs font-semibold leading-5 text-ink/60">
-                결과 링크를 다시 확인할 때만 사용돼요. 입력하지 않아도 무료
-                결과를 볼 수 있어요.
-              </p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-ink/45">
+          <section className="rounded-[1.75rem] border border-moss/20 bg-moss/10 p-4">
+            <p className="text-sm font-black text-moss">개인정보 안내</p>
+            <ul className="mt-3 grid gap-2 text-xs font-semibold leading-5 text-ink/60">
+              <li>리포트 생성에 필요한 최소 정보만 입력받습니다.</li>
+              <li>입력한 정보는 무료 결과와 심층 리포트 생성에만 사용됩니다.</li>
+              <li>
                 보유기간과 삭제 기준은{" "}
                 <Link
                   href="/privacy"
@@ -802,16 +567,7 @@ export default function InputPage() {
                   개인정보처리방침
                 </Link>
                 에서 확인할 수 있습니다.
-              </p>
-            </div>
-            <ErrorText id="guardianEmail-error" message={errors.guardianEmail} />
-          </label>
-
-          <section className="rounded-[1.75rem] border border-moss/20 bg-moss/10 p-4">
-            <p className="text-sm font-black text-moss">개인정보 안내</p>
-            <ul className="mt-3 grid gap-2 text-xs font-semibold leading-5 text-ink/60">
-              <li>리포트 생성을 위해 필요한 최소 정보만 입력받습니다.</li>
-              <li>카드 번호, CVV 같은 결제 정보는 멍냥사주 서버에 저장하지 않습니다.</li>
+              </li>
               <li>생일을 모르는 경우에는 처음 만난 날만으로도 무료 결과를 만들 수 있습니다.</li>
             </ul>
           </section>
@@ -824,12 +580,6 @@ export default function InputPage() {
               birthTime={timeUnknown ? null : birthTime}
               birthTimeUnknown={timeUnknown}
               adoptionDate={adoptionDate || null}
-              livingEnvironment={livingEnvironment}
-              activityLevel={dailyActivityFrequency}
-              aloneTime={aloneTime}
-              strangerReaction={strangerReaction}
-              guardianDistance={guardianDistance}
-              favoriteActivities={favoriteActivities}
             />
           ) : null}
         </div>

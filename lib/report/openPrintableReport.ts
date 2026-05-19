@@ -38,9 +38,7 @@ export function openPrintableReport({
       background: #FFF7EC;
       font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
     }
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       padding: 32px 16px;
@@ -98,9 +96,7 @@ export function openPrintableReport({
         padding: 0;
         background: white;
       }
-      .toolbar {
-        display: none;
-      }
+      .toolbar { display: none; }
       article {
         width: auto;
         min-height: auto;
@@ -110,9 +106,7 @@ export function openPrintableReport({
         box-shadow: none;
         background: white;
       }
-      p {
-        break-inside: avoid;
-      }
+      p { break-inside: avoid; }
     }
   </style>
 </head>

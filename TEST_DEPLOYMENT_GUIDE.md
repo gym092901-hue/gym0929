@@ -77,6 +77,8 @@ https://your-preview-url.vercel.app/test
 https://your-preview-url.vercel.app/demo
 ```
 
+`PUBLIC_REVIEW_MODE=true`인 Preview 배포에서 `/demo`는 고정 샘플 `demo-mong-2026`으로 이동합니다. Supabase가 아직 연결되지 않은 테스트 배포에서도 샘플 무료 결과와 샘플 심층 리포트 확인은 가능합니다. 다만 실제 사용자가 `/input`에서 새로 만든 reading을 여러 서버리스 요청에 걸쳐 안정적으로 테스트하려면 Supabase Preview 환경변수를 넣어두는 편이 좋습니다.
+
 ## 테스터 확인 순서
 
 1. `/test`에서 안내와 피드백 항목을 확인합니다.

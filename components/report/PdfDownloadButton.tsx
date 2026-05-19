@@ -24,7 +24,11 @@ function filenameFromDisposition(disposition: string | null, petName: string) {
   const encodedMatch = disposition.match(/filename\*=UTF-8''([^;]+)/);
 
   if (encodedMatch?.[1]) {
-    return decodeURIComponent(encodedMatch[1]);
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      return fallbackFilename(petName);
+    }
   }
 
   const plainMatch = disposition.match(/filename="?([^";]+)"?/);
@@ -46,14 +50,19 @@ export function PdfDownloadButton({
   tone = "berry",
 }: PdfDownloadButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
 
   async function downloadPdf() {
-    setError("");
+    setMessage("");
+    setIsError(false);
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/pdf/${readingId}`);
+      const response = await fetch(`/api/pdf/${readingId}`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
       if (!response.ok) {
         const result = (await response.json().catch(() => null)) as
@@ -67,6 +76,13 @@ export function PdfDownloadButton({
       }
 
       const blob = await response.blob();
+
+      if (!blob.size) {
+        throw new Error(
+          "PDF 생성 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.",
+        );
+      }
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -74,12 +90,16 @@ export function PdfDownloadButton({
         response.headers.get("Content-Disposition"),
         petName,
       );
+      link.rel = "noopener";
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      setMessage("PDF 저장을 시작했어요.");
     } catch (downloadError) {
-      setError(
+      setIsError(true);
+      setMessage(
         downloadError instanceof Error
           ? downloadError.message
           : "PDF 생성 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.",
@@ -99,11 +119,19 @@ export function PdfDownloadButton({
       >
         {isLoading ? loadingLabel : label}
       </button>
-      {error && (
-        <p className="mt-3 rounded-2xl border border-berry/20 bg-berry/10 px-4 py-3 text-sm font-semibold leading-6 text-berry">
-          {error}
+      {message ? (
+        <p
+          className={`mt-3 rounded-2xl border px-4 py-3 text-sm font-semibold leading-6 ${
+            isError
+              ? "border-berry/20 bg-berry/10 text-berry"
+              : "border-moss/20 bg-moss/10 text-moss"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {message}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

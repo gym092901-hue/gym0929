@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { DemoStartButton } from "@/components/demo/DemoStartButton";
 import { PageShell } from "@/components/layout/PageShell";
 import { PetMascot } from "@/components/mascot/PetMascot";
-import { isDemoModeEnabled } from "@/lib/demo/config";
+import { demoReadingId, isDemoModeEnabled } from "@/lib/demo/config";
 
 export const metadata = {
   title: "멍냥사주 데모",
@@ -67,7 +67,7 @@ export default function DemoPage() {
             ))}
           </div>
           <div className="mt-7">
-            <DemoStartButton />
+            <DemoStartButton directHref={`/result/free/${demoReadingId}`} />
           </div>
         </section>
 

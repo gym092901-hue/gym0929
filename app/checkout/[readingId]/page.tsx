@@ -163,10 +163,10 @@ export default async function CheckoutPage({
               </div>
               <div className="mt-5 grid gap-2 sm:grid-cols-3">
                 <span className="rounded-2xl bg-berry/10 px-4 py-3 text-sm font-black text-berry">
-                  심층 리포트 2,900원
+                  심층 리포트 1,990원
                 </span>
                 <span className="rounded-2xl bg-persimmon/10 px-4 py-3 text-sm font-black text-persimmon">
-                  추가 콘텐츠 1,000원
+                  추가 콘텐츠 990원
                 </span>
                 <span className="rounded-2xl bg-moss/10 px-4 py-3 text-sm font-black text-moss">
                   PDF 무료

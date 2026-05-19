@@ -397,7 +397,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
             {[
               {
                 title: "상품 요약",
-                body: "심층 리포트 2,900원, 추가 콘텐츠 각 1,000원, PDF 저장 무료 정책이 동일하게 표시되어야 합니다.",
+                body: "심층 리포트 1,990원, 추가 콘텐츠 각 990원, PDF 저장 무료 정책이 동일하게 표시되어야 합니다.",
               },
               {
                 title: "결제 전 고지",

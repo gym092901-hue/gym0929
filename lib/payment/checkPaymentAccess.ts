@@ -1,6 +1,11 @@
 import "server-only";
 
-import { isDemoModeEnabled, isDemoReadingId } from "@/lib/demo/config";
+import {
+  isDemoModeEnabled,
+  isDemoReadingId,
+  isPublicReviewModeEnabled,
+  shouldAllowTestPremiumAccess,
+} from "@/lib/demo/config";
 import { getLocalApprovedPayment } from "@/lib/payment/localPaymentStore";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type { PaymentProvider, ProductType } from "@/types/database";
@@ -24,6 +29,20 @@ export async function checkPaymentAccess(
       paymentId: null,
       provider: null,
       productType: null,
+    };
+  }
+
+  if (
+    shouldAllowTestPremiumAccess() &&
+    (productType === "premium_report" || productType === "pdf_report")
+  ) {
+    return {
+      hasAccess: true,
+      paymentId: isPublicReviewModeEnabled()
+        ? "public-review-test-access"
+        : "local-test-access",
+      provider: "mock",
+      productType,
     };
   }
 

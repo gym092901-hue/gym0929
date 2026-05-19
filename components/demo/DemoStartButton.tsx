@@ -8,7 +8,11 @@ type DemoSampleResponse = {
   error?: string;
 };
 
-export function DemoStartButton() {
+type DemoStartButtonProps = {
+  directHref?: string;
+};
+
+export function DemoStartButton({ directHref }: DemoStartButtonProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -16,6 +20,11 @@ export function DemoStartButton() {
   async function createDemoReading() {
     setError("");
     setIsLoading(true);
+
+    if (directHref) {
+      router.push(directHref);
+      return;
+    }
 
     try {
       const response = await fetch("/api/demo/sample-reading", {

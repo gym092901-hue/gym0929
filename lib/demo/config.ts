@@ -41,6 +41,15 @@ export function isDemoModeEnabled() {
   );
 }
 
+export function shouldAllowTestPremiumAccess() {
+  return (
+    !isProductionRuntime() &&
+    (process.env.NODE_ENV === "development" ||
+      process.env.DEMO_MODE === "true" ||
+      process.env.PUBLIC_REVIEW_MODE === "true")
+  );
+}
+
 export function shouldShowHeaderTestLink() {
   return (
     !isProductionRuntime() &&

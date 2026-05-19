@@ -355,6 +355,23 @@ async function main() {
     await fs.writeFile(path.join(outDir, `${fileBase}.txt`), snapshot.text);
   }
 
+  const compatibilityCopies = [
+    ["free-result-dog", "free-result"],
+    ["checkout-premium-report", "checkout"],
+    ["premium-blocked", "premium-result"],
+  ] as const;
+
+  for (const [sourceBase, targetBase] of compatibilityCopies) {
+    await fs.copyFile(
+      path.join(outDir, `${sourceBase}.html`),
+      path.join(outDir, `${targetBase}.html`),
+    );
+    await fs.copyFile(
+      path.join(outDir, `${sourceBase}.txt`),
+      path.join(outDir, `${targetBase}.txt`),
+    );
+  }
+
   const summary = buildSummary(snapshots, dogReadingId, catReadingId);
   await fs.writeFile(
     path.join(outDir, "summary.json"),

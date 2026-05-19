@@ -3,6 +3,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
+const crypto = require("node:crypto");
+const zlib = require("node:zlib");
 
 const baseUrl = (process.env.QA_BASE_URL || "http://127.0.0.1:3000").replace(
   /\/$/,
@@ -68,6 +70,123 @@ function readProjectFile(filePath) {
   return fs.readFileSync(path.join(rootDir, filePath), "utf8");
 }
 
+function readReviewExportTextHtmlBundle() {
+  const reviewDir = path.join(rootDir, "gpt-review");
+
+  if (!fs.existsSync(reviewDir)) {
+    return null;
+  }
+
+  const files = fs
+    .readdirSync(reviewDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(txt|html)$/i.test(entry.name))
+    .map((entry) => path.join(reviewDir, entry.name));
+
+  if (files.length === 0) {
+    return "";
+  }
+
+  return files.map((filePath) => fs.readFileSync(filePath, "utf8")).join("\n\n");
+}
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function getBaseName(filePath) {
+  return filePath.split(/[\\/]/).pop();
+}
+
+function readGptReviewFolderEntries() {
+  const reviewDir = path.join(rootDir, "gpt-review");
+
+  if (!fs.existsSync(reviewDir)) {
+    return null;
+  }
+
+  const entries = new Map();
+  const files = fs
+    .readdirSync(reviewDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(txt|html|json)$/i.test(entry.name));
+
+  for (const entry of files) {
+    entries.set(entry.name, fs.readFileSync(path.join(reviewDir, entry.name), "utf8"));
+  }
+
+  return entries;
+}
+
+function readGptReviewZipEntries() {
+  const zipPath = path.join(rootDir, "gpt-review.zip");
+
+  if (!fs.existsSync(zipPath)) {
+    return null;
+  }
+
+  const buffer = fs.readFileSync(zipPath);
+  const minSearchOffset = Math.max(0, buffer.length - 66000);
+  let eocdOffset = -1;
+
+  for (let offset = buffer.length - 22; offset >= minSearchOffset; offset -= 1) {
+    if (buffer.readUInt32LE(offset) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+
+  if (eocdOffset < 0) {
+    throw new Error("gpt-review.zip central directory를 찾을 수 없습니다.");
+  }
+
+  const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+  let centralOffset = buffer.readUInt32LE(eocdOffset + 16);
+  const entries = new Map();
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (buffer.readUInt32LE(centralOffset) !== 0x02014b50) {
+      throw new Error(`gpt-review.zip central entry ${index}를 읽을 수 없습니다.`);
+    }
+
+    const compressionMethod = buffer.readUInt16LE(centralOffset + 10);
+    const compressedSize = buffer.readUInt32LE(centralOffset + 20);
+    const fileNameLength = buffer.readUInt16LE(centralOffset + 28);
+    const extraLength = buffer.readUInt16LE(centralOffset + 30);
+    const commentLength = buffer.readUInt16LE(centralOffset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(centralOffset + 42);
+    const entryName = buffer
+      .subarray(centralOffset + 46, centralOffset + 46 + fileNameLength)
+      .toString("utf8");
+
+    if (buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
+      throw new Error(`gpt-review.zip local entry ${entryName}를 읽을 수 없습니다.`);
+    }
+
+    const localFileNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+    const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+    const dataOffset = localHeaderOffset + 30 + localFileNameLength + localExtraLength;
+    const compressed = buffer.subarray(dataOffset, dataOffset + compressedSize);
+    let contents;
+
+    if (compressionMethod === 0) {
+      contents = compressed;
+    } else if (compressionMethod === 8) {
+      contents = zlib.inflateRawSync(compressed);
+    } else {
+      contents = null;
+    }
+
+    const baseName = getBaseName(entryName);
+
+    if (contents && /\.(txt|html|json)$/i.test(baseName)) {
+      entries.set(baseName, contents.toString("utf8"));
+    }
+
+    centralOffset += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
 function hasAll(text, needles) {
   return needles.every((needle) => text.includes(needle));
 }
@@ -107,6 +226,40 @@ function hasMascotSpecies(html, species) {
 
 function hasMascotSpeciesMarker(html, species) {
   return html.includes(`data-mascot-species="${species}"`);
+}
+
+function findLineMatches(fileName, content, checks) {
+  const lines = String(content || "").split(/\r\n|\n|\r/);
+  const matches = [];
+
+  lines.forEach((line, index) => {
+    checks.forEach(({ label, phrase, pattern }) => {
+      if (phrase && line.includes(phrase)) {
+        matches.push({ fileName, line: index + 1, phrase: label || phrase });
+      }
+
+      if (pattern) {
+        const regex = new RegExp(pattern.source, pattern.flags.replace("g", ""));
+
+        if (regex.test(line)) {
+          matches.push({ fileName, line: index + 1, phrase: label || pattern.source });
+        }
+      }
+    });
+  });
+
+  return matches;
+}
+
+function formatSnapshotMatches(matches, limit = 12) {
+  const preview = matches
+    .slice(0, limit)
+    .map((match) => `${match.fileName}:${match.line} "${match.phrase}"`)
+    .join("; ");
+
+  return matches.length > limit
+    ? `${preview}; ... +${matches.length - limit} more`
+    : preview;
 }
 
 function isLocalQaTarget() {
@@ -772,6 +925,266 @@ async function runRuntimeAuthorizationChecks(isDemoMode) {
       file: "app/api/pdf/[readingId]/route.ts",
     },
   );
+}
+
+function inspectGptReviewSnapshotEntries(label, entries) {
+  const requiredFiles = [
+    "home.txt",
+    "input.txt",
+    "free-result-cat.txt",
+    "checkout-premium-report.txt",
+    "premium-result.txt",
+    "sample.txt",
+    "summary.json",
+  ];
+  const missingRequired = requiredFiles.filter((fileName) => !entries.has(fileName));
+  const hasDogFreeResult = entries.has("free-result-dog.txt") || entries.has("free-result.txt");
+
+  addResult(
+    "GPT 스냅샷",
+    `${label}: 필수 txt/json 파일 존재`,
+    missingRequired.length === 0 && hasDogFreeResult,
+    [
+      missingRequired.length > 0 ? `missing: ${missingRequired.join(", ")}` : "",
+      hasDogFreeResult ? "" : "missing: free-result-dog.txt 또는 free-result.txt",
+    ]
+      .filter(Boolean)
+      .join("; "),
+    {
+      url: label,
+      issue: "snapshot required files",
+      file: "gpt-review.zip, gpt-review/",
+    },
+  );
+
+  const textTargets = [
+    "home.txt",
+    "input.txt",
+    entries.has("free-result-dog.txt") ? "free-result-dog.txt" : "free-result.txt",
+    "free-result-cat.txt",
+    "checkout-premium-report.txt",
+    "premium-result.txt",
+    "sample.txt",
+    "summary.json",
+  ].filter((fileName) => entries.has(fileName));
+  const textChecks = [
+    { label: "4,900원", phrase: "4,900원" },
+    { label: "5,900원", phrase: "5,900원" },
+    { label: "3,900원", phrase: "3,900원" },
+    { label: "PDF 소장본 추가 1,000원", phrase: "PDF 소장본 추가 1,000원" },
+    { label: "PDF 소장본", phrase: "PDF 소장본" },
+    { label: "PDF 다운로드 추가 상품", phrase: "PDF 다운로드 추가 상품" },
+    { label: "PDF 결제", phrase: "PDF 결제" },
+    { label: "AI", pattern: /(^|[^A-Za-z])AI([^A-Za-z]|$)/ },
+    { label: "인공지능", phrase: "인공지능" },
+    { label: "Gemini", phrase: "Gemini" },
+    { label: "규칙 기반 엔진", phrase: "규칙 기반 엔진" },
+    { label: "자동 생성", phrase: "자동 생성" },
+    {
+      label: "standalone 멍",
+      pattern: /(^|[\s"'“”‘’<>()\[\]{}.,!?·:;])멍(?=[\s"'“”‘’<>()\[\]{}.,!?·:;]|$)/,
+    },
+  ];
+  const textViolations = textTargets.flatMap((fileName) =>
+    findLineMatches(fileName, entries.get(fileName), textChecks),
+  );
+
+  addResult(
+    "GPT 스냅샷",
+    `${label}: 가격/PDF/기술/텍스트 아바타 금지 문구 없음`,
+    textViolations.length === 0,
+    textViolations.length > 0
+      ? formatSnapshotMatches(textViolations)
+      : "forbidden phrases not found in snapshot txt/json files",
+    {
+      url: label,
+      issue: "snapshot forbidden phrases",
+      file: "home.txt, input.txt, free-result*.txt, checkout-premium-report.txt, premium-result.txt, sample.txt, summary.json",
+    },
+  );
+
+  const htmlTargets = [
+    "home.html",
+    "input.html",
+    entries.has("free-result-dog.html") ? "free-result-dog.html" : "free-result.html",
+    "free-result-cat.html",
+    "sample.html",
+  ];
+  const htmlBundle = htmlTargets
+    .filter((fileName) => entries.has(fileName))
+    .map((fileName) => entries.get(fileName))
+    .join("\n");
+  const hasPetHook = htmlBundle.includes('data-testid="pet-hook-card"');
+  const hasDogMascot = htmlBundle.includes('data-mascot-species="dog"');
+  const hasCatMascot = htmlBundle.includes('data-mascot-species="cat"');
+
+  addResult(
+    "GPT 스냅샷",
+    `${label}: PetHookCard 및 DogMascot/CatMascot 존재`,
+    hasPetHook && hasDogMascot && hasCatMascot,
+    [
+      hasPetHook ? "" : "missing PetHookCard marker",
+      hasDogMascot ? "" : "missing DogMascot marker",
+      hasCatMascot ? "" : "missing CatMascot marker",
+    ]
+      .filter(Boolean)
+      .join("; "),
+    {
+      url: label,
+      issue: "snapshot mascot/hook markers",
+      file: "free-result*.html, sample.html",
+    },
+  );
+
+  let summary = null;
+
+  try {
+    summary = JSON.parse(entries.get("summary.json") || "{}");
+  } catch (error) {
+    addResult(
+      "GPT 스냅샷",
+      `${label}: summary.json 파싱`,
+      false,
+      error instanceof Error ? error.message : String(error),
+      {
+        url: label,
+        issue: "snapshot summary parse",
+        file: "summary.json",
+      },
+    );
+  }
+
+  if (summary) {
+    const checks = summary.checks || {};
+    const expectedFalseFlags = [
+      "hasOldPricePhrases",
+      "hasStandaloneMeongAvatar",
+      "hasPdfPaidPhrase",
+      "hasCustomerFacingAiPhrase",
+      "hasCustomerFacingGenerationPhrase",
+    ];
+    const badFalseFlags = expectedFalseFlags.filter((flag) => checks[flag] !== false);
+    const expectedTrueFlags = [
+      "hasPetHookCard",
+      "hasDogMascot",
+      "hasCatMascot",
+      "premiumAccessBlockedBeforePayment",
+      "pdfApiBlockedBeforePayment",
+      "reviewProtected",
+    ];
+    const badTrueFlags = expectedTrueFlags.filter((flag) => checks[flag] !== true);
+    const sampleSnapshot = (summary.snapshots || []).find(
+      (snapshot) => snapshot.fileBase === "sample" || snapshot.path === "/sample",
+    );
+    const samplePublic = Boolean(sampleSnapshot && sampleSnapshot.status === 200);
+
+    addResult(
+      "GPT 스냅샷",
+      `${label}: summary 정책 플래그 일치`,
+      badFalseFlags.length === 0 && badTrueFlags.length === 0 && samplePublic,
+      [
+        badFalseFlags.length > 0 ? `expected false: ${badFalseFlags.join(", ")}` : "",
+        badTrueFlags.length > 0 ? `expected true: ${badTrueFlags.join(", ")}` : "",
+        samplePublic ? "" : "/sample status is not 200 in summary",
+      ]
+        .filter(Boolean)
+        .join("; "),
+      {
+        url: label,
+        issue: "snapshot summary policy flags",
+        file: "summary.json",
+      },
+    );
+  }
+}
+
+function runGptReviewSnapshotChecks() {
+  const folderEntries = readGptReviewFolderEntries();
+  const zipEntries = (() => {
+    try {
+      return readGptReviewZipEntries();
+    } catch (error) {
+      addResult(
+        "GPT 스냅샷",
+        "gpt-review.zip 읽기",
+        false,
+        error instanceof Error ? error.message : String(error),
+        {
+          url: "gpt-review.zip",
+          issue: "zip read failure",
+          file: "gpt-review.zip",
+        },
+      );
+      return null;
+    }
+  })();
+
+  if (folderEntries) {
+    inspectGptReviewSnapshotEntries("gpt-review folder", folderEntries);
+  } else {
+    addSkip(
+      "GPT 스냅샷",
+      "gpt-review folder 검사",
+      "gpt-review folder not found",
+      {
+        url: "gpt-review/",
+        issue: "snapshot folder missing",
+        file: "gpt-review/",
+      },
+    );
+  }
+
+  if (zipEntries) {
+    inspectGptReviewSnapshotEntries("gpt-review.zip", zipEntries);
+  } else {
+    addResult(
+      "GPT 스냅샷",
+      "gpt-review.zip 존재",
+      false,
+      "gpt-review.zip not found or unreadable",
+      {
+        url: "gpt-review.zip",
+        issue: "snapshot zip missing",
+        file: "gpt-review.zip",
+      },
+    );
+  }
+
+  if (folderEntries && zipEntries) {
+    const compareFiles = [
+      "home.txt",
+      "input.txt",
+      "free-result-dog.txt",
+      "free-result.txt",
+      "free-result-cat.txt",
+      "checkout-premium-report.txt",
+      "checkout.txt",
+      "premium-result.txt",
+      "sample.txt",
+      "summary.json",
+    ];
+    const mismatches = compareFiles.filter((fileName) => {
+      if (!folderEntries.has(fileName) || !zipEntries.has(fileName)) {
+        return folderEntries.has(fileName) !== zipEntries.has(fileName);
+      }
+
+      return sha256(folderEntries.get(fileName)) !== sha256(zipEntries.get(fileName));
+    });
+
+    addResult(
+      "GPT 스냅샷",
+      "gpt-review folder와 zip 내용 일치",
+      mismatches.length === 0,
+      mismatches.length > 0
+        ? `mismatch: ${mismatches.join(", ")}`
+        : "zip snapshot matches generated folder for required files",
+      {
+        url: "gpt-review.zip",
+        issue: "snapshot folder/zip mismatch",
+        file: "gpt-review.zip, gpt-review/",
+      },
+    );
+  }
 }
 
 async function runPremiumChecks(isDemoMode) {
@@ -1673,6 +2086,41 @@ async function runUiEnhancementChecks(isDemoMode) {
       file: "components/report/PremiumReportTabs.tsx, components/report/TabInsightCard.tsx, lib/report/tabInsightGenerator.ts",
     },
   );
+
+  const reviewExportBundle = readReviewExportTextHtmlBundle();
+  const reviewExportForbiddenFound =
+    reviewExportBundle === null
+      ? []
+      : customerGenerationForbiddenTerms.filter(({ pattern }) =>
+          pattern.test(stripHtml(reviewExportBundle)),
+        );
+
+  if (reviewExportBundle === null) {
+    addSkip(
+      "UI 고도화",
+      "review:export txt/html 기술 문구 미노출",
+      "gpt-review folder not found. Run npm run review:export to check exported txt/html.",
+      {
+        url: "gpt-review/*.txt, gpt-review/*.html",
+        issue: "review export implementation wording",
+        file: "scripts/export-gpt-review.ts, scripts/qa-check.ts",
+      },
+    );
+  } else {
+    addResult(
+      "UI 고도화",
+      "review:export txt/html 기술 문구 미노출",
+      reviewExportForbiddenFound.length === 0,
+      reviewExportForbiddenFound.length > 0
+        ? `found: ${reviewExportForbiddenFound.map(({ label }) => label).join(", ")}`
+        : "exported txt/html files do not expose implementation wording",
+      {
+        url: "gpt-review/*.txt, gpt-review/*.html",
+        issue: "review export implementation wording",
+        file: "scripts/export-gpt-review.ts, scripts/qa-check.ts",
+      },
+    );
+  }
 
   const uiSourceBundle = [
     "app/page.tsx",
@@ -2928,6 +3376,7 @@ async function main() {
   await runPremiumChecks(isDemoMode);
   await runPdfChecks(isDemoMode);
   await runUiEnhancementChecks(isDemoMode);
+  runGptReviewSnapshotChecks();
   runReportActionChecks();
   await runReportQualityChecks();
 

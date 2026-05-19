@@ -15,5 +15,6 @@ ui-*.png
 analysis-*.png
 qa-artifacts/
 gpt-review/
+.tools/
 tmp-*.log
 .DS_Store

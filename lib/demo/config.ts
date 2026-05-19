@@ -23,20 +23,30 @@ export const demoSamplePet = {
 };
 
 export function isProductionRuntime() {
-  return (
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL_ENV === "production"
-  );
+  if (process.env.VERCEL_ENV) {
+    return process.env.VERCEL_ENV === "production";
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
+export function isPublicReviewModeEnabled() {
+  return process.env.PUBLIC_REVIEW_MODE === "true" && !isProductionRuntime();
 }
 
 export function isDemoModeEnabled() {
-  return process.env.DEMO_MODE === "true" && !isProductionRuntime();
+  return (
+    (process.env.DEMO_MODE === "true" || isPublicReviewModeEnabled()) &&
+    !isProductionRuntime()
+  );
 }
 
 export function shouldShowHeaderTestLink() {
   return (
     !isProductionRuntime() &&
-    (process.env.DEMO_MODE === "true" || process.env.VERCEL_ENV !== "production")
+    (process.env.DEMO_MODE === "true" ||
+      process.env.PUBLIC_REVIEW_MODE === "true" ||
+      process.env.VERCEL_ENV !== "production")
   );
 }
 

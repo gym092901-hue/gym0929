@@ -126,6 +126,7 @@ export function FiveElementPentagonChart({
   const polygon = buildPolygon(scores);
   const petTopic = postposition.topic(petName);
   const petPossessive = postposition.possessive(petName);
+  const animalLabel = species === "cat" ? "고양이" : "강아지";
   const title =
     variant === "premium"
       ? `${petPossessive} 오행 기운 지도`
@@ -143,8 +144,9 @@ export function FiveElementPentagonChart({
             {title}
           </h2>
           <p className="mt-3 break-keep text-sm font-semibold leading-6 text-ink/62">
-            {petTopic} 어떤 기운을 많이 드러내고, 어떤 기운은 생활 속에서
-            천천히 채워가면 좋을지 부드럽게 보여주는 차트예요.
+            {petTopic} {animalLabel}답게 어떤 기운을 많이 드러내고,
+            어떤 기운은 생활 속에서 천천히 채워가면 좋을지 부드럽게
+            보여주는 차트예요.
           </p>
         </div>
 

@@ -70,24 +70,6 @@ async function createReading(species: "dog" | "cat") {
       birth_time_unknown: true,
       adoption_date: species === "dog" ? "2021-08-20" : "2022-05-01",
       owner_email: null,
-      living_environment:
-        species === "dog"
-          ? ["with_family", "mostly_indoor"]
-          : ["single_household", "mostly_indoor"],
-      daily_activity_frequency: species === "dog" ? "once" : "twice",
-      alone_time: species === "dog" ? "one_to_three" : "four_to_six",
-      stranger_reaction:
-        species === "dog" ? "observes_carefully" : "hides_or_avoids",
-      guardian_distance:
-        species === "dog" ? "moderately_close" : "depends_on_mood",
-      favorite_activities:
-        species === "dog"
-          ? ["walk", "treat_search"]
-          : ["window_watch", "short_hunt_play", "sleeping"],
-      guardian_questions:
-        species === "dog"
-          ? ["personality", "bond", "routine"]
-          : ["bond", "routine", "sensitive_moments"],
     }),
   });
   const body = (await response.json().catch(() => ({}))) as {
@@ -334,7 +316,7 @@ async function main() {
   const targets = [
     ["홈", "/", "home"],
     ["입력", "/input", "input"],
-    ["공개 샘플", "/sample", "sample"],
+    ["입력 흐름 재확인", "/sample", "sample"],
     ["강아지 무료 결과", `/result/free/${dogReadingId}`, "free-result-dog"],
     ["고양이 무료 결과", `/result/free/${catReadingId}`, "free-result-cat"],
     [
@@ -389,7 +371,7 @@ async function main() {
 
 1. \`GPT_REVIEW_PROMPT.md\` 내용을 GPT에 붙여넣으세요.
 2. 더 정확한 점검을 원하면 이 폴더의 \`.txt\`, \`.html\`, \`summary.json\` 파일을 함께 업로드하세요.
-3. 외부 URL로 검토받으려면 Vercel 배포 후 \`https://배포주소/sample\`을 공유하세요.
+3. 외부 URL로 검토받으려면 Vercel 배포 후 \`https://배포주소/input\`을 공유하세요.
 4. 정식 production에서는 프리미엄 직접 접근과 PDF 저장 요청이 결제 없이 열리면 안 됩니다.
 
 생성 기준 URL: ${baseUrl}

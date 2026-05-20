@@ -92,6 +92,9 @@ export function PremiumReportTabs({
   lifestyle,
   sections,
 }: PremiumReportTabsProps) {
+  const coreIntro =
+    `${petName}의 핵심 성향, 오행 흐름, 보호자와의 교감, 생활 루틴, ` +
+    "올해의 흐름과 종합 보고서를 한 화면에 차례대로 정리했어요.";
   const tabInsights = createTabInsights({
     petName,
     species,
@@ -117,8 +120,7 @@ export function PremiumReportTabs({
             탭을 누르지 않아도 처음부터 끝까지 이어서 볼 수 있어요
           </h2>
           <p className="mt-3 break-keep text-sm font-semibold leading-7 text-ink/65">
-            {petName}의 핵심 성향, 오행 흐름, 보호자와의 교감, 생활 루틴,
-            올해의 흐름과 종합 보고서를 한 화면에 차례대로 정리했어요.
+            {coreIntro}
           </p>
         </div>
         <PetMascot

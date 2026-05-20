@@ -221,6 +221,7 @@ export default async function PremiumResultPage({
     birthTimeUnknown: !reading.birthTime,
     adoptionDate: reading.metDate || null,
   });
+  const hookSignal = `${hook.hookKeyword}의 결로 천천히 마음을 표현하는 아이예요.`;
   const safePremiumSections = reading.premiumSections.map((section, index) => ({
     ...section,
     id: `premium-section-${index + 1}`,
@@ -333,7 +334,7 @@ export default async function PremiumResultPage({
                     보호자에게 보내는 신호
                   </p>
                   <p className="mt-2 break-keep text-lg font-black leading-7 text-ink">
-                    {hook.hookKeyword}의 결로 천천히 마음을 표현하는 아이예요.
+                    {hookSignal}
                   </p>
                 </div>
                 <div className="rounded-[1.5rem] border border-berry/10 bg-white/75 px-4 py-4 sm:col-span-2">

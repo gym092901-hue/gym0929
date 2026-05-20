@@ -462,13 +462,18 @@ async function runInputChecks() {
   addResult(
     "입력",
     "미래 날짜 입력 방지",
-    futureDate.status === 400 && futureDate.text.includes("미래 날짜는 사용할 수 없어요.") && inputSource.includes("max={today}"),
+    futureDate.status === 400 &&
+      futureDate.text.includes("미래 날짜는 사용할 수 없어요.") &&
+      inputSource.includes("isFutureDate"),
   );
   addResult(
     "입력",
-    "이메일 형식 오류 처리",
-    invalidEmail.status === 400 && inputSource.includes("이메일 형식이 올바르지 않아요."),
-    "API 거부 + 화면 문구 확인",
+    "보호자 이메일 입력란 제거 및 API 형식 방어 유지",
+    invalidEmail.status === 400 &&
+      invalidEmail.text.includes("이메일 형식을 다시 확인해 주세요.") &&
+      !inputPage.text.includes("보호자 이메일") &&
+      !inputSource.includes('name="owner_email"'),
+    "화면에서는 이메일을 받지 않고, 직접 payload가 들어와도 서버에서 형식 검증",
   );
   addResult(
     "입력",
@@ -479,8 +484,8 @@ async function runInputChecks() {
   );
   addResult(
     "입력",
-    "생활 패턴 선택 UI 노출",
-    hasAll(inputPage.text, [
+    "생활 패턴 입력란 제거",
+    hasNone(inputPage.text, [
       "생활 패턴",
       "생활 환경",
       "하루 산책/놀이 횟수",
@@ -490,24 +495,23 @@ async function runInputChecks() {
       "좋아하는 활동",
       "보호자가 궁금한 점",
     ]),
-    "선택 항목은 필수가 아니며 칩 버튼으로 노출",
+    "최근 입력 UX 정책에 따라 기본 정보만 받도록 정리",
     {
       url: "/input",
-      issue: "lifestyle personalization fields",
+      issue: "remove lifestyle personalization fields from input UI",
       file: "app/input/page.tsx",
     },
   );
   addResult(
     "입력",
-    "선택 요약 태그 UI 존재",
-    inputSource.includes("getLifestyleSummaryTags") &&
-      inputSource.includes("입력 요약") &&
-      inputSource.includes("flex flex-wrap"),
-    "모바일에서 태그가 줄바꿈되도록 flex-wrap 확인",
+    "기본 입력 요약 태그 UI 존재",
+    inputSource.includes("<PetInputSummaryTags") &&
+      inputSummaryTagsSource.includes("flex flex-wrap"),
+    "이름, 종, 날짜, 시간 모름 정보를 pill 태그로 표시",
     {
       url: "/input",
-      issue: "lifestyle summary tags",
-      file: "app/input/page.tsx, lib/readings/lifestyle.ts",
+      issue: "basic input summary tags",
+      file: "app/input/page.tsx, components/report/PetInputSummaryTags.tsx",
     },
   );
   addResult(
@@ -526,17 +530,19 @@ async function runInputChecks() {
   );
   addResult(
     "입력",
-    "생활 패턴 저장 필드 API 연결",
+    "생활 패턴 서버 필드는 선택값으로만 유지",
     readingsRouteSource.includes("normalizeLifestyleProfile") &&
       readingsRouteSource.includes("living_environment") &&
       readingsRouteSource.includes("daily_activity_frequency") &&
       readingsRouteSource.includes("stranger_reaction") &&
       databaseTypes.includes("living_environment") &&
-      databaseTypes.includes("favorite_activities"),
-    "API payload -> pets table insert/type 정의 확인",
+      databaseTypes.includes("favorite_activities") &&
+      !inputSource.includes("living_environment") &&
+      !inputSource.includes("daily_activity_frequency"),
+    "DB/API 호환성은 유지하되 입력 화면에서는 노출하지 않음",
     {
       url: "/api/readings",
-      issue: "lifestyle persistence",
+      issue: "optional lifestyle persistence without input UI",
       file: "app/api/readings/route.ts, types/database.ts",
     },
   );
@@ -658,10 +664,10 @@ async function runFreeResultChecks(isDemoMode) {
   );
   addResult(
     "홈",
-    "production 샘플 링크는 정적 무료 샘플로 연결",
-    homeSource.includes('"/sample"') &&
-      homeSource.includes("isDemoModeEnabled()"),
-    "데모 비활성 환경에서는 /sample 사용",
+    "샘플 리포트 링크 미노출",
+    !homeSource.includes("샘플 리포트 보기") &&
+      !homeSource.includes('href="/sample"'),
+    "현재 공개 흐름은 실제 입력 페이지 중심",
   );
   addResult(
     "운영 가드",
@@ -1334,13 +1340,33 @@ async function runPdfChecks(isDemoMode) {
 }
 
 async function runUiEnhancementChecks(isDemoMode) {
+  let uiReadingId = readingId;
+  if (isLocalQaTarget() && !isDemoMode) {
+    const dogReading = await postJson("/api/readings", {
+      name: "몽이",
+      type: "dog",
+      birth_date: "2021-05-14",
+      birth_time_unknown: true,
+      adoption_date: "2021-08-20",
+    });
+
+    try {
+      const parsed = JSON.parse(dogReading.text);
+      if (dogReading.status === 200 && parsed.readingId) {
+        uiReadingId = parsed.readingId;
+      }
+    } catch {
+      // Keep the configured QA_READING_ID fallback when local reading creation is unavailable.
+    }
+  }
+
   const homePath = "/";
   const inputPath = "/input";
-  const freePath = `/result/free/${readingId}`;
-  const checkoutPath = `/checkout/${readingId}?productType=premium_report${
+  const freePath = `/result/free/${uiReadingId}`;
+  const checkoutPath = `/checkout/${uiReadingId}?productType=premium_report${
     isDemoMode ? "&forceCheckout=1" : ""
   }`;
-  const premiumPath = `/result/premium/${readingId}#premium-section-1`;
+  const premiumPath = `/result/premium/${uiReadingId}#premium-section-1`;
   const reviewPath = "/review";
   const testPath = "/test";
   const demoPath = "/demo";
@@ -1359,6 +1385,7 @@ async function runUiEnhancementChecks(isDemoMode) {
   const demoSource = readProjectFile("app/demo/page.tsx");
   const adminSource = readProjectFile("app/admin/page.tsx");
   const sampleSource = readProjectFile("app/sample/page.tsx");
+  const inputSource = readProjectFile("app/input/page.tsx");
   const freeResultSource = readProjectFile("app/result/free/[readingId]/page.tsx");
   const premiumResultSource = readProjectFile(
     "app/result/premium/[readingId]/page.tsx",
@@ -1369,17 +1396,19 @@ async function runUiEnhancementChecks(isDemoMode) {
   const petMascotSource = readProjectFile("components/mascot/PetMascot.tsx");
 
   const testLocation = test.headers.get("location") || "";
+  const sampleLocation = sample.headers.get("location") || "";
   const expectsProductionVisibility =
     process.env.QA_EXPECT_PRODUCTION === "true" ||
     process.env.NODE_ENV === "production" ||
     process.env.VERCEL_ENV === "production";
   const testRouteOk = expectsProductionVisibility
-    ? [307, 308].includes(test.status) && testLocation.includes("/sample")
+    ? [307, 308].includes(test.status) &&
+      (testLocation.includes("/sample") || testLocation.includes("/input"))
     : test.status === 200 &&
       test.text.includes("멍냥사주를 먼저 써보고 알려주세요");
   addResult(
     "운영 노출 정책",
-    "/test는 production에서 /sample redirect, demo/dev에서만 공개",
+    "/test는 production에서 입력 흐름으로 redirect, demo/dev에서만 공개",
     testRouteOk,
     `status ${test.status}, location ${testLocation || test.url}`,
     {
@@ -1403,12 +1432,13 @@ async function runUiEnhancementChecks(isDemoMode) {
 
   addResult(
     "운영 노출 정책",
-    "/sample 공개 샘플 페이지 유지",
-    sample.status === 200 && sample.text.includes("무료 샘플 전용"),
-    `status ${sample.status}`,
+    "/sample은 실제 입력 흐름으로 연결",
+    ([307, 308].includes(sample.status) && sampleLocation.includes("/input")) ||
+      sampleSource.includes('redirect("/input")'),
+    `status ${sample.status}, location ${sampleLocation || sample.url}`,
     {
       url: samplePath,
-      issue: "/sample public free sample",
+      issue: "/sample redirects to actual input flow",
       file: "app/sample/page.tsx",
     },
   );
@@ -1465,9 +1495,10 @@ async function runUiEnhancementChecks(isDemoMode) {
 
   addResult(
     "운영 노출 정책",
-    "/test는 production에서 /sample redirect 또는 noindex",
+    "/test는 production에서 숨김 또는 noindex",
     testSource.includes("productionRuntime") &&
-      testSource.includes('redirect("/sample")') &&
+      (testSource.includes('redirect("/sample")') ||
+        testSource.includes('redirect("/input")')) &&
       testSource.includes("robots"),
     "/test production redirect 및 noindex metadata 확인",
     {
@@ -1527,26 +1558,25 @@ async function runUiEnhancementChecks(isDemoMode) {
     inputSummaryTagsSource.includes('data-testid="pet-input-summary-tags"') &&
       freeResultSource.includes("<PetInputSummaryTags") &&
       premiumResultSource.includes("<PetInputSummaryTags") &&
-      sampleSource.includes("<PetInputSummaryTags") &&
-      sample.text.includes('data-testid="pet-input-summary-tags"'),
-    "무료/프리미엄은 소스 연결, 샘플은 렌더링까지 확인",
+      inputSource.includes("<PetInputSummaryTags"),
+    "입력/무료/프리미엄 화면에 기본 입력 정보 요약 태그 연결",
     {
-      url: "/result/free/[readingId], /result/premium/[readingId], /sample",
+      url: "/input, /result/free/[readingId], /result/premium/[readingId]",
       issue: "PetInputSummaryTags",
-      file: "components/report/PetInputSummaryTags.tsx, app/result/free/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx, app/sample/page.tsx",
+      file: "components/report/PetInputSummaryTags.tsx, app/input/page.tsx, app/result/free/[readingId]/page.tsx, app/result/premium/[readingId]/page.tsx",
     },
   );
 
   addResult(
     "UI 고도화",
     "입력 정보 태그에 null/undefined 미노출",
-    !stripHtml(sample.text).includes("null") &&
-      !stripHtml(sample.text).includes("undefined") &&
+    !stripHtml(input.text).includes("null") &&
+      !stripHtml(input.text).includes("undefined") &&
       inputSummaryTagsSource.includes('trimmed === "null"') &&
       inputSummaryTagsSource.includes('trimmed === "undefined"'),
-    "샘플 렌더링과 컴포넌트 필터 로직 확인",
+    "입력 화면 렌더링과 컴포넌트 필터 로직 확인",
     {
-      url: "/sample",
+      url: "/input",
       issue: "null/undefined summary tag",
       file: "components/report/PetInputSummaryTags.tsx",
     },
@@ -1629,7 +1659,7 @@ async function runUiEnhancementChecks(isDemoMode) {
     "입력 페이지에 모바일 앱바 존재",
     input.status === 200 &&
       input.text.includes("정보 입력") &&
-      input.text.includes("샘플"),
+      input.text.includes("우리 아이 이야기를 살짝 들려주세요"),
     `status ${input.status}`,
     {
       url: inputPath,
@@ -1919,7 +1949,7 @@ async function runUiEnhancementChecks(isDemoMode) {
   const renderedPlainText = stripHtml(renderedTextBundle);
   const hasHookCopy =
     renderedTextBundle.includes('data-has-hook-copy="true"') &&
-    /(몽이는|우리 강아지는|우리 고양이는)\s+.{8,80}야\./.test(
+    /(몽이는|나비는|우리 강아지는|우리 고양이는)\s+.{8,80}야\./.test(
       renderedPlainText,
     );
 
@@ -1996,20 +2026,19 @@ async function runUiEnhancementChecks(isDemoMode) {
   const hasPremiumTabs =
     premiumResultSource.includes("<PremiumReportTabs") &&
     premiumTabsSource.includes('data-testid="premium-report-tabs"') &&
-    expectedPremiumTabHashes.every((tabId) =>
-      premiumTabsSource.includes(`id: "${tabId}"`),
-    );
+    premiumTabsSource.includes('data-report-mode="continuous"') &&
+    premiumTabsSource.includes("순서대로 읽는 심층 리포트");
 
   addResult(
     "UI 고도화",
-    "프리미엄 결과 8개 탭 구조",
+    "프리미엄 결과 연속형 심층 리포트 구조",
     hasPremiumTabs,
     hasPremiumTabs
-      ? "PremiumReportTabs has 8 hash-addressable tabs"
-      : "PremiumReportTabs integration or tab ids missing",
+      ? "PremiumReportTabs renders a continuous premium report"
+      : "PremiumReportTabs continuous report integration missing",
     {
       url: "/result/premium/[readingId]",
-      issue: "premium report tabs",
+      issue: "premium continuous report",
       file: "app/result/premium/[readingId]/page.tsx, components/report/PremiumReportTabs.tsx",
     },
   );

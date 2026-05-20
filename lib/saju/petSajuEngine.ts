@@ -272,10 +272,10 @@ function createFreeEnergyText({
     : "";
 
   if (input.type === "cat") {
-    return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황에서 바로 움직이기보다 자기 자리, 창가, 캣타워, 숨숨집 같은 익숙한 기준점을 먼저 확인하는 흐름이 강합니다.${strangerLine} ${timeNote(input)}`;
+    return `이번 무료 사주는 ${basisLabel}을 기준으로 오행의 상징을 반려생활 언어로 풀어본 맞춤형 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황에서 바로 움직이기보다 자기 자리, 창가, 캣타워, 숨숨집 같은 익숙한 기준점을 먼저 확인하는 흐름이 강합니다.${strangerLine} ${timeNote(input)}`;
   }
 
-  return `이번 무료 사주는 ${basisLabel}을 기준으로 오행을 간단히 계산한 규칙 기반 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황을 무작정 밀어붙이기보다 먼저 살피고, 익숙해지면 자기 방식으로 즐거움을 표현하는 흐름이 강합니다.${strangerLine} ${timeNote(input)}`;
+  return `이번 무료 사주는 ${basisLabel}을 기준으로 오행의 상징을 반려생활 언어로 풀어본 맞춤형 해석입니다. ${primaryLabel}은 ${primaryTraits}의 방향으로 드러나고, ${secondaryLabel}은 ${secondaryTraits}의 분위기를 더합니다. 그래서 ${nameTopic} 낯선 상황을 무작정 밀어붙이기보다 먼저 살피고, 익숙해지면 자기 방식으로 즐거움을 표현하는 흐름이 강합니다.${strangerLine} ${timeNote(input)}`;
 }
 
 function createFreeBondText({

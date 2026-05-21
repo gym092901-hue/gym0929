@@ -981,6 +981,7 @@ function inspectGptReviewSnapshotEntries(label, entries) {
     entries.has("free-result-dog.txt") ? "free-result-dog.txt" : "free-result.txt",
     "free-result-cat.txt",
     "checkout-premium-report.txt",
+    "checkout-pdf-report.txt",
     "premium-result.txt",
     "sample.txt",
     "summary.json",
@@ -998,6 +999,8 @@ function inspectGptReviewSnapshotEntries(label, entries) {
     { label: "AI", pattern: /(^|[^A-Za-z])AI([^A-Za-z]|$)/ },
     { label: "인공지능", phrase: "인공지능" },
     { label: "Gemini", phrase: "Gemini" },
+    { label: "API", pattern: /(^|[^A-Za-z])API([^A-Za-z]|$)/ },
+    { label: "SDK", pattern: /(^|[^A-Za-z])SDK([^A-Za-z]|$)/ },
     { label: "규칙 기반 엔진", phrase: "규칙 기반 엔진" },
     { label: "자동 생성", phrase: "자동 생성" },
     {
@@ -2114,6 +2117,7 @@ async function runUiEnhancementChecks(isDemoMode) {
     { label: "인공지능", pattern: /인공지능/ },
     { label: "Gemini", pattern: /Gemini/ },
     { label: "API", pattern: /(^|[^A-Za-z])API([^A-Za-z]|$)/ },
+    { label: "SDK", pattern: /(^|[^A-Za-z])SDK([^A-Za-z]|$)/ },
     { label: "프롬프트", pattern: /프롬프트/ },
     { label: "모델 응답", pattern: /모델 응답/ },
     { label: "자동 생성", pattern: /자동 생성/ },
@@ -2415,6 +2419,11 @@ async function runUiEnhancementChecks(isDemoMode) {
     {
       label: "고객 화면 API",
       found: /(^|[^A-Za-z])API([^A-Za-z]|$)/.test(customerRenderedPlainText),
+      file: "components/report/*, app/**/*.tsx",
+    },
+    {
+      label: "고객 화면 SDK",
+      found: /(^|[^A-Za-z])SDK([^A-Za-z]|$)/.test(customerRenderedPlainText),
       file: "components/report/*, app/**/*.tsx",
     },
     {

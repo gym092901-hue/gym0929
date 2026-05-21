@@ -52,7 +52,7 @@ function loadPayPalSdk(clientId: string, currency: string) {
     script.async = true;
     script.dataset.meongnyangPaypalSdk = "true";
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("PayPal SDK를 불러오지 못했습니다."));
+    script.onerror = () => reject(new Error("PayPal 결제창을 불러오지 못했습니다."));
     document.body.appendChild(script);
   });
 }
@@ -231,7 +231,7 @@ export function PayPalCheckout({
         setStatus("");
       })
       .catch((sdkError) => {
-        console.error("PayPal SDK load/render failed", sdkError);
+        console.error("PayPal checkout load/render failed", sdkError);
         setStatus("");
         setError("PayPal 결제 모듈을 준비하지 못했습니다.");
       });
@@ -265,7 +265,7 @@ export function PayPalCheckout({
         <div>
           <h3 className="text-lg font-black text-ink">PayPal 카드로 결제하기</h3>
           <p className="mt-2 text-sm leading-6 text-ink/65">
-            PayPal JS SDK가 결제 버튼과 카드 필드를 처리합니다. 카드 번호와 CVV는 멍냥사주 서버에 저장되거나 전송되지 않습니다.
+            PayPal 결제창에서 카드 정보를 안전하게 처리합니다. 카드 번호와 CVV는 멍냥사주 서버에 저장되거나 전송되지 않습니다.
           </p>
         </div>
         <span className="rounded-full bg-[#003087] px-3 py-1 text-xs font-black text-white">

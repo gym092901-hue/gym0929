@@ -17,7 +17,7 @@
 - [ ] `NEXT_PUBLIC_SITE_URL`이 로컬 터널/localhost가 아니라 Vercel Production URL 또는 커스텀 도메인이다.
 - [ ] Vercel Production 환경에서 `VERCEL_ENV=production`이 적용되는지 확인했다.
 - [ ] KakaoPay 운영 콘솔 callback URL이 운영 도메인으로 등록되어 있다.
-- [ ] PayPal 운영 앱 client id/secret과 JS SDK client id가 설정되어 있다.
+- [ ] PayPal 운영 앱 client id/secret과 브라우저 결제 client id가 설정되어 있다.
 - [ ] 실제 결제 전 금액이 서버 product config/DB 기준으로 계산되는지 확인했다.
 - [ ] PDF API가 `premium_report` 승인 결제를 확인하고 PDF로 저장하기 기능을 제공하는지 확인했다.
 - [ ] 관리자 비밀번호 `ADMIN_PASSWORD`가 충분히 강한 값으로 설정되어 있다.
@@ -71,12 +71,38 @@
 
 ## 6. PayPal 콜백 URL 목록
 
-PayPal Buttons/Card Fields 흐름은 checkout 페이지의 JavaScript SDK `onApprove`에서 서버 capture API를 호출합니다.
+PayPal Buttons/Card Fields 흐름은 checkout 페이지에서 승인 완료 후 서버 capture API를 호출합니다.
 
 - Checkout page: `https://your-domain.example/checkout/[readingId]?productType=premium_report`
 - Capture API: `https://your-domain.example/api/payments/paypal/capture-order`
 - 안내용 success page: `https://your-domain.example/payment/paypal/success`
 - 안내용 fail page: `https://your-domain.example/payment/paypal/fail`
+
+## 6-1. 운영 실결제 QA
+
+KakaoPay:
+
+1. Vercel Production 환경변수를 입력한다.
+2. `/api/payments/kakao/ready` 호출이 성공하는지 확인한다.
+3. `premium_report` 결제 준비 금액이 1,990원인지 확인한다.
+4. 추가 콘텐츠 결제 준비 금액이 990원인지 확인한다.
+5. 카카오페이 결제창 이동이 정상인지 확인한다.
+6. 승인 후 `payments.status`가 `approved`로 저장되는지 확인한다.
+7. 승인 후 premium result 접근이 가능한지 확인한다.
+8. 승인 후 PDF 저장이 가능한지 확인한다.
+9. cancel/fail 상태에서는 접근권이 없는지 확인한다.
+
+PayPal:
+
+1. `NEXT_PUBLIC_PAYPAL_CLIENT_ID` 입력을 확인한다.
+2. `/api/payments/paypal/create-order` 호출이 성공하는지 확인한다.
+3. `premium_report` order 금액이 1,990원인지 확인한다.
+4. 추가 콘텐츠 order 금액이 990원인지 확인한다.
+5. PayPal order 생성이 정상인지 확인한다.
+6. `capture-order` 성공 여부를 확인한다.
+7. `payments.status`가 `approved`로 저장되는지 확인한다.
+8. 금액 불일치 시 `failed`로 처리되는지 확인한다.
+9. 승인 후 premium/PDF 접근이 가능한지 확인한다.
 
 ## 7. 배포 후 테스트 경로
 

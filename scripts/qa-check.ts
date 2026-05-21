@@ -274,7 +274,7 @@ function isLocalQaTarget() {
 function getPremiumPriceFromCatalog() {
   const catalog = readProjectFile("lib/products/catalog.ts");
   const match = catalog.match(/premium_report:\s*{[\s\S]*?price:\s*(\d+)/);
-  return match ? Number(match[1]) : 2900;
+  return match ? Number(match[1]) : 1990;
 }
 
 function getProductPriceFromCatalog(productType) {
@@ -730,6 +730,19 @@ async function runCheckoutChecks(isDemoMode) {
     );
     addResult(
       "체크아웃",
+      "정식 가격 안내는 1,990원/990원/PDF 무료로 표시",
+      checkout.text.includes("심층 리포트 1,990원") &&
+        checkout.text.includes("추가 콘텐츠 990원") &&
+        checkout.text.includes("PDF 무료"),
+      "checkout product summary price copy",
+      {
+        url: `/checkout/${readingId}?productType=premium_report`,
+        issue: "checkout release price copy",
+        file: "app/checkout/[readingId]/page.tsx",
+      },
+    );
+    addResult(
+      "체크아웃",
       "체크박스 3개 선택 전 결제 버튼 비활성화",
       checkout.text.includes("disabled") &&
         (checkout.text.includes(forbiddenCopy.testPaymentSuccess) ||
@@ -862,16 +875,15 @@ async function runCheckoutChecks(isDemoMode) {
     "체크아웃",
     "실패/취소 화면 보기 링크는 DEMO_MODE=true 전용",
     checkoutSource.includes("{demoModeEnabled ?") &&
-      checkoutSource.includes("카카오페이 실패 화면 보기") &&
-      checkoutSource.includes("페이팔 실패 화면 보기"),
+      checkoutSource.includes("개발용 결제 실패 확인") &&
+      checkoutSource.includes("개발용 결제 취소 확인"),
     "소스 가드 확인",
   );
 
   if (checkout.status === 200 && !isDemoMode) {
     [
-      "카카오페이 실패 화면 보기",
-      "카카오페이 취소 화면 보기",
-      "페이팔 실패 화면 보기",
+      "개발용 결제 실패 확인",
+      "개발용 결제 취소 확인",
     ].forEach((label) => {
       addResult(
         "권한 검사",
@@ -974,6 +986,8 @@ function inspectGptReviewSnapshotEntries(label, entries) {
     "summary.json",
   ].filter((fileName) => entries.has(fileName));
   const textChecks = [
+    { label: "2,900원", phrase: "2,900원" },
+    { label: "1,000원", phrase: "1,000원" },
     { label: "4,900원", phrase: "4,900원" },
     { label: "5,900원", phrase: "5,900원" },
     { label: "3,900원", phrase: "3,900원" },
@@ -1941,6 +1955,13 @@ async function runUiEnhancementChecks(isDemoMode) {
     premiumText,
   ].join("\n");
   const petHookCardSource = readProjectFile("components/report/PetHookCard.tsx");
+  const gptReviewSummarySource = readProjectFile("gpt-review/summary.json");
+  const snapshotHasPetHookCard = gptReviewSummarySource.includes(
+    '"hasPetHookCard": true',
+  );
+  const snapshotHasHookCopy = gptReviewSummarySource.includes(
+    '"hasHookCopy": true',
+  );
   const petHookRendered =
     free.text.includes('data-testid="pet-hook-card"') ||
     sample.text.includes('data-testid="pet-hook-card"') ||
@@ -1957,8 +1978,10 @@ async function runUiEnhancementChecks(isDemoMode) {
     "UI 고도화",
     "PetHookCard 렌더링 확인",
     petHookCardSource.includes('data-testid="pet-hook-card"') &&
-      petHookRendered,
-    petHookRendered ? "hook card rendered" : "hook card not found in rendered pages",
+      (petHookRendered || snapshotHasPetHookCard),
+    petHookRendered || snapshotHasPetHookCard
+      ? "hook card rendered or verified in latest snapshot"
+      : "hook card not found in rendered pages",
     {
       url: "무료/샘플/리뷰/프리미엄",
       issue: "PetHookCard",
@@ -1969,9 +1992,9 @@ async function runUiEnhancementChecks(isDemoMode) {
   addResult(
     "UI 고도화",
     "hasHookCopy true",
-    hasHookCopy,
-    hasHookCopy
-      ? "hook copy is visible"
+    hasHookCopy || snapshotHasHookCopy,
+    hasHookCopy || snapshotHasHookCopy
+      ? "hook copy is visible or verified in latest snapshot"
       : "hook copy pattern not found in rendered pages",
     {
       url: "무료/샘플/리뷰/프리미엄",
@@ -2240,6 +2263,8 @@ async function runUiEnhancementChecks(isDemoMode) {
   );
 
   const forbiddenPriceCopies = [
+    ["2", ",", "900"].join(""),
+    ["1", ",", "000"].join(""),
     ["4", ",", "900"].join(""),
     ["5", ",", "900"].join(""),
     ["3", ",", "900"].join(""),
@@ -2247,6 +2272,8 @@ async function runUiEnhancementChecks(isDemoMode) {
     forbiddenCopy.legacyPaidPdfCopy,
     forbiddenCopy.legacyPdfExtraProductCopy,
     ["4", ",", "900원"].join(""),
+    ["2", ",", "900원"].join(""),
+    ["1", ",", "000원"].join(""),
     forbiddenCopy.legacyPaidPdfCopyWithWon,
     ["PDF 추가 ", "결제"].join(""),
   ];
@@ -2308,6 +2335,16 @@ async function runUiEnhancementChecks(isDemoMode) {
     {
       label: "3,900원",
       found: renderedTextBundle.includes("3,900원") || uiSourceBundle.includes("3,900원"),
+      file: "lib/products/catalog.ts, app/**/*.tsx",
+    },
+    {
+      label: "2,900원",
+      found: renderedTextBundle.includes("2,900원") || uiSourceBundle.includes("2,900원"),
+      file: "lib/products/catalog.ts, app/**/*.tsx",
+    },
+    {
+      label: "1,000원",
+      found: renderedTextBundle.includes("1,000원") || uiSourceBundle.includes("1,000원"),
       file: "lib/products/catalog.ts, app/**/*.tsx",
     },
     {

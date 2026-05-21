@@ -73,6 +73,8 @@ export default async function CheckoutPage({
 
   const productType = resolveProductType(productTypeParam);
   const product = getProductCatalogItem(productType);
+  const premiumProduct = getProductCatalogItem("premium_report");
+  const addonProduct = getProductCatalogItem("guardian_match");
   const reading = await getReading(readingId);
 
   if (!reading) {
@@ -163,10 +165,10 @@ export default async function CheckoutPage({
               </div>
               <div className="mt-5 grid gap-2 sm:grid-cols-3">
                 <span className="rounded-2xl bg-berry/10 px-4 py-3 text-sm font-black text-berry">
-                  심층 리포트 1,990원
+                  심층 리포트 {formatProductPrice(premiumProduct.price)}
                 </span>
                 <span className="rounded-2xl bg-persimmon/10 px-4 py-3 text-sm font-black text-persimmon">
-                  추가 콘텐츠 990원
+                  추가 콘텐츠 {formatProductPrice(addonProduct.price)}
                 </span>
                 <span className="rounded-2xl bg-moss/10 px-4 py-3 text-sm font-black text-moss">
                   PDF 무료
@@ -222,7 +224,7 @@ export default async function CheckoutPage({
               </h2>
               <p className="mt-3 text-sm font-semibold leading-6 text-ink/65">
                 PDF는 심층 리포트 내용을 표지와 요약 카드가 포함된 파일로
-                정리하는 무료 소장본입니다. 먼저 {prerequisiteProduct.name}를
+                정리하는 무료 저장 기능입니다. 먼저 {prerequisiteProduct.name}를
                 열람한 뒤 PDF를 다운로드할 수 있습니다.
               </p>
               <PrimaryLink
@@ -426,19 +428,19 @@ export default async function CheckoutPage({
                 href={`/payment/kakao/fail?readingId=${readingId}`}
                 className="focus-ring rounded-2xl border border-berry/20 bg-white/70 px-5 py-4 text-center text-sm font-bold text-ink/70 transition hover:text-berry"
               >
-                카카오페이 실패 화면 보기
+                개발용 결제 실패 확인
               </Link>
               <Link
                 href={`/payment/kakao/cancel?readingId=${readingId}`}
                 className="focus-ring rounded-2xl border border-berry/20 bg-white/70 px-5 py-4 text-center text-sm font-bold text-ink/70 transition hover:text-berry"
               >
-                카카오페이 취소 화면 보기
+                개발용 결제 취소 확인
               </Link>
               <Link
                 href={`/payment/paypal/fail?readingId=${readingId}`}
                 className="focus-ring rounded-2xl border border-berry/20 bg-white/70 px-5 py-4 text-center text-sm font-bold text-ink/70 transition hover:text-berry"
               >
-                페이팔 실패 화면 보기
+                개발용 결제 실패 확인
               </Link>
             </div>
 

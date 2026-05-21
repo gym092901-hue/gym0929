@@ -110,6 +110,10 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
   const plainBundle = stripHtml(htmlBundle);
   const forbiddenSensitiveTermMatches = findForbiddenSensitiveTerms(bundle);
   const oldPricePhraseMatches = [
+    "2,900",
+    "2,900원",
+    "1,000",
+    "1,000원",
     "4,900",
     "4,900원",
     "5,900",
@@ -196,6 +200,8 @@ function buildSummary(snapshots: Snapshot[], dogReadingId: string, catReadingId:
     hasCustomerFacingAiPhrase: customerFacingGenerationPhraseMatches.length > 0,
     hasCustomerFacingGenerationPhrase:
       customerFacingGenerationPhraseMatches.length > 0,
+    hasOldPrice2900: has(bundle, "2,900") || has(bundle, "2,900원"),
+    hasOldPrice1000: has(bundle, "1,000") || has(bundle, "1,000원"),
     hasOldPrice4900: has(bundle, "4,900") || has(bundle, "4,900원"),
     hasOldPrice5900: has(bundle, "5,900") || has(bundle, "5,900원"),
     hasOldPrice3900: has(bundle, "3,900") || has(bundle, "3,900원"),
@@ -288,7 +294,7 @@ ${snapshot.text.slice(0, 5000)}
 - PetHookCard의 첫 문장 훅이 바로 공감되는지
 - "멍" 같은 텍스트형 아바타가 실제 캐릭터 대신 노출되지 않는지
 - 가격 정책이 심층 리포트 1,990원, 추가 콘텐츠 990원, PDF 저장 무료로 일관적인지
-- "4,900원", "5,900원", "3,900원"과 예전 유료 PDF 문구가 없는지
+- "2,900원", "1,000원", "4,900원", "5,900원", "3,900원"과 예전 유료 PDF 문구가 없는지
 - "몽이 의", "잘 맞아요.도", "화의 기운은 올해는", "낯선 자극을 만났을 때는 금의 기운은" 같은 문장 오류가 없는지
 - 고객 화면에 기술 생성 방식이 드러나는 표현이 노출되지 않는지
 - 모바일 리포트형 UI로 읽기 좋은지

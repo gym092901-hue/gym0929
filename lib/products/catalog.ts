@@ -47,7 +47,8 @@ export const productCatalog: Record<ProductType, ProductCatalogItem> = {
     name: "두 마리 궁합 리포트",
     price: 990,
     currency: "KRW",
-    description: "두 반려동물의 관계 흐름과 생활 공간 조율 포인트",
+    description:
+      "두 반려동물의 관계 흐름과 생활 공간 조율 포인트를 읽는 추가 콘텐츠",
     includedItems: [
       "두 아이의 기질 차이",
       "거리감 해석",
@@ -61,7 +62,7 @@ export const productCatalog: Record<ProductType, ProductCatalogItem> = {
     name: "2026년 연간 흐름 리포트",
     price: 990,
     currency: "KRW",
-    description: "2026년의 계절별 생활 흐름과 월별 조언",
+    description: "2026년의 계절별 생활 흐름과 월별 조언을 담은 추가 콘텐츠",
     includedItems: [
       "2026년 전체 흐름",
       "계절별 생활 포인트",

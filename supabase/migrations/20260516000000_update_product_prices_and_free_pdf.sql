@@ -1,10 +1,10 @@
 update products
 set
   price = case product_type
-    when 'premium_report' then 2900
-    when 'guardian_match' then 1000
-    when 'two_pet_match' then 1000
-    when 'yearly_fortune' then 1000
+    when 'premium_report' then 1990
+    when 'guardian_match' then 990
+    when 'two_pet_match' then 990
+    when 'yearly_fortune' then 990
     when 'pdf_report' then 0
     else price
   end,

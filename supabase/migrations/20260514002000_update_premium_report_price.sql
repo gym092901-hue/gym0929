@@ -1,3 +1,3 @@
 update products
-set price = 2900
+set price = 1990
 where product_type = 'premium_report';

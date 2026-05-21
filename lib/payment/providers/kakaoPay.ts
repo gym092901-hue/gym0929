@@ -44,18 +44,20 @@ export class KakaoPayApiError extends Error {
 }
 
 function getKakaoPayConfig() {
+  const clientId = process.env.KAKAOPAY_CLIENT_ID;
   const cid = process.env.KAKAOPAY_CID;
   const secretKey = process.env.KAKAOPAY_SECRET_KEY;
   const siteUrl = getRequiredSiteUrl();
   const baseUrl = process.env.KAKAOPAY_BASE_URL ?? "https://open-api.kakaopay.com";
 
-  if (!cid || !secretKey) {
+  if (!clientId || !cid || !secretKey) {
     throw new Error(
-      "KakaoPay server credentials are missing. Set KAKAOPAY_CID, KAKAOPAY_SECRET_KEY, and NEXT_PUBLIC_SITE_URL.",
+      "KakaoPay server credentials are missing. Set KAKAOPAY_CLIENT_ID, KAKAOPAY_CID, KAKAOPAY_SECRET_KEY, and NEXT_PUBLIC_SITE_URL.",
     );
   }
 
   return {
+    clientId,
     cid,
     secretKey,
     siteUrl,
@@ -123,14 +125,14 @@ export const kakaoPayProvider: PaymentProviderAdapter = {
   ): Promise<CreateProviderPaymentResult> {
     const config = getKakaoPayConfig();
     const productName = input.productName ?? "멍냥사주 프리미엄 리포트";
-    const approvalUrl = `${config.siteUrl}/payment/kakao/success?paymentId=${input.paymentId}&readingId=${input.readingId}`;
+    const approvalUrl = `${config.siteUrl}/payment/kakao/approve?paymentId=${input.paymentId}&readingId=${input.readingId}`;
     const cancelUrl = `${config.siteUrl}/payment/kakao/cancel?paymentId=${input.paymentId}&readingId=${input.readingId}`;
     const failUrl = `${config.siteUrl}/payment/kakao/fail?paymentId=${input.paymentId}&readingId=${input.readingId}`;
 
     const body = {
       cid: config.cid,
-      partner_order_id: input.paymentId,
-      partner_user_id: input.readingId,
+      partner_order_id: input.partnerOrderId,
+      partner_user_id: input.partnerUserId,
       item_name: productName,
       quantity: 1,
       total_amount: input.amount,
@@ -165,18 +167,32 @@ export const kakaoPayProvider: PaymentProviderAdapter = {
     }
 
     return {
-      providerOrderId: input.paymentId,
+      providerOrderId: input.partnerOrderId,
       providerTid: rawResponse.tid,
       providerPaymentId: null,
       redirectUrl:
         rawResponse.next_redirect_pc_url ??
         rawResponse.next_redirect_mobile_url ??
         null,
+      approvalUrl,
+      cancelUrl,
+      failUrl,
+      rawRequest: {
+        partner_order_id: input.partnerOrderId,
+        partner_user_id: input.partnerUserId,
+        item_name: productName,
+        quantity: 1,
+        total_amount: input.amount,
+        tax_free_amount: 0,
+        approval_url: approvalUrl,
+        cancel_url: cancelUrl,
+        fail_url: failUrl,
+      },
       rawResponse: {
         ready: rawResponse,
         request: {
-          partner_order_id: input.paymentId,
-          partner_user_id: input.readingId,
+          partner_order_id: input.partnerOrderId,
+          partner_user_id: input.partnerUserId,
           item_name: productName,
           quantity: 1,
           total_amount: input.amount,
@@ -210,12 +226,7 @@ export const kakaoPayProvider: PaymentProviderAdapter = {
       cid: config.cid,
       tid: input.providerTid,
       partner_order_id: input.providerOrderId,
-      partner_user_id: input.providerPayload &&
-        typeof input.providerPayload === "object" &&
-        !Array.isArray(input.providerPayload) &&
-        typeof input.providerPayload.readingId === "string"
-          ? input.providerPayload.readingId
-          : "",
+      partner_user_id: input.partnerUserId ?? "",
       pg_token: pgToken,
     };
 
@@ -244,6 +255,24 @@ export const kakaoPayProvider: PaymentProviderAdapter = {
       );
     }
 
+    const approvedTotal =
+      rawResponse.amount &&
+      typeof rawResponse.amount === "object" &&
+      !Array.isArray(rawResponse.amount) &&
+      typeof rawResponse.amount.total === "number"
+        ? rawResponse.amount.total
+        : null;
+
+    if (approvedTotal !== null && approvedTotal !== input.expectedAmount) {
+      throw new KakaoPayApiError("KakaoPay approved amount mismatch", 400, {
+        approve: rawResponse,
+        expected: {
+          amount: input.expectedAmount,
+          currency: input.expectedCurrency,
+        },
+      });
+    }
+
     return {
       status: "approved",
       providerPaymentId:
@@ -257,6 +286,6 @@ export const kakaoPayProvider: PaymentProviderAdapter = {
   },
 
   getMockSuccessUrl({ paymentId, readingId }) {
-    return `/payment/kakao/success?paymentId=${paymentId}&readingId=${readingId}`;
+    return `/payment/kakao/approve?paymentId=${paymentId}&readingId=${readingId}`;
   },
 };

@@ -14,6 +14,8 @@ type PayPalCheckoutProps = {
 type CreateOrderResponse = {
   orderId?: string;
   paymentId?: string;
+  resultUrl?: string;
+  alreadyApproved?: boolean;
   error?: string;
 };
 
@@ -96,6 +98,12 @@ export function PayPalCheckout({
     });
     const result = (await response.json()) as CreateOrderResponse;
 
+    if (result.resultUrl) {
+      setStatus("이미 구매한 리포트로 이동합니다.");
+      router.push(result.resultUrl);
+      throw new Error("이미 구매한 리포트로 이동합니다.");
+    }
+
     if (!response.ok || !result.orderId || !result.paymentId) {
       throw new Error(result.error ?? "PayPal 주문을 생성하지 못했습니다.");
     }
@@ -104,7 +112,7 @@ export function PayPalCheckout({
     setStatus("PayPal 승인 대기 중입니다.");
 
     return result.orderId;
-  }, [disabled, productType, readingId]);
+  }, [disabled, productType, readingId, router]);
 
   const captureOrder = useCallback(async (orderId: string) => {
     const paymentId = activePaymentIdRef.current;

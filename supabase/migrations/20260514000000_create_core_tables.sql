@@ -37,10 +37,12 @@ end $$;
 
 do $$ begin
   create type payment_status as enum (
+    'ready',
     'pending',
     'approved',
     'failed',
-    'canceled'
+    'canceled',
+    'refunded'
   );
 exception
   when duplicate_object then null;
@@ -90,13 +92,23 @@ create table if not exists payments (
   reading_id uuid not null references readings(id) on delete cascade,
   provider payment_provider not null,
   product_type product_type not null default 'premium_report',
-  amount integer not null check (amount > 0),
+  amount integer not null check (amount >= 0),
   currency char(3) not null default 'KRW',
   status payment_status not null default 'pending',
   provider_order_id text,
   provider_tid text,
   provider_payment_id text,
+  partner_order_id text,
+  partner_user_id text,
+  approval_url text,
+  cancel_url text,
+  fail_url text,
+  raw_request jsonb,
   raw_response jsonb,
+  approved_at timestamptz,
+  failed_at timestamptz,
+  canceled_at timestamptz,
+  refunded_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -105,7 +117,7 @@ create table if not exists products (
   id uuid primary key default gen_random_uuid(),
   product_type product_type not null unique,
   name text not null unique,
-  price integer not null check (price > 0),
+  price integer not null check (price >= 0),
   currency char(3) not null default 'KRW',
   description text not null default '',
   active boolean not null default true

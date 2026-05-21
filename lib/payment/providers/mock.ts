@@ -8,6 +8,15 @@ export const mockPaymentProvider: PaymentProviderAdapter = {
       providerTid: null,
       providerPaymentId: null,
       redirectUrl: `/checkout/${input.readingId}?productType=${input.productType}`,
+      approvalUrl: null,
+      cancelUrl: null,
+      failUrl: null,
+      rawRequest: {
+        demoMode: true,
+        provider: "mock",
+        productType: input.productType,
+        paymentId: input.paymentId,
+      },
       rawResponse: {
         demoMode: true,
         provider: "mock",

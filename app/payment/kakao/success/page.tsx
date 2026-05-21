@@ -71,20 +71,7 @@ export default async function KakaoSuccessPage({
       error,
     });
 
-    return (
-      <PageShell
-        eyebrow="KakaoPay"
-        title="카카오페이 결제 승인이 완료되지 않았습니다"
-        description="결제 승인 처리 중 문제가 발생했습니다. 결제 내역을 확인한 뒤 다시 시도해주세요."
-        narrow
-      >
-        <div className="warm-panel rounded-[2rem] p-6 sm:p-8">
-          <PrimaryLink href={retryHref} className="w-full">
-            결제 다시 시도하기
-          </PrimaryLink>
-        </div>
-      </PageShell>
-    );
+    redirect(`/payment/kakao/fail?paymentId=${paymentId}&readingId=${readingId}`);
   }
 
   redirect(nextUrl);

@@ -2,7 +2,13 @@ import type { Json, ProductType } from "@/types/database";
 
 export type PaymentProvider = "kakaopay" | "paypal" | "mock";
 
-export type PaymentStatus = "pending" | "approved" | "failed" | "canceled";
+export type PaymentStatus =
+  | "ready"
+  | "pending"
+  | "approved"
+  | "failed"
+  | "canceled"
+  | "refunded";
 
 export type CreatePaymentInput = {
   provider: PaymentProvider;
@@ -15,6 +21,8 @@ export type CreatePaymentInput = {
 
 export type CreateProviderPaymentInput = Omit<CreatePaymentInput, "provider"> & {
   paymentId: string;
+  partnerOrderId: string;
+  partnerUserId: string;
 };
 
 export type CreateProviderPaymentResult = {
@@ -22,6 +30,10 @@ export type CreateProviderPaymentResult = {
   providerTid: string | null;
   providerPaymentId: string | null;
   redirectUrl: string | null;
+  approvalUrl: string | null;
+  cancelUrl: string | null;
+  failUrl: string | null;
+  rawRequest: Json;
   rawResponse: Json;
 };
 
@@ -45,6 +57,10 @@ export type ApproveProviderPaymentInput = {
   providerOrderId: string | null;
   providerTid: string | null;
   providerPaymentId: string | null;
+  partnerOrderId: string | null;
+  partnerUserId: string | null;
+  expectedAmount: number;
+  expectedCurrency: string;
   providerPayload?: Json;
 };
 

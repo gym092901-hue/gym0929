@@ -62,7 +62,7 @@ function statusText(
     };
   }
 
-  if (rawStatus === "pending") {
+  if (rawStatus === "ready" || rawStatus === "pending") {
     return {
       state: "pending",
       label: "결제 대기",
@@ -71,12 +71,14 @@ function statusText(
     };
   }
 
-  if (rawStatus === "failed") {
+  if (rawStatus === "failed" || rawStatus === "refunded") {
     return {
       state: "failed",
-      label: "결제실패",
+      label: rawStatus === "refunded" ? "환불 완료" : "결제실패",
       description:
-        "이전 결제가 완료되지 않았습니다. 확인 항목을 다시 선택한 뒤 새 결제를 시작할 수 있습니다.",
+        rawStatus === "refunded"
+          ? "환불 처리된 결제입니다. 다시 이용하려면 새 결제가 필요합니다."
+          : "이전 결제가 완료되지 않았습니다. 확인 항목을 다시 선택한 뒤 새 결제를 시작할 수 있습니다.",
     };
   }
 

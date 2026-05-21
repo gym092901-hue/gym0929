@@ -29,13 +29,13 @@ export async function updatePaymentStatus({
 }: {
   paymentId: string;
   readingId?: string;
-  status: Exclude<PaymentStatus, "approved" | "pending">;
+  status: Exclude<PaymentStatus, "approved" | "pending" | "ready">;
   rawResponse: Json;
 }) {
   const supabase = getSupabaseAdmin();
   const { data: payment, error: paymentError } = await supabase
     .from("payments")
-    .select("id, reading_id, status, raw_response")
+    .select("id, reading_id, product_type, status, raw_response")
     .eq("id", paymentId)
     .maybeSingle();
 
@@ -55,10 +55,13 @@ export async function updatePaymentStatus({
     .from("payments")
     .update({
       status,
+      ...(status === "failed" ? { failed_at: new Date().toISOString() } : {}),
+      ...(status === "canceled" ? { canceled_at: new Date().toISOString() } : {}),
+      ...(status === "refunded" ? { refunded_at: new Date().toISOString() } : {}),
       raw_response: mergeRawResponse(payment.raw_response, rawResponse),
     })
     .eq("id", paymentId)
-    .select("id, reading_id, status, raw_response")
+    .select("id, reading_id, product_type, status, raw_response")
     .single();
 
   if (updateError || !updatedPayment) {

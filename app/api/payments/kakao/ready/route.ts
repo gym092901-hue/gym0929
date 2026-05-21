@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isDemoModeEnabled } from "@/lib/demo/config";
 import { createPayment } from "@/lib/payment/createPayment";
-import { getProductResultUrl, isProductType } from "@/lib/products/catalog";
+import {
+  getProductCatalogItem,
+  getProductResultUrl,
+  isProductType,
+} from "@/lib/products/catalog";
 import { ensureProductPurchaseAllowed } from "@/lib/products/purchaseGuards";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -72,25 +76,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: product, error: productError } = await supabase
-      .from("products")
-      .select("product_type, name, price, currency, active")
-      .eq("product_type", body.productType)
-      .eq("active", true)
-      .maybeSingle();
-
-    if (productError || !product) {
-      return NextResponse.json(
-        { error: "결제 가능한 상품을 찾을 수 없습니다." },
-        { status: 404 },
-      );
-    }
+    const product = getProductCatalogItem(body.productType);
 
     if (product.price <= 0) {
       return NextResponse.json(
         {
           error: "무료 제공 상품은 결제가 필요하지 않습니다.",
-          redirectUrl: getProductResultUrl(body.readingId, product.product_type),
+          redirectUrl: getProductResultUrl(body.readingId, product.productType),
         },
         { status: 400 },
       );
@@ -99,7 +91,7 @@ export async function POST(request: NextRequest) {
     const payment = await createPayment({
       provider: "kakaopay",
       readingId: body.readingId,
-      productType: product.product_type,
+      productType: product.productType,
       amount: product.price,
       currency: product.currency,
       productName: product.name,

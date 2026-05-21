@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
 import { updatePaymentStatus } from "@/lib/payment/updatePaymentStatus";
@@ -14,8 +15,10 @@ export default async function KakaoFailPage({ searchParams }: KakaoFailPageProps
   const retryHref = readingId ? `/checkout/${readingId}` : "/input";
 
   if (paymentId && readingId) {
+    let redirectHref: string | null = null;
+
     try {
-      await updatePaymentStatus({
+      const payment = await updatePaymentStatus({
         paymentId,
         readingId,
         status: "failed",
@@ -26,12 +29,17 @@ export default async function KakaoFailPage({ searchParams }: KakaoFailPageProps
           },
         },
       });
+      redirectHref = `/checkout/${payment.reading_id}?productType=${payment.product_type}&paymentStatus=failed`;
     } catch (error) {
       console.error("KakaoPay fail status update failed", {
         paymentId,
         readingId,
         error,
       });
+    }
+
+    if (redirectHref) {
+      redirect(redirectHref);
     }
   }
 

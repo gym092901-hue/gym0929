@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { PrimaryLink } from "@/components/ui/PrimaryLink";
 import { updatePaymentStatus } from "@/lib/payment/updatePaymentStatus";
@@ -17,8 +18,10 @@ export default async function KakaoCancelPage({
   const freeResultHref = readingId ? `/result/free/${readingId}` : "/input";
 
   if (paymentId && readingId) {
+    let redirectHref: string | null = null;
+
     try {
-      await updatePaymentStatus({
+      const payment = await updatePaymentStatus({
         paymentId,
         readingId,
         status: "canceled",
@@ -29,12 +32,17 @@ export default async function KakaoCancelPage({
           },
         },
       });
+      redirectHref = `/checkout/${payment.reading_id}?productType=${payment.product_type}&paymentStatus=canceled`;
     } catch (error) {
       console.error("KakaoPay cancel status update failed", {
         paymentId,
         readingId,
         error,
       });
+    }
+
+    if (redirectHref) {
+      redirect(redirectHref);
     }
   }
 

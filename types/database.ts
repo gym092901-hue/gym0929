@@ -23,7 +23,13 @@ export type ProductType =
   | "two_pet_match"
   | "yearly_fortune";
 
-export type PaymentStatus = "pending" | "approved" | "failed" | "canceled";
+export type PaymentStatus =
+  | "ready"
+  | "pending"
+  | "approved"
+  | "failed"
+  | "canceled"
+  | "refunded";
 
 export type Database = {
   public: {
@@ -135,7 +141,17 @@ export type Database = {
           provider_order_id: string | null;
           provider_tid: string | null;
           provider_payment_id: string | null;
+          partner_order_id: string | null;
+          partner_user_id: string | null;
+          approval_url: string | null;
+          cancel_url: string | null;
+          fail_url: string | null;
+          raw_request: Json | null;
           raw_response: Json | null;
+          approved_at: string | null;
+          failed_at: string | null;
+          canceled_at: string | null;
+          refunded_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -150,7 +166,17 @@ export type Database = {
           provider_order_id?: string | null;
           provider_tid?: string | null;
           provider_payment_id?: string | null;
+          partner_order_id?: string | null;
+          partner_user_id?: string | null;
+          approval_url?: string | null;
+          cancel_url?: string | null;
+          fail_url?: string | null;
+          raw_request?: Json | null;
           raw_response?: Json | null;
+          approved_at?: string | null;
+          failed_at?: string | null;
+          canceled_at?: string | null;
+          refunded_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -165,7 +191,17 @@ export type Database = {
           provider_order_id?: string | null;
           provider_tid?: string | null;
           provider_payment_id?: string | null;
+          partner_order_id?: string | null;
+          partner_user_id?: string | null;
+          approval_url?: string | null;
+          cancel_url?: string | null;
+          fail_url?: string | null;
+          raw_request?: Json | null;
           raw_response?: Json | null;
+          approved_at?: string | null;
+          failed_at?: string | null;
+          canceled_at?: string | null;
+          refunded_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

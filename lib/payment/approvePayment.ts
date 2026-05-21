@@ -3,7 +3,10 @@ import "server-only";
 import { getPaymentProvider } from "@/lib/payment/providers";
 import { KakaoPayApiError } from "@/lib/payment/providers/kakaoPay";
 import { PayPalApiError } from "@/lib/payment/providers/paypal";
-import { getProductResultUrl } from "@/lib/products/catalog";
+import {
+  getProductCatalogItem,
+  getProductResultUrl,
+} from "@/lib/products/catalog";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
 import type {
@@ -36,7 +39,7 @@ export async function approvePayment(
   const { data: payment, error: paymentError } = await supabase
     .from("payments")
     .select(
-      "id, reading_id, provider, product_type, status, provider_order_id, provider_tid, provider_payment_id, raw_response",
+      "id, reading_id, provider, product_type, amount, currency, status, provider_order_id, provider_tid, provider_payment_id, partner_order_id, partner_user_id, raw_response",
     )
     .eq("id", input.paymentId)
     .eq("provider", input.provider)
@@ -60,6 +63,32 @@ export async function approvePayment(
     throw new Error("승인 가능한 결제 대기 상태가 아닙니다.");
   }
 
+  const product = getProductCatalogItem(payment.product_type);
+
+  if (
+    payment.amount !== product.price ||
+    payment.currency.toUpperCase() !== product.currency.toUpperCase()
+  ) {
+    await supabase
+      .from("payments")
+      .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        raw_response: mergeRawResponse(payment.raw_response, {
+          validation: {
+            error: "payment amount mismatch",
+            expectedAmount: product.price,
+            expectedCurrency: product.currency,
+            storedAmount: payment.amount,
+            storedCurrency: payment.currency,
+          },
+        }),
+      })
+      .eq("id", payment.id);
+
+    throw new Error("결제 금액 정보가 상품 가격과 일치하지 않습니다.");
+  }
+
   const payloadReadingId =
     input.providerPayload &&
     typeof input.providerPayload === "object" &&
@@ -81,6 +110,10 @@ export async function approvePayment(
       providerOrderId: payment.provider_order_id,
       providerTid: payment.provider_tid,
       providerPaymentId: payment.provider_payment_id,
+      partnerOrderId: payment.partner_order_id,
+      partnerUserId: payment.partner_user_id,
+      expectedAmount: product.price,
+      expectedCurrency: product.currency,
       providerPayload: {
         ...(input.providerPayload &&
         typeof input.providerPayload === "object" &&
@@ -113,6 +146,8 @@ export async function approvePayment(
     await supabase
       .from("payments")
       .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
         raw_response: mergeRawResponse(payment.raw_response, rawResponse),
       })
       .eq("id", payment.id);
@@ -125,6 +160,7 @@ export async function approvePayment(
     .update({
       status: approval.status,
       provider_payment_id: approval.providerPaymentId,
+      approved_at: new Date().toISOString(),
       raw_response: mergeRawResponse(payment.raw_response, approval.rawResponse),
     })
     .eq("id", payment.id)

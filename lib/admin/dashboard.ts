@@ -12,10 +12,12 @@ import type {
 } from "@/types/database";
 
 export const adminPaymentStatuses = [
+  "ready",
   "pending",
   "approved",
   "failed",
   "canceled",
+  "refunded",
 ] as const satisfies PaymentStatus[];
 
 export type AdminDashboardFilters = {

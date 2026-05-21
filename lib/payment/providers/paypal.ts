@@ -28,6 +28,10 @@ type PayPalCaptureResponse = {
       captures?: Array<{
         id?: string;
         status?: string;
+        amount?: {
+          currency_code?: string;
+          value?: string;
+        };
       }>;
     };
   }>;
@@ -142,6 +146,10 @@ function getCaptureId(captureResponse: PayPalCaptureResponse) {
   return captureResponse.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
 }
 
+function getCaptureAmount(captureResponse: PayPalCaptureResponse) {
+  return captureResponse.purchase_units?.[0]?.payments?.captures?.[0]?.amount ?? null;
+}
+
 export const paypalProvider: PaymentProviderAdapter = {
   provider: "paypal",
 
@@ -192,6 +200,10 @@ export const paypalProvider: PaymentProviderAdapter = {
       providerTid: null,
       providerPaymentId: null,
       redirectUrl: null,
+      approvalUrl: null,
+      cancelUrl: null,
+      failUrl: null,
+      rawRequest: requestBody as Json,
       rawResponse: {
         create_order: rawResponse,
         request: requestBody as Json,
@@ -232,6 +244,27 @@ export const paypalProvider: PaymentProviderAdapter = {
     if (!response.ok || captureResponse?.status !== "COMPLETED") {
       throw new PayPalApiError("PayPal capture order failed", response.status, {
         capture_order: rawResponse,
+      });
+    }
+
+    const capturedAmount = getCaptureAmount(captureResponse);
+    const expectedValue = formatAmount(
+      input.expectedAmount,
+      input.expectedCurrency,
+    );
+
+    if (
+      capturedAmount &&
+      (capturedAmount.currency_code?.toUpperCase() !==
+        input.expectedCurrency.toUpperCase() ||
+        capturedAmount.value !== expectedValue)
+    ) {
+      throw new PayPalApiError("PayPal capture amount mismatch", 400, {
+        capture_order: rawResponse,
+        expected: {
+          currency_code: input.expectedCurrency.toUpperCase(),
+          value: expectedValue,
+        },
       });
     }
 

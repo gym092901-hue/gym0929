@@ -53,17 +53,21 @@ const successMessages: Record<string, string> = {
 };
 
 const statusClass: Record<PaymentStatus, string> = {
+  ready: "bg-persimmon/10 text-persimmon",
   pending: "bg-persimmon/10 text-persimmon",
   approved: "bg-moss/10 text-moss",
   failed: "bg-berry/10 text-berry",
   canceled: "bg-ink/10 text-ink/65",
+  refunded: "bg-moss/10 text-moss",
 };
 
 const paymentStatusText: Record<PaymentStatus, string> = {
+  ready: "결제 준비",
   pending: "결제 대기",
   approved: "결제 승인",
   failed: "결제 실패",
   canceled: "결제 취소",
+  refunded: "환불 완료",
 };
 
 const readingStatusText: Record<string, string> = {

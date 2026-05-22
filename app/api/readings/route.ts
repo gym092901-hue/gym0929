@@ -207,6 +207,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (petError || !pet) {
+      console.error("[readings] pet insert failed", {
+        code: petError?.code,
+        message: petError?.message,
+        details: petError?.details,
+        hint: petError?.hint,
+      });
+
       return NextResponse.json(
         { error: "반려동물 정보를 저장하지 못했습니다." },
         { status: 500 },
@@ -225,6 +232,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (readingError || !reading) {
+      console.error("[readings] reading insert failed", {
+        code: readingError?.code,
+        message: readingError?.message,
+        details: readingError?.details,
+        hint: readingError?.hint,
+      });
+
       return NextResponse.json(
         { error: "무료 리포트를 생성하지 못했습니다." },
         { status: 500 },

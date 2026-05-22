@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isDemoModeEnabled, isProductionRuntime } from "@/lib/demo/config";
 import { normalizeLifestyleProfile } from "@/lib/readings/lifestyle";
 import { createFreeSummary } from "@/lib/reports/free-summary";
+import { createDatabaseReading, isDatabaseUrlConfigured } from "@/lib/readings/databaseStore";
 import { createLocalReading } from "@/lib/readings/localReadingStore";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type { PetType } from "@/types/database";
@@ -213,6 +214,35 @@ export async function POST(request: NextRequest) {
         details: petError?.details,
         hint: petError?.hint,
       });
+
+      if (isDatabaseUrlConfigured()) {
+        try {
+          const databaseReading = await createDatabaseReading({
+            name,
+            type,
+            birthDate,
+            birthTime,
+            birthTimeUnknown,
+            adoptionDate,
+            ownerEmail,
+            freeSummary,
+            lifestyle,
+          });
+
+          return NextResponse.json({
+            readingId: databaseReading.readingId,
+            petId: databaseReading.petId,
+            storage: "database",
+          });
+        } catch (databaseError) {
+          console.error("[readings] direct database fallback failed", {
+            error:
+              databaseError instanceof Error
+                ? databaseError.message
+                : databaseError,
+          });
+        }
+      }
 
       return NextResponse.json(
         { error: "반려동물 정보를 저장하지 못했습니다." },

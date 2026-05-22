@@ -8,6 +8,10 @@ import {
   emptyLifestyleProfile,
   normalizeLifestyleProfile,
 } from "@/lib/readings/lifestyle";
+import {
+  getDatabaseReadingRecord,
+  updateDatabasePremiumReport,
+} from "@/lib/readings/databaseStore";
 import { demoReadingId, isDemoModeEnabled } from "@/lib/demo/config";
 import { generateFreePetSajuReading } from "@/lib/saju/petSajuEngine";
 import {
@@ -175,7 +179,7 @@ function getDemoPremiumReading() {
 
 export async function getReadingRecord(readingId: string) {
   if (!isSupabaseConfigured()) {
-    return null;
+    return getDatabaseReadingRecord(readingId);
   }
 
   const supabase = getSupabaseAdmin();
@@ -189,13 +193,26 @@ export async function getReadingRecord(readingId: string) {
     .maybeSingle();
 
   if (error || !data) {
-    return null;
+    return getDatabaseReadingRecord(readingId);
   }
 
   return data;
 }
 
 async function savePremiumReport(readingId: string, premiumReport: string) {
+  if (!isSupabaseConfigured()) {
+    const savedWithDatabase = await updateDatabasePremiumReport(
+      readingId,
+      premiumReport,
+    );
+
+    if (!savedWithDatabase) {
+      throw new Error("프리미엄 리포트를 저장하지 못했습니다.");
+    }
+
+    return;
+  }
+
   const supabase = getSupabaseAdmin();
   const { error } = await supabase
     .from("readings")
@@ -206,7 +223,14 @@ async function savePremiumReport(readingId: string, premiumReport: string) {
     .eq("id", readingId);
 
   if (error) {
-    throw new Error("프리미엄 리포트를 저장하지 못했습니다.");
+    const savedWithDatabase = await updateDatabasePremiumReport(
+      readingId,
+      premiumReport,
+    );
+
+    if (!savedWithDatabase) {
+      throw new Error("프리미엄 리포트를 저장하지 못했습니다.");
+    }
   }
 }
 
@@ -227,7 +251,34 @@ export async function getOrCreatePremiumReading(readingId: string) {
   }
 
   if (!isSupabaseConfigured()) {
-    return isDemoModeEnabled() ? getDemoPremiumReading() : null;
+    const databaseRow = await getDatabaseReadingRecord(readingId);
+
+    if (!databaseRow) {
+      return isDemoModeEnabled() ? getDemoPremiumReading() : null;
+    }
+
+    if (!databaseRow.premium_report && databaseRow.pets) {
+      const premiumReport = generatePremiumReport({
+        name: databaseRow.pets.name,
+        type: databaseRow.pets.type,
+        birthDate: databaseRow.pets.birth_date,
+        birthTime: databaseRow.pets.birth_time,
+        birthTimeUnknown: databaseRow.pets.birth_time_unknown,
+        adoptionDate: databaseRow.pets.adoption_date,
+        freeSummary: databaseRow.free_summary,
+        lifestyle: normalizeLifestyleProfile(databaseRow.pets),
+      }).report;
+
+      await updateDatabasePremiumReport(readingId, premiumReport);
+
+      return mapReading({
+        ...databaseRow,
+        premium_report: premiumReport,
+        status: "premium_created",
+      });
+    }
+
+    return mapReading(databaseRow);
   }
 
   const row = await getReadingRecord(readingId);
@@ -308,7 +359,13 @@ export async function getReading(readingId: string) {
   }
 
   if (!isSupabaseConfigured()) {
-    return isDemoModeEnabled() ? getDemoReading() : null;
+    const databaseRow = await getDatabaseReadingRecord(readingId);
+
+    if (!databaseRow) {
+      return isDemoModeEnabled() ? getDemoReading() : null;
+    }
+
+    return mapReading(databaseRow);
   }
 
   const data = await getReadingRecord(readingId);
